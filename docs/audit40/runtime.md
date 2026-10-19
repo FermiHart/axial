@@ -21,3 +21,20 @@ fix. Failed calls retain the caller's output value.
 
 **Limits.** Floating arithmetic still follows the existing IEEE/canonical-NaN
 contract; this wave changes neither its rounding environment nor op costs.
+
+## W12 — alias-safe union construction and extraction
+
+**Problem.** UMAKE, UTAG, UPAY and successful UCHK initialized the destination
+before consuming every input. Self-unwrapping lost payloads and kinds; building
+over the tag register changed the arm. The added cases failed 83 checks before
+the fix.
+
+**Change.** Construct the complete union in a temporary; capture tags before
+publishing; share one payload extraction helper that returns the value before
+the destination register changes.
+
+**Evidence.** The suite now has 560 checks, covering eight payload kinds,
+separate and aliased destinations, all four union instructions, exact fuel,
+error atom/payload retention and nonzero-arm early propagation. All pass.
+
+**Limits.** Nested union and CAP payloads remain outside the existing format.

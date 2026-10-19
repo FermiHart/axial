@@ -98,9 +98,79 @@ static void arithmetic_aliases(void)
     }
 }
 
+static void union_aliases(void)
+{
+    static const axi_vkind kinds[] = {
+        VB_UNIT, VB_U64, VB_I64, VB_F64, VB_BOOL, VB_STR, VB_BYTES, VB_ERR
+    };
+    for (unsigned k = 0; k < sizeof kinds / sizeof kinds[0]; k++) {
+        axi_vval args[2], out;
+        uint64_t used;
+        memset(args, 0, sizeof args);
+        args[0].kind = VB_U64;
+        args[0].bits = 7;
+        args[1].kind = kinds[k];
+        args[1].bits = kinds[k] == VB_BOOL ? 1 : 42;
+        args[1].s = "payload";
+        args[1].slen = 7;
+        if (kinds[k] == VB_ERR) {
+            args[1].atom = "Denied";
+            args[1].atom_len = 6;
+        }
+        for (uint8_t destination = 0; destination < 3; destination++) {
+            uint32_t code[] = {instruction(OP_UMAKE, destination, 0, 1),
+                               instruction(OP_RET, destination, 0, 0)};
+            memset(&out, 0, sizeof out);
+            CHECK(run(code, 2, 3, args, 2, &out, 100, &used));
+            CHECK(out.kind == VB_UNION && out.tag == 7);
+            CHECK(out.payload_kind == kinds[k] && out.bits == args[1].bits);
+            CHECK(out.slen == args[1].slen && out.s == args[1].s);
+            CHECK(out.atom_len == args[1].atom_len && out.atom == args[1].atom);
+            CHECK(used == 2);
+        }
+        args[0] = args[1];
+        args[0].kind = VB_UNION;
+        args[0].payload_kind = kinds[k];
+        args[0].tag = 0;
+        for (unsigned op = 0; op < 3; op++) {
+            uint8_t opcode = op == 0 ? OP_UTAG : op == 1 ? OP_UPAY : OP_UCHK;
+            for (uint8_t destination = 0; destination < 2; destination++) {
+                uint32_t code[] = {instruction(opcode, destination, 0, 0),
+                                   instruction(OP_RET, destination, 0, 0)};
+                memset(&out, 0, sizeof out);
+                CHECK(run(code, 2, 2, args, 1, &out, 100, &used));
+                if (opcode == OP_UTAG) {
+                    CHECK(out.kind == VB_U64 && out.bits == 0);
+                    args[0].tag = 7;
+                    CHECK(run(code, 2, 2, args, 1, &out, 100, &used));
+                    CHECK(out.kind == VB_U64 && out.bits == 7);
+                    args[0].tag = 0;
+                } else {
+                    CHECK(out.kind == kinds[k] && out.bits == args[1].bits);
+                    CHECK(out.slen == args[1].slen && out.s == args[1].s);
+                    CHECK(out.atom_len == args[1].atom_len && out.atom == args[1].atom);
+                }
+                CHECK(used == (uint64_t)axb_op_info(opcode)->fuel + 1);
+            }
+        }
+    }
+    /* A nonzero arm propagates its union; it must not become an unwrapped OK. */
+    {
+        axi_vval arg, out;
+        uint64_t used;
+        uint32_t code[] = {instruction(OP_UCHK, 0, 0, 0),
+                           instruction(OP_HALT, 0, 0, 0)};
+        memset(&arg, 0, sizeof arg);
+        arg.kind = VB_UNION; arg.tag = 3; arg.payload_kind = VB_U64; arg.bits = 91;
+        CHECK(run(code, 2, 1, &arg, 1, &out, 100, &used));
+        CHECK(out.kind == VB_UNION && out.tag == 3 && out.bits == 91 && used == 2);
+    }
+}
+
 int main(void)
 {
     arithmetic_aliases();
+    union_aliases();
     printf("audit40 runtime: %u checks, %u failures\n", checks, failures);
     return failures != 0;
 }

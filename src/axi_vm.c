@@ -149,6 +149,19 @@ static void vm_plain_scratch_free(vm *V)
 
 static vval VUNIT(void) { vval v; memset(&v, 0, sizeof v); return v; }
 
+/* Return by value: callers may publish over the union's own register. */
+static vval union_payload(const vval *value)
+{
+    vval payload = VUNIT();
+    payload.kind = value->pay_kind;
+    payload.bits = value->bits;
+    payload.s = value->s;
+    payload.slen = value->slen;
+    payload.atom = value->atom;
+    payload.atom_len = value->atom_len;
+    return payload;
+}
+
 static void vtrap(vm *V, const axb_cell *c, uint32_t pc, const char *code,
                    const char *msg, const char *fix) {
     if (V->diags)
@@ -938,7 +951,8 @@ static int run_cell_execute(vm *V, uint32_t ci, vval *reg, vval *ret,
             }
             if (!reg[a].bits) { pc = (uint32_t)((int32_t)pc + (int16_t)bc16); continue; }
             break;
-        case OP_UMAKE:
+        case OP_UMAKE: {
+            vval result;
             if (reg[b].kind != VK_U64) {
                 vtrap(V, c, pc, "AXI-R004", "union tag must be u64",
                       "umake rDST rTAG rPAYLOAD");
@@ -961,23 +975,28 @@ static int run_cell_execute(vm *V, uint32_t ci, vval *reg, vval *ret,
                       "payloads are unit/u64/i64/f64/bool/str; nested unions do not exist");
                 return 0;
             }
-            reg[a] = VUNIT(); reg[a].kind = VK_UNION;
-            reg[a].aux  = (uint8_t)reg[b].bits;
-            reg[a].pay_kind = reg[cc].kind;
-            reg[a].bits = reg[cc].bits;
-            reg[a].s    = reg[cc].s;
-            reg[a].slen = reg[cc].slen;
-            reg[a].atom = reg[cc].atom;
-            reg[a].atom_len = reg[cc].atom_len;
+            result = VUNIT(); result.kind = VK_UNION;
+            result.aux  = (uint8_t)reg[b].bits;
+            result.pay_kind = reg[cc].kind;
+            result.bits = reg[cc].bits;
+            result.s    = reg[cc].s;
+            result.slen = reg[cc].slen;
+            result.atom = reg[cc].atom;
+            result.atom_len = reg[cc].atom_len;
+            reg[a] = result;
             break;
-        case OP_UTAG:
+        }
+        case OP_UTAG: {
+            uint8_t tag;
             if (reg[b].kind != VK_UNION) {
                 vtrap(V, c, pc, "AXI-R004", "utag needs a union",
                       "only unions carry a tag");
                 return 0;
             }
-            reg[a] = VUNIT(); reg[a].kind = VK_U64; reg[a].bits = reg[b].aux;
+            tag = reg[b].aux;
+            reg[a] = VUNIT(); reg[a].kind = VK_U64; reg[a].bits = tag;
             break;
+        }
         case OP_UPAY:
             if (reg[b].kind != VK_UNION) {
                 vtrap(V, c, pc, "AXI-R004", "upay needs a union",
@@ -985,13 +1004,7 @@ static int run_cell_execute(vm *V, uint32_t ci, vval *reg, vval *ret,
                 return 0;
             }
             /* INV-322 / AXI-INV-104: value AND kind come back bit-exact. */
-            reg[a] = VUNIT();
-            reg[a].kind = reg[b].pay_kind;
-            reg[a].bits = reg[b].bits;
-            reg[a].s    = reg[b].s;
-            reg[a].slen = reg[b].slen;
-            reg[a].atom = reg[b].atom;
-            reg[a].atom_len = reg[b].atom_len;
+            reg[a] = union_payload(&reg[b]);
             break;
         case OP_UCHK:
             /* W13 — the `?` in one deterministic step: tag 0 (ok/some)
@@ -1006,13 +1019,7 @@ static int run_cell_execute(vm *V, uint32_t ci, vval *reg, vval *ret,
                 if (!contract_return_ok(V, c, pc, &reg[b])) return 0;
                 *ret = reg[b]; return 1;
             }
-            reg[a] = VUNIT();
-            reg[a].kind = reg[b].pay_kind;
-            reg[a].bits = reg[b].bits;
-            reg[a].s = reg[b].s;
-            reg[a].slen = reg[b].slen;
-            reg[a].atom = reg[b].atom;
-            reg[a].atom_len = reg[b].atom_len;
+            reg[a] = union_payload(&reg[b]);
             break;
         case OP_CALL: {
             if (b >= V->m->n) {
