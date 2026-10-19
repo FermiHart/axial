@@ -80,3 +80,24 @@ this execution host reports that LeakSanitizer cannot run under ptrace.
 
 **Limits.** This validates in-memory structure and byte framing; authenticity
 continues to belong to the existing explicitly trusted signed-v4 boundary.
+
+## W15 — effect evidence and grant-table boundary validation
+
+**Problem.** Ledger appends truncated long names, admitted empty identities and
+dereferenced null payload/digest arguments. Corrupt row counts could bypass
+reservation. Journal transitions could continue after evidence failure.
+Grant lookup could return a matching early entry before noticing an invalid
+or duplicate later entry. Direct ledger JSON interpolation did not escape
+quoted or control-character names.
+
+**Change.** Reject malformed receipt inputs before allocation or hashing,
+check ledger/journal storage shape, stop failed journal transitions, validate
+the complete grant table before mutation or lookup, and escape JSON names.
+
+**Evidence.** 734 checks pass, covering unchanged ledger tip/count on refusal,
+valid JSON output for quotes/newlines, malformed row counts, terminal journal
+transitions, sticky failure, duplicates and unterminated grant entries.
+
+**Limits.** Existing canonical production names serialize byte-identically.
+The grant set remains a fixed maximum of 32 entries; whole-table validation
+is intentional at the authority boundary.

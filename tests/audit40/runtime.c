@@ -1,6 +1,7 @@
 /* Audit40 runtime regressions. SPDX-License-Identifier: LicenseRef-SPL-1.0 */
 #include "axi_vm.h"
 #include "axi_replay.h"
+#include "axi_json.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -321,12 +322,78 @@ static void replay_bounds(void)
     axi_replay_free(&replay);
 }
 
+static void effect_records_and_grants(void)
+{
+    axi_ledger ledger;
+    axi_effect_journal journal;
+    axi_grants grants;
+    uint8_t root[32] = {0}, tip[32], digest[32] = {0};
+    char too_long[AXI_CAPNAME + 1], text[1024];
+    uint64_t attempt;
+    FILE *json;
+    size_t n;
+    axi_ledger_init(&ledger, root);
+    memcpy(tip, ledger.tip, sizeof tip);
+    memset(too_long, 'a', AXI_CAPNAME); too_long[AXI_CAPNAME] = 0;
+    CHECK(axi_ledger_append(&ledger, "", "audit", "abc", 3) != 0);
+    CHECK(axi_ledger_append(&ledger, too_long, "audit", "abc", 3) != 0);
+    CHECK(axi_ledger_append(&ledger, "io.Write", "audit", NULL, 1) != 0);
+    CHECK(axi_ledger_append_digest(&ledger, "io.Write", "audit", NULL, 1) != 0);
+    CHECK(ledger.n == 0 && ledger.cap == 0 && memcmp(tip, ledger.tip, 32) == 0);
+    CHECK(axi_ledger_append_digest(&ledger, "io.\"Write", "line\nbreak", digest, 3) == 0);
+    json = tmpfile();
+    CHECK(json != NULL);
+    if (json) {
+        axi_ledger_print_json(&ledger, json);
+        rewind(json);
+        n = fread(text, 1, sizeof text - 1, json); text[n] = 0;
+        CHECK(axi_json_validate(text, n) == 0);
+        CHECK(strstr(text, "io.\\\"Write") != NULL);
+        CHECK(strstr(text, "line\\u000abreak") != NULL);
+        fclose(json);
+    }
+    axi_ledger_free(&ledger);
+    ledger.n = 1;
+    CHECK(axi_ledger_prepare(&ledger) != 0);
+    ledger.n = 0;
+    axi_effect_journal_init(&journal, root);
+    CHECK(axi_effect_journal_begin(&journal, "io.Write", "audit", "a", 1,
+                                    &attempt) == 0);
+    CHECK(axi_effect_journal_attempt(&journal, attempt) == 0);
+    CHECK(axi_effect_journal_finish(&journal, attempt, 1, 1) == 0);
+    CHECK(axi_effect_journal_verify(&journal) == 0);
+    CHECK(axi_effect_journal_begin(&journal, "io.Write", "audit", NULL, 0,
+                                    &attempt) == 0);
+    journal.oom = 1;
+    CHECK(axi_effect_journal_attempt(&journal, attempt) != 0);
+    CHECK(axi_effect_journal_finish(&journal, attempt, 0, -1) != 0);
+    journal.oom = 0;
+    CHECK(axi_effect_journal_finish(&journal, attempt, 0, -1) == 0);
+    axi_effect_journal_free(&journal);
+    journal.n = 1;
+    CHECK(axi_effect_journal_begin(&journal, "io.Write", "audit", NULL, 0,
+                                    &attempt) != 0);
+    journal.n = 0;
+    axi_grants_init(&grants);
+    CHECK(axi_grants_add(&grants, "io.Write") == 0);
+    CHECK(axi_grants_has(&grants, "io.Write"));
+    CHECK(axi_grants_add(&grants, "io.Write") == -3);
+    grants.n = 2; memcpy(grants.name[1], grants.name[0], AXI_CAPNAME);
+    CHECK(!axi_grants_has(&grants, "io.Write"));
+    CHECK(axi_grants_add(&grants, "fs.Read") != 0);
+    memset(grants.name[1], 'x', AXI_CAPNAME);
+    CHECK(!axi_grants_has(&grants, "io.Write"));
+    CHECK(axi_grants_add(&grants, "fs.Read") != 0);
+    CHECK(grants.n == 2);
+}
+
 int main(void)
 {
     arithmetic_aliases();
     union_aliases();
     typed_equality();
     replay_bounds();
+    effect_records_and_grants();
     printf("audit40 runtime: %u checks, %u failures\n", checks, failures);
     return failures != 0;
 }

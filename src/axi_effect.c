@@ -28,9 +28,16 @@ static void effect_account_size_overflow(axi_mem_account *account)
     if (account) (void)axi_mem_alloc(account, (size_t)-1);
 }
 
+static size_t effect_name_len(const char *name)
+{
+    size_t n = 0;
+    if (name) while (n < AXI_CAPNAME && name[n]) n++;
+    return n;
+}
+
 static int effect_name_ok(const char *name)
 {
-    size_t n = name ? strlen(name) : 0;
+    size_t n = effect_name_len(name);
     return n > 0 && n < AXI_CAPNAME;
 }
 
@@ -83,6 +90,10 @@ static int journal_reserve(axi_effect_journal *J, uint32_t need)
     size_t bytes;
     axi_effect_journal_row *rows;
     if (!J || J->oom) return -1;
+    if (J->n > J->cap || (J->cap && !J->row)) {
+        J->oom = 1;
+        return -1;
+    }
     if (need > UINT32_MAX - J->n) {
         effect_account_size_overflow(J->account);
         J->oom = 1;
@@ -207,6 +218,7 @@ int axi_effect_journal_begin(axi_effect_journal *J, const char *cap,
 int axi_effect_journal_attempt(axi_effect_journal *J, uint64_t attempt)
 {
     if (!J || attempt == 0 || J->open_attempt != attempt
+            || J->oom || !J->row || J->n == 0 || J->n >= J->cap
             || J->open_state != AXI_JOURNAL_PREPARED) return -1;
     journal_append(J, attempt, AXI_JOURNAL_ATTEMPTED, 0, NULL);
     J->open_state = AXI_JOURNAL_ATTEMPTED;
@@ -218,6 +230,8 @@ int axi_effect_journal_finish(axi_effect_journal *J, uint64_t attempt,
 {
     uint8_t state;
     if (!J || attempt == 0 || J->open_attempt != attempt
+            || J->oom || !J->row || J->n == 0 || J->n >= J->cap
+            || (J->open_state == AXI_JOURNAL_ATTEMPTED && J->n < 2)
             || (J->open_state != AXI_JOURNAL_PREPARED
                 && J->open_state != AXI_JOURNAL_ATTEMPTED)
             || (committed != 0 && committed != 1)
@@ -237,6 +251,8 @@ int axi_effect_journal_finish_effect(axi_effect_journal *J, uint64_t attempt,
     uint8_t state;
     int64_t outcome;
     if (!J || attempt == 0 || J->open_attempt != attempt
+            || J->oom || !J->row || J->n == 0 || J->n >= J->cap
+            || (J->open_state == AXI_JOURNAL_ATTEMPTED && J->n < 2)
             || !ctx || (J->open_state != AXI_JOURNAL_PREPARED
                 && J->open_state != AXI_JOURNAL_ATTEMPTED)) return -1;
     outcome = ctx->host_outcome;
@@ -387,8 +403,8 @@ void axi_grants_init(axi_grants *g)
 
 int axi_grants_add(axi_grants *g, const char *name)
 {
-    size_t l = name ? strlen(name) : 0;
-    if (!g || g->n < 0 || g->n > AXI_CAP_MAX) return -1;
+    size_t l = effect_name_len(name);
+    if (axi_grants_verify(g) != 0) return -1;
     if (l == 0 || l >= AXI_CAPNAME) return -2;
     if (g->n >= AXI_CAP_MAX)        return -1;
     for (int i = 0; i < g->n; i++)
@@ -400,7 +416,7 @@ int axi_grants_add(axi_grants *g, const char *name)
 
 int axi_grants_has(const axi_grants *g, const char *name)
 {
-    if (!g || !name || g->n < 0 || g->n > AXI_CAP_MAX) return 0;
+    if (!effect_name_ok(name) || axi_grants_verify(g) != 0) return 0;
     for (int i = 0; i < g->n; i++)
         if (strcmp(g->name[i], name) == 0) return 1;
     return 0;
@@ -660,6 +676,10 @@ int axi_ledger_prepare(axi_ledger *L)
 {
     size_t bytes;
     if (!L || L->oom) return -1;
+    if (L->n > L->cap || (L->cap && !L->row)) {
+        L->oom = 1;
+        return -1;
+    }
     if (L->n == L->cap) {
         uint32_t capacity;
         axi_ledger_row *rows;
@@ -710,6 +730,8 @@ int axi_ledger_append(axi_ledger *L, const char *cap, const char *cell,
                       const void *payload, size_t len)
 {
     uint8_t digest[32];
+    if ((!payload && len) || !effect_name_ok(cap) || !effect_name_ok(cell))
+        return -1;
     axi_sha256(payload, len, digest);
     return axi_ledger_append_digest(L, cap, cell, digest, (uint64_t)len);
 }
@@ -717,13 +739,13 @@ int axi_ledger_append(axi_ledger *L, const char *cap, const char *cell,
 int axi_ledger_append_digest(axi_ledger *L, const char *cap, const char *cell,
                              const uint8_t digest[32], uint64_t nbytes)
 {
+    size_t cl = effect_name_len(cap), el = effect_name_len(cell);
+    if (!digest || cl == 0 || cl >= AXI_CAPNAME || el == 0 || el >= AXI_CAPNAME)
+        return -1;
     if (axi_ledger_prepare(L) != 0) return -1;
     axi_ledger_row *r = &L->row[L->n];
     memset(r, 0, sizeof *r);
     r->seq = (uint64_t)L->n + 1;
-    size_t cl = strlen(cap), el = strlen(cell);
-    if (cl >= AXI_CAPNAME) cl = AXI_CAPNAME - 1;
-    if (el >= AXI_CAPNAME) el = AXI_CAPNAME - 1;
     memcpy(r->cap,  cap,  cl);
     memcpy(r->cell, cell, el);
     r->nbytes = nbytes;
@@ -758,16 +780,38 @@ void axi_ledger_print(const axi_ledger *L, FILE *out)
             L->n == 1 ? "row" : "rows");
 }
 
+static void ledger_json_string(FILE *out, const char *value)
+{
+    const unsigned char *p = (const unsigned char *)value;
+    fputc('"', out);
+    for (; *p; p++) {
+        if (*p == '"' || *p == '\\') {
+            fputc('\\', out);
+            fputc(*p, out);
+        } else if (*p < 0x20 || *p >= 0x7f) {
+            fprintf(out, "\\u%04x", (unsigned)*p);
+        } else fputc(*p, out);
+    }
+    fputc('"', out);
+}
+
 void axi_ledger_print_json(const axi_ledger *L, FILE *out)
 {
     char h[65];
+    if (!L || !out || L->n > L->cap || (L->n && !L->row)) return;
+    for (uint32_t i = 0; i < L->n; i++)
+        if (!memchr(L->row[i].cap, '\0', AXI_CAPNAME)
+                || !memchr(L->row[i].cell, '\0', AXI_CAPNAME)) return;
     fputs("{\"ledger\":[", out);
     for (uint32_t i = 0; i < L->n; i++) {
         const axi_ledger_row *r = &L->row[i];
         hex32(r->digest, h);
-        fprintf(out, "%s{\"seq\":%llu,\"cap\":\"%s\",\"cell\":\"%s\","
-                     "\"bytes\":%llu,\"digest\":\"%s\"}",
-                i ? "," : "", (unsigned long long)r->seq, r->cap, r->cell,
+        fprintf(out, "%s{\"seq\":%llu,\"cap\":", i ? "," : "",
+                (unsigned long long)r->seq);
+        ledger_json_string(out, r->cap);
+        fputs(",\"cell\":", out);
+        ledger_json_string(out, r->cell);
+        fprintf(out, ",\"bytes\":%llu,\"digest\":\"%s\"}",
                 (unsigned long long)r->nbytes, h);
     }
     /* The root goes on the page. Without it a reader can recompute nothing:
