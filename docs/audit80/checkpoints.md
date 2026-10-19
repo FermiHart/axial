@@ -58,3 +58,39 @@ goldens de runtime permaneceram idênticos nesta árvore. A dependência do
 runner isolado de strings foi atualizada para os módulos de ownership,
 mantendo a compilação real do decoder. Identidade regenerada para 124
 arquivos de produto e pins ABI v1 válidos. Execução segue para W61–W80.
+
+## Checkpoint W70 — 30 de 40 waves adicionais
+
+A cota de compilação agora acompanha montagem, manifestos, hashes,
+assinatura e publicação atômica. Os onze comandos de compilador aceitam
+`--compile-mem BYTES` e relatório JSON; uma recusa preserva o arquivo de
+destino e limpa a conta. A revisão integrou também argumentos cujo valor
+coincide com o nome de uma opção, sem consumir argumentos do runtime.
+
+A conversão decimal usa aritmética inteira e arredondamento nearest/even;
+a forma canônica deriva dos bits, inclusive subnormais e o sinal do zero.
+Não depende de locale, arredondamento corrente ou buffers alocados no heap.
+O workspace numérico tem 2.372 bytes nesta plataforma; sua reserva na cota
+das fases será consolidada na W77. O runtime conserva seu contrato próprio
+de normalizar zero ao avaliar valores.
+
+Validação da árvore integrada:
+
+- `make -j2 gate`: PASS no host, com os testes anteriores e 201 checks C
+  de orçamento mais 3.385 asserts CLI / 413 pontos de OOM injetado.
+- W51–W56: todos os casos fonte → checker → bytecode assinado → VM PASS.
+- Numéricos: 3.785 entradas no leitor e novamente no lexer real; 8.318
+  padrões canônicos com oráculo racional; 46 casos pela CLI; caudas de
+  1 MiB e 12 combinações de locale/rounding disponíveis neste ambiente:
+  PASS. A validação ampliada da frente, com locales de vírgula e
+  ASan/UBSan, está registrada em [frontend.md](frontend.md).
+- Runtime: 384 resultados/fuel em 12 famílias e 489 checks do ciclo de
+  contexto, incluindo 120 recusas de alocação: PASS.
+- Identidade regenerada para 126 arquivos de produto; pins ABI v1 válidos.
+
+O novo ponteiro interno de ownership do módulo custa oito bytes por
+instância; o golden de pico observado aumenta 32 bytes quando há cópias
+simultâneas. A ABI pública e o formato serializado permanecem compatíveis.
+Os ganhos de conversão são microbenchmarks com a implementação exata
+anterior como base, documentados em [frontend.md](frontend.md). A execução
+segue automaticamente para a integração e validação final W71–W80.
