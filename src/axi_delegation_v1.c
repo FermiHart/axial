@@ -1,6 +1,7 @@
 #include "axi_delegation_v1.h"
 
 #include "axi_hash.h"
+#include "axi_wipe.h"
 #include "ed25519.h"
 
 #include <string.h>
@@ -161,12 +162,13 @@ int axi_delegation_v1_encode(const axi_delegation_v1 *d,
     return p == out + AXI_DELEGATION_V1_BODY_SIZE ? 0 : -1;
 }
 
-int axi_delegation_v1_decode(axi_delegation_v1 *d,
+int axi_delegation_v1_decode(axi_delegation_v1 *out,
                              const uint8_t *bytes, size_t len)
 {
+    axi_delegation_v1 parsed, *d = &parsed;
     dlg_reader r = {bytes, len, 0, 0};
     size_t i;
-    if (!d || !bytes || len != AXI_DELEGATION_V1_BODY_SIZE
+    if (!out || !bytes || len != AXI_DELEGATION_V1_BODY_SIZE
             || memcmp(rd(&r, 4), AXI_DELEGATION_V1_MAGIC, 4) != 0
             || rd_u32(&r) != AXI_DELEGATION_V1_VERSION)
         return -1;
@@ -186,7 +188,9 @@ int axi_delegation_v1_decode(axi_delegation_v1 *d,
     d->ncap = rd_u8(&r);
     for (i = 0; i < AXI_DELEGATION_V1_MAX_CAPS; i++)
         rd_bytes(&r, d->caps[i], AXI_DELEGATION_V1_CAPNAME);
-    return !r.err && r.off == len && delegation_valid(d) ? 0 : -1;
+    if (r.err || r.off != len || !delegation_valid(d)) return -1;
+    *out = parsed;
+    return 0;
 }
 
 void axi_delegation_v1_root(const axi_delegation_v1 *d, uint8_t out[32])
@@ -223,10 +227,10 @@ int axi_delegation_v1_encode_signed(const axi_delegation_v1 *d,
     ed25519_keypair_from_seed(seed, out + AXI_DELEGATION_V1_BODY_SIZE + 8, sk);
     signature_message(out, msg);
     if (ed25519_sign(out + AXI_DELEGATION_V1_BODY_SIZE + 40, msg, sizeof msg, sk) != 0) {
-        memset(sk, 0, sizeof sk);
+        axi_private_wipe(sk, sizeof sk);
         return -1;
     }
-    memset(sk, 0, sizeof sk);
+    axi_private_wipe(sk, sizeof sk);
     return 0;
 }
 

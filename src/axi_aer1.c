@@ -1,5 +1,6 @@
 #include "axi_aer1.h"
 #include "axi_hash.h"
+#include "axi_wipe.h"
 #include "ed25519.h"
 
 #include <string.h>
@@ -124,10 +125,11 @@ int axi_aer1_encode(const axi_aer1 *receipt,
     return p == out + AXI_AER1_ENCODED_SIZE ? 0 : -1;
 }
 
-int axi_aer1_decode(axi_aer1 *receipt, const uint8_t *bytes, size_t len)
+int axi_aer1_decode(axi_aer1 *out, const uint8_t *bytes, size_t len)
 {
+    axi_aer1 parsed, *receipt = &parsed;
     const uint8_t *p = bytes;
-    if (!receipt || !bytes || len != AXI_AER1_ENCODED_SIZE
+    if (!out || !bytes || len != AXI_AER1_ENCODED_SIZE
             || memcmp(p, "AER1", 4) != 0) return -1;
     p += 4;
     if (get32(&p) != 1) return -1;
@@ -163,7 +165,9 @@ int axi_aer1_decode(axi_aer1 *receipt, const uint8_t *bytes, size_t len)
     receipt->resources.output_bytes = get64(&p);
     receipt->resources.handles = get64(&p);
     receipt->resources.children = get64(&p);
-    return p == bytes + len && aer1_valid(receipt) ? 0 : -1;
+    if (p != bytes + len || !aer1_valid(receipt)) return -1;
+    *out = parsed;
+    return 0;
 }
 
 void axi_aer1_root(const axi_aer1 *receipt, uint8_t root[32])
@@ -201,7 +205,7 @@ int axi_aer1_encode_signed(const axi_aer1 *receipt, const uint8_t seed[32],
     if (ed25519_sign(out + AXI_AER1_ENCODED_SIZE + 40, message,
                      (uint32_t)sizeof message, secret) == 0)
         rc = 0;
-    memset(secret, 0, sizeof secret);
+    axi_private_wipe(secret, sizeof secret);
     return rc;
 }
 

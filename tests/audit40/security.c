@@ -2,6 +2,11 @@
 #include "axi_trust_v1.h"
 #include "axi_hash.h"
 #include "axi_time_lease_v1.h"
+#include "axi_aer1.h"
+#include "axi_aer1_verify.h"
+#include "axi_aer2_v1.h"
+#include "axi_delegation_v1.h"
+#include "ed25519.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -128,11 +133,90 @@ static void w23(void)
     CHECK(axi_lease1_reserve(&s, l.quota_unit[1], 0) == -1);
 }
 
+static void sign_body(uint8_t *bytes, size_t body_len, const char *domain,
+                       const uint8_t sk[64])
+{
+    uint8_t msg[160];
+    size_t dom_len = strlen(domain) + 1;
+    CHECK(dom_len + 32 <= sizeof msg);
+    memcpy(msg, domain, dom_len);
+    axi_sha256(bytes, body_len, msg + dom_len);
+    CHECK(ed25519_sign(bytes + body_len + 40, msg,
+                       (uint32_t)(dom_len + 32), sk) == 0);
+}
+
+static void delegation_fixture(axi_delegation_v1 *d)
+{
+    memset(d, 0, sizeof *d);
+    d->parent_kind = AXI_DELEGATION_V1_PARENT_AG1;
+    d->parent_root[0] = 1; d->delegator_root[0] = 2;
+    d->delegatee_root[0] = 3; d->trust_snapshot_root[0] = 4;
+    d->issuer_key_id[0] = 5; d->branch_nonce[0] = 6;
+    d->depth = 1; d->remaining_depth = 31; d->not_after = 100;
+    d->budget[0] = 100; d->ncap = 1; strcpy(d->caps[0], "fs.Write");
+}
+
+static void w24(void)
+{
+    axi_aer1 a1, got1, saved1;
+    axi_aer2_v1 a2, got2, saved2;
+    axi_delegation_v1 d, gotd, savedd;
+    uint8_t b1[AXI_AER1_SIGNED_SIZE], b2[AXI_AER2_V1_SIGNED_SIZE];
+    uint8_t bd[AXI_DELEGATION_V1_SIGNED_SIZE];
+    uint8_t seed[32] = {1, 2, 3}, pk[32], sk[64];
+    size_t n;
+    ed25519_keypair_from_seed(seed, pk, sk);
+    memset(&a1, 0, sizeof a1);
+    a1.profile = AXI_AER1_PROFILE_DEV; a1.opacity = AXI_AER1_OPACITY_CLEAR;
+    a1.maturity = AXI_AER1_MATURITY_DEV; a1.has_artifact_root = 1;
+    a1.principal_root[0] = 1; a1.artifact_root[0] = 2;
+    a1.action_root[0] = 3; a1.budget_root[0] = 4;
+    CHECK(axi_aer1_encode_signed(&a1, seed, b1) == 0);
+    CHECK(axi_aer1_decode_signed(&got1, b1, sizeof b1, pk) == 0);
+    CHECK(axi_aer1_verify_signed(&got1, b1, sizeof b1, pk) == 0);
+    CHECK(memcmp(&got1, &a1, sizeof a1) == 0);
+    memset(&got1, 0xa5, sizeof got1); saved1 = got1;
+    for (n = 0; n < sizeof b1; n++) {
+        CHECK(axi_aer1_decode_signed(&got1, b1, n, pk) == -1);
+        CHECK(memcmp(&got1, &saved1, sizeof got1) == 0);
+    }
+    b1[8] = 255; sign_body(b1, AXI_AER1_ENCODED_SIZE, AXI_AER1_SIG_DOMAIN, sk);
+    CHECK(axi_aer1_decode_signed(&got1, b1, sizeof b1, pk) == -1);
+    CHECK(memcmp(&got1, &saved1, sizeof got1) == 0);
+    CHECK(axi_aer1_verify_signed(&got1, b1, sizeof b1, pk) == -1);
+    CHECK(memcmp(&got1, &saved1, sizeof got1) == 0);
+    memset(&a2, 0, sizeof a2);
+    a2.profile = AXI_AER2_V1_PROFILE_DEV; a2.opacity = AXI_AER2_V1_OPACITY_CLEAR;
+    a2.maturity = AXI_AER2_V1_MATURITY_DEV; a2.has_artifact_root = 1;
+    a2.principal_root[0] = 1; a2.artifact_root[0] = 2;
+    a2.action_root[0] = 3; a2.budget_root[0] = 4;
+    CHECK(axi_aer2_v1_encode_signed(&a2, seed, b2) == 0);
+    CHECK(axi_aer2_v1_decode_signed(&got2, b2, sizeof b2, pk) == 0);
+    CHECK(axi_aer2_v1_verify_signed(&got2, b2, sizeof b2, pk) == 0);
+    CHECK(memcmp(&got2, &a2, sizeof a2) == 0);
+    memset(&got2, 0xa5, sizeof got2); saved2 = got2;
+    b2[8] = 255; sign_body(b2, AXI_AER2_V1_BODY_SIZE, AXI_AER2_V1_SIG_DOMAIN, sk);
+    CHECK(axi_aer2_v1_decode_signed(&got2, b2, sizeof b2, pk) == -1);
+    CHECK(memcmp(&got2, &saved2, sizeof got2) == 0);
+    CHECK(axi_aer2_v1_verify_signed(&got2, b2, sizeof b2, pk) == -1);
+    CHECK(memcmp(&got2, &saved2, sizeof got2) == 0);
+    delegation_fixture(&d);
+    CHECK(axi_delegation_v1_encode_signed(&d, seed, bd) == 0);
+    CHECK(axi_delegation_v1_decode_signed(&gotd, bd, sizeof bd, pk) == 0);
+    CHECK(memcmp(&gotd, &d, sizeof d) == 0);
+    memset(&gotd, 0xa5, sizeof gotd); savedd = gotd;
+    bd[8] = 255; sign_body(bd, AXI_DELEGATION_V1_BODY_SIZE,
+                           AXI_DELEGATION_V1_SIG_DOMAIN, sk);
+    CHECK(axi_delegation_v1_decode_signed(&gotd, bd, sizeof bd, pk) == -1);
+    CHECK(memcmp(&gotd, &savedd, sizeof gotd) == 0);
+}
+
 int main(int argc, char **argv)
 {
     if (argc == 1 || strcmp(argv[1], "W21") == 0) w21();
     if (argc == 1 || strcmp(argv[1], "W22") == 0) w22();
     if (argc == 1 || strcmp(argv[1], "W23") == 0) w23();
+    if (argc == 1 || strcmp(argv[1], "W24") == 0) w24();
     printf("audit40 security: %u checks passed\n", checks);
     return 0;
 }
