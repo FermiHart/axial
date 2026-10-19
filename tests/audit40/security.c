@@ -8,6 +8,7 @@
 #include "axi_delegation_v1.h"
 #include "axi_local_attempt_v1.h"
 #include "axi_local_epoch_v1.h"
+#include "axi_selective_disclosure_v1.h"
 #include "ed25519.h"
 
 #include <stdio.h>
@@ -332,6 +333,61 @@ static void w26(void)
     CHECK(rmdir(records) == 0); CHECK(rmdir(directory) == 0);
 }
 
+static void chain_fixture(axi_delegation_v1 chain[AXI_DELEGATION_V1_MAX_DEPTH],
+                          axi_delegation_v1_authority *root,
+                          axi_delegation_v1_authority *leaf)
+{
+    axi_delegation_v1_authority parent;
+    size_t i;
+    memset(root, 0, sizeof *root);
+    root->root[0] = 1; root->principal_root[0] = 2;
+    root->trust_snapshot_root[0] = 4; root->remaining_depth = AXI_DELEGATION_V1_MAX_DEPTH;
+    root->not_after = 100; root->budget[0] = 100;
+    root->ncap = 1; strcpy(root->caps[0], "fs.Write");
+    parent = *root;
+    for (i = 0; i < AXI_DELEGATION_V1_MAX_DEPTH; i++) {
+        delegation_fixture(&chain[i]);
+        chain[i].parent_kind = i ? AXI_DELEGATION_V1_PARENT_DELEGATION
+                                 : AXI_DELEGATION_V1_PARENT_AG1;
+        memcpy(chain[i].parent_root, parent.root, 32);
+        memcpy(chain[i].delegator_root, parent.principal_root, 32);
+        chain[i].delegatee_root[0] = (uint8_t)(3 + i);
+        chain[i].branch_nonce[0] = (uint8_t)(i + 1);
+        chain[i].depth = (uint32_t)i + 1;
+        chain[i].remaining_depth = AXI_DELEGATION_V1_MAX_DEPTH - (uint32_t)i - 1;
+        chain[i].budget[0] = 100 - i;
+        CHECK(axi_delegation_v1_verify(&chain[i], &parent, leaf) == 0);
+        parent = *leaf;
+    }
+}
+
+static void w28(void)
+{
+    axi_sd1_leaf leaf, saved;
+    uint8_t tag[32] = {1}, salt[32] = {2}, expected[32];
+    axi_delegation_v1 chain[AXI_DELEGATION_V1_MAX_DEPTH];
+    axi_delegation_v1_authority root, wanted, got, saved_authority;
+    CHECK(axi_sd1_commit_field(AXI_SD1_PROTECTED, 1, tag, 7, salt,
+                               (const uint8_t *)"secret", 6, expected) == 0);
+    CHECK(axi_sd1_make_leaf(&leaf, AXI_SD1_PROTECTED, 1, tag, 7, salt,
+                            (const uint8_t *)"secret", 6) == 0);
+    CHECK(memcmp(leaf.commitment, expected, 32) == 0);
+    CHECK(axi_sd1_verify_disclosure(&leaf, salt, (const uint8_t *)"secret", 6) == 0);
+    CHECK(axi_sd1_make_leaf(&leaf, AXI_SD1_PROTECTED, 1, leaf.field_tag, 7, salt,
+                            (const uint8_t *)"secret", 6) == 0);
+    CHECK(memcmp(leaf.commitment, expected, 32) == 0);
+    saved = leaf; memset(tag, 0, 32);
+    CHECK(axi_sd1_make_leaf(&leaf, AXI_SD1_PROTECTED, 1, tag, 7, salt,
+                            (const uint8_t *)"secret", 6) == -1);
+    CHECK(memcmp(&leaf, &saved, sizeof leaf) == 0);
+    chain_fixture(chain, &root, &wanted);
+    CHECK(axi_delegation_v1_verify_chain(chain, AXI_DELEGATION_V1_MAX_DEPTH, &root, &got) == 0);
+    CHECK(memcmp(&got, &wanted, sizeof got) == 0);
+    saved_authority = got; chain[31].delegator_root[0] ^= 1;
+    CHECK(axi_delegation_v1_verify_chain(chain, AXI_DELEGATION_V1_MAX_DEPTH, &root, &got) == -1);
+    CHECK(memcmp(&got, &saved_authority, sizeof got) == 0);
+}
+
 int main(int argc, char **argv)
 {
     if (argc == 1 || strcmp(argv[1], "W21") == 0) w21();
@@ -340,6 +396,7 @@ int main(int argc, char **argv)
     if (argc == 1 || strcmp(argv[1], "W24") == 0) w24();
     if (argc == 1 || strcmp(argv[1], "W25") == 0) w25();
     if (argc == 1 || strcmp(argv[1], "W26") == 0) w26();
+    if (argc == 1 || strcmp(argv[1], "W28") == 0) w28();
     printf("audit40 security: %u checks passed\n", checks);
     return 0;
 }

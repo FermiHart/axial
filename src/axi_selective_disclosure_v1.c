@@ -67,17 +67,20 @@ int axi_sd1_make_leaf(axi_sd1_leaf *leaf, uint8_t class_id, uint8_t type_id,
                       const uint8_t salt[32],
                       const uint8_t *value, uint64_t value_len)
 {
+    axi_sd1_leaf staged;
+    memset(&staged, 0, sizeof staged);
     if (!leaf || axi_sd1_commit_field(class_id, type_id, field_tag, index, salt,
-                                      value, value_len, leaf->commitment) != 0)
+                                      value, value_len, staged.commitment) != 0)
         return -1;
-    memset(leaf, 0, sizeof *leaf);
-    leaf->class_id = class_id;
-    leaf->type_id = type_id;
-    memcpy(leaf->field_tag, field_tag, 32);
-    leaf->index = index;
-    leaf->value_len = value_len;
-    return axi_sd1_commit_field(class_id, type_id, field_tag, index, salt,
-                                value, value_len, leaf->commitment);
+    staged.class_id = class_id;
+    staged.type_id = type_id;
+    memcpy(staged.field_tag, field_tag, 32);
+    staged.index = index;
+    staged.value_len = value_len;
+    /* Publish once: inputs may refer to the previous leaf, and the
+     * potentially large value needs to be hashed only once. */
+    *leaf = staged;
+    return 0;
 }
 
 int axi_sd1_verify_disclosure(const axi_sd1_leaf *leaf,
