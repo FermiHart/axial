@@ -14,5 +14,6 @@ before/after reproductions; test sources always come from this audited tree.
 | Wave | Finding and change | Regression evidence | Limit |
 | --- | --- | --- | --- |
 | W21 | TRS1 passed a NULL bounded-reader result to `memcmp` for 1–3-byte inputs. Require the eight-byte magic/version prefix and defend reader subtraction. | Pristine ASan/UBSan reports NULL argument and SEGV in `parse_snapshot`; fixed parser rejects all tested short prefixes (17 checks). | Bounds supplied to C APIs still describe caller-owned accessible memory. |
+| W22 | A correctly linked successor could switch organization/time domain or wrap the sequence to zero. Bind both identities, reject exhausted sequences, and require a present predecessor to be nonzero. | Reproduced cross-organization acceptance before the fix. Canonical successor passes; all 472 truncations, appended data, identity swaps, skipped/wrapped sequence, and revoked-key rollback refuse. | A snapshot digest or valid transition is not authentication of the snapshot source. |
 
 Further waves are recorded here with their concrete results as completed.

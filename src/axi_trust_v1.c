@@ -184,7 +184,9 @@ static int parse_snapshot(trust_snapshot *s, const uint8_t *bytes, size_t len)
     s->valid_until = rd_u64(&r);
     ni = rd_u16(&r); nk = rd_u16(&r); ng = rd_u16(&r);
     np = rd_u16(&r); nr = rd_u16(&r);
-    if (r.err || s->has_predecessor > 1 || (!s->has_predecessor && !root_zero(s->predecessor_root))
+    if (r.err || s->has_predecessor > 1
+            || (s->has_predecessor ? root_zero(s->predecessor_root)
+                                   : !root_zero(s->predecessor_root))
             || root_zero(s->org_id) || root_zero(s->time_domain)
             || s->valid_from >= s->valid_until
             || ni == 0 || ni > AXI_TRUST_V1_MAX_IDENTITIES
@@ -318,6 +320,9 @@ int axi_trust_v1_check_transition(const uint8_t *previous, size_t previous_len,
         return -1;
     axi_sha256(previous, previous_len, prev_root);
     if (!cur.has_predecessor || memcmp(cur.predecessor_root, prev_root, 32) != 0
+            || memcmp(cur.org_id, prev.org_id, 32) != 0
+            || memcmp(cur.time_domain, prev.time_domain, 32) != 0
+            || prev.sequence == UINT64_MAX
             || cur.sequence != prev.sequence + 1)
         return -1;
     for (i = 0; i < prev.nrevocations; i++) {
