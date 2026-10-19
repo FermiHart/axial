@@ -441,6 +441,51 @@ static void replay_effect_refusal(void)
     axi_replay_free(&replay);
 }
 
+static void resource_transactions(void)
+{
+    axi_resource_envelope resources;
+    axi_resource_vector ceiling = {UINT64_MAX, UINT64_MAX, UINT64_MAX,
+                                    UINT64_MAX, UINT64_MAX};
+    axi_resource_vector amount = {2, 3, 4, 1, 2}, excessive;
+    axi_resource_vector saved_spent, saved_reserved;
+    axi_mem_account owner, wrong_owner;
+    void *output;
+    axi_resource_envelope_init(&resources, &ceiling, 100, fixed_now, NULL);
+    CHECK(axi_resource_reserve(&resources, &amount) == AXI_RESOURCE_OK);
+    CHECK(axi_resource_commit(&resources, &resources.reserved,
+                              &resources.reserved) == AXI_RESOURCE_OK);
+    CHECK(resources.spent.calls == 2 && resources.spent.input_bytes == 3
+          && resources.spent.output_bytes == 4 && resources.spent.children == 2
+          && resources.spent.handles == 1 && resources.live_handles == 1);
+    CHECK(resources.reserved.calls == 0 && resources.reserved.handles == 0
+          && axi_resource_envelope_valid(&resources));
+    CHECK(axi_resource_reserve(&resources, &amount) == AXI_RESOURCE_OK);
+    saved_spent = resources.spent; saved_reserved = resources.reserved;
+    excessive = amount; excessive.output_bytes++;
+    CHECK(axi_resource_commit(&resources, &amount, &excessive) == AXI_RESOURCE_CORRUPT);
+    CHECK(memcmp(&saved_spent, &resources.spent, sizeof saved_spent) == 0);
+    CHECK(memcmp(&saved_reserved, &resources.reserved, sizeof saved_reserved) == 0);
+    CHECK(axi_resource_release(&resources, &resources.reserved) == AXI_RESOURCE_CORRUPT);
+    CHECK(resources.reserved.calls == 0 && resources.reserved.output_bytes == 0);
+    CHECK(axi_resource_handle_closed(&resources) == AXI_RESOURCE_CORRUPT);
+    CHECK(resources.live_handles == 0);
+    axi_mem_account_init(&owner, 65536);
+    axi_mem_account_init(&wrong_owner, 65536);
+    output = axi_resource_output_alloc(&resources, &owner, 8);
+    CHECK(output != NULL);
+    CHECK(!axi_resource_outputs_free(&resources, &wrong_owner));
+    CHECK(resources.owned_output_count == 1 && resources.owned_outputs[0] == output
+          && owner.live > 0);
+    CHECK(axi_resource_outputs_free(&resources, &owner));
+    CHECK(resources.owned_output_count == 0 && owner.live == 0 && owner.active_count == 0);
+    resources.owned_output_count = AXI_RESOURCE_MAX_OWNED_OUTPUTS + 1;
+    CHECK(!axi_resource_outputs_free(&resources, &owner));
+    CHECK(!axi_resource_envelope_valid(&resources));
+    resources.owned_output_count = 0;
+    resources.live_handles = 2; resources.spent.handles = 1;
+    CHECK(!axi_resource_envelope_valid(&resources));
+}
+
 static int worker_exit_without_frame(void *opaque)
 {
     int *marker = opaque;
@@ -490,6 +535,7 @@ int main(int argc, char **argv)
     replay_bounds();
     effect_records_and_grants();
     replay_effect_refusal();
+    resource_transactions();
     printf("audit40 runtime: %u checks, %u failures\n", checks, failures);
     return failures != 0;
 }

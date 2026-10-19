@@ -125,3 +125,28 @@ had written before its signing refusal.
 **Environment.** This sandbox returns EPERM for worker socket sends. That is
 not a normal-host fsync defect; positive worker tests were run through the
 authorized unsandboxed local-test door. No network endpoint was contacted.
+
+## W17 — resource transaction aliasing and lifetime exhaustion
+
+**Problem.** Committing an envelope's own reserved vector as both reservation
+and actual usage zeroed it before charging the spend. Output cleanup removed
+ownership pointers even when the supplied memory account refused to free
+them. Malformed output counts could read beyond the fixed ownership table.
+Handle generation wrapped after UINT32_MAX, making stale identities reusable.
+
+**Change.** Snapshot resource-commit inputs, validate the envelope before the
+transaction, preserve ownership on failed cleanup, bound cleanup counts and
+live-handle accounting, and saturate generation allocation with a refusal at
+exhaustion. The 64-bit handle format stays unchanged.
+
+**Evidence.** 766 runtime checks pass, including aliased commits, all-or-none
+refusal, cleanup under a wrong account followed by successful owner cleanup,
+malformed ownership counts and impossible live-handle totals.
+`tests/audit40/runtime_handles.c` separately positions the private counter at
+its final two generations and confirms that exhaustion never revives stale
+handles or changes the caller's output. Compile it standalone with `-Isrc`;
+it deliberately includes the handle implementation for boundary setup.
+
+**Limits.** After 4,294,967,295 process-wide generations, creating a new handle
+fails safely. Applications requiring a larger lifetime need a separately
+versioned handle representation; this audit does not change that format.
