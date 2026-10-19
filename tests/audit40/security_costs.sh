@@ -15,8 +15,13 @@ for audit_src in axi_selective_disclosure_v1 axi_delegation_v1; do
         -Daxi_sha256=audit_count_hash -c "$audit_source/src/$audit_src.c" -o "$audit_build/costs/$audit_src.o"
     set -- "$@" "$audit_build/costs/$audit_src.o"
 done
+# shellcheck disable=SC2086
+"$audit_cc" $audit_flags -I"$audit_source/src" -I"$audit_source/include" -I"$audit_source/vendor" \
+    -Dmemcmp=audit_count_compare -Dmalloc=audit_count_malloc \
+    -c "$audit_source/src/axi_rf1_pin_v1.c" -o "$audit_build/costs/axi_rf1_pin_v1.o"
+set -- "$@" "$audit_build/costs/axi_rf1_pin_v1.o"
 for audit_object in "$audit_build"/*.o; do
-    case "$audit_object" in */axi_selective_disclosure_v1.o|*/axi_delegation_v1.o|*/security.o) continue ;; esac
+    case "$audit_object" in */axi_selective_disclosure_v1.o|*/axi_delegation_v1.o|*/axi_rf1_pin_v1.o|*/security.o) continue ;; esac
     set -- "$@" "$audit_object"
 done
 # shellcheck disable=SC2086

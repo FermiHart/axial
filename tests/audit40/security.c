@@ -9,6 +9,7 @@
 #include "axi_local_attempt_v1.h"
 #include "axi_local_epoch_v1.h"
 #include "axi_selective_disclosure_v1.h"
+#include "axi_rf1_pin_v1.h"
 #include "ed25519.h"
 
 #include <stdio.h>
@@ -388,6 +389,56 @@ static void w28(void)
     CHECK(memcmp(&got, &saved_authority, sizeof got) == 0);
 }
 
+static size_t rf_fixture(char *bytes, size_t capacity, unsigned records)
+{
+    size_t off = 6;
+    unsigned i;
+    memcpy(bytes, "RF1\t1\n", 6);
+    for (i = 0; i < records; i++) {
+        int n = snprintf(bytes + off, capacity - off, "root\t%06u\tv\n", records - i);
+        CHECK(n > 0 && (size_t)n < capacity - off);
+        off += (size_t)n;
+    }
+    return off;
+}
+
+static void w29(void)
+{
+    char bytes[AXI_RF1_PIN_V1_MAX_BYTES + 1];
+    uint8_t image[sizeof("BEYOND-RF1") + AXI_RF1_PIN_V1_MAX_BYTES], expected[32];
+    axi_rf1_pin_v1 out;
+    const char *bad[] = {"RF1\t1\n", "RF1\t1\nroot\ta\tb", "RF1\t1\nroot\ta\tb\n\n",
+                         "RF1\t1\nroot\t\tb\n", "RF1\t1\nwat\ta\tb\n",
+                         "RF1\t1\nunknown\ta\tb\tc\nroot\ta\tb\n"};
+    size_t n, i;
+    unsigned trial;
+    for (i = 0; i < sizeof bad / sizeof bad[0]; i++)
+        CHECK(axi_rf1_pin_v1_parse(bad[i], strlen(bad[i]), &out) == AXI_RF1_PIN_V1_REFUSED);
+    for (trial = 1; trial <= 128; trial++) {
+        n = rf_fixture(bytes, sizeof bytes, trial);
+        CHECK(axi_rf1_pin_v1_parse(bytes, n, &out) == AXI_RF1_PIN_V1_OK);
+        CHECK(out.records == trial && out.unknowns == 0);
+        memcpy(image, "BEYOND-RF1", sizeof("BEYOND-RF1"));
+        memcpy(image + sizeof("BEYOND-RF1"), bytes, n);
+        axi_sha256(image, sizeof("BEYOND-RF1") + n, expected);
+        CHECK(memcmp(expected, out.rf_root, 32) == 0);
+        memcpy(bytes + n, bytes + 6, 14);
+        CHECK(axi_rf1_pin_v1_parse(bytes, n + 14, &out) == AXI_RF1_PIN_V1_REFUSED);
+    }
+    n = rf_fixture(bytes, sizeof bytes, 4096);
+    CHECK(axi_rf1_pin_v1_parse(bytes, n, &out) == AXI_RF1_PIN_V1_OK);
+    CHECK(out.records == 4096);
+    memcpy(bytes, "RF1\t1\nroot\tx\t", 13);
+    memset(bytes + 13, 'x', AXI_RF1_PIN_V1_MAX_BYTES - 14);
+    bytes[AXI_RF1_PIN_V1_MAX_BYTES - 1] = '\n';
+    CHECK(axi_rf1_pin_v1_parse(bytes, AXI_RF1_PIN_V1_MAX_BYTES, &out) == AXI_RF1_PIN_V1_OK);
+    CHECK(axi_rf1_pin_v1_parse(bytes, AXI_RF1_PIN_V1_MAX_BYTES + 1, &out) == AXI_RF1_PIN_V1_REFUSED);
+    n = (size_t)snprintf(bytes, sizeof bytes, "RF1\t1\nunknown\ta\tb\tc\n");
+    CHECK(axi_rf1_pin_v1_parse(bytes, n, &out) == AXI_RF1_PIN_V1_OK && out.unknowns == 1);
+    bytes[8] = '\0';
+    CHECK(axi_rf1_pin_v1_parse(bytes, n, &out) == AXI_RF1_PIN_V1_REFUSED);
+}
+
 int main(int argc, char **argv)
 {
     if (argc == 1 || strcmp(argv[1], "W21") == 0) w21();
@@ -397,6 +448,7 @@ int main(int argc, char **argv)
     if (argc == 1 || strcmp(argv[1], "W25") == 0) w25();
     if (argc == 1 || strcmp(argv[1], "W26") == 0) w26();
     if (argc == 1 || strcmp(argv[1], "W28") == 0) w28();
+    if (argc == 1 || strcmp(argv[1], "W29") == 0) w29();
     printf("audit40 security: %u checks passed\n", checks);
     return 0;
 }
