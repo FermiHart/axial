@@ -53,3 +53,25 @@ No VM instruction or existing UCHK meaning changes.
 Validation: `frontend.py build/axi options` covers options mixed with errors,
 plain-ok callers, bool false in conditions, nested call arguments with live
 bindings, recursion, short-circuit before a trap and undeclared ok refusal.
+
+## W55 — text-string contract v1
+
+The five escapes advertised by the lexer now have one semantic decoder:
+`\n` is LF, `\t` is TAB, `\0` is NUL, `\\` is backslash, and `\"` is quote.
+Unknown escapes and unrepresentable controls refuse instead of passing
+through. Length-aware source codegen and AXS emission use the same byte
+encoder, so LF/TAB/NUL survive assembly, signed v7 storage and disassembly.
+The allocation-free length and decode-into APIs support the root compiler
+budget without a global allocator context. Invalid inputs/capacity leave
+caller outputs unchanged; embedded NUL is never treated as string length.
+
+**Migration:** the earlier two-escape implementation interpreted `"\n"`,
+`"\t"`, and `"\0"` as two literal bytes. To retain those old bytes, rewrite
+them as `"\\n"`, `"\\t"`, and `"\\0"` before recompiling with text-string v1.
+Existing binary string bytes are not rewritten. Source/AXS text meaning has
+intentionally changed; the final checker identity and migration notes must
+identify this revision rather than silently reusing the previous identity.
+
+Validation: `frontend.py build/axi strings`; compile `frontend_strings.c`
+with `axi_lex.c`, `axi_diag.c`, and `axi_alloc.c` for exact bytes, sentinel
+preservation, insufficient capacity, invalid escapes and overlap refusal.

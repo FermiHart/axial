@@ -4,6 +4,7 @@
  */
 #include "axi_codegen.h"
 #include "axi_alloc.h"
+#include "axi_string.h"
 #include "axi_ast.h"
 #include "axi_cap_table.h"
 #include "axi.h"
@@ -878,8 +879,10 @@ static void gen_cell(cg *c, outbuf *o, const axi_node *cell)
         } else {
             ob_printf(o, "  k%d %s \"", i, c->k[i].tag == 4 ? "err" : "str");
             for (uint32_t j = 0; j < c->k[i].slen; j++) {
-                if (c->k[i].s[j] == '"' || c->k[i].s[j] == '\\') ob_puts(o, "\\");
-                ob_putc(o, (unsigned char)c->k[i].s[j]);
+                char escaped[2];
+                int len = axi_string_escape_byte((unsigned char)c->k[i].s[j], escaped);
+                if (!len) { c->err = 1; break; }
+                for (int k = 0; k < len; k++) ob_putc(o, escaped[k]);
             }
             ob_puts(o, "\"\n");
         }

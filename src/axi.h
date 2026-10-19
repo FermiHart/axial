@@ -96,9 +96,15 @@ typedef struct {
 
 void        axi_lex_init(axi_lexer *lx, const char *src, size_t len,
                          axi_diags *diags);
-/* The one string decoder (INV-323 / AXI-INV-105): the source grammar has
- * exactly two escapes, \" and \\. The lexeme arrives WITH its quotes.
- * Returns a fresh buffer (caller frees) and the decoded length, or NULL. */
+/* Text-string contract v1: \\n, \\t, \\0, \\\\ and \\". Lexemes include quotes.
+ * Length/into functions allocate nothing, return 0 on success, and leave
+ * outputs untouched on invalid input or insufficient capacity. The output
+ * buffer must be disjoint from the lexeme; capacity includes a final NUL.
+ * Decoded embedded NUL is data: consumers must use the returned length. */
+int         axi_str_decoded_length(const char *lexeme, size_t len, uint32_t *outlen);
+int         axi_str_decode_into(const char *lexeme, size_t len, char *dst,
+                                 size_t capacity, uint32_t *outlen);
+/* Allocating convenience wrapper; caller frees, NULL on invalid input/OOM. */
 char       *axi_str_unescape(const char *lexeme, size_t len, uint32_t *outlen);
 /* Always produces a token; T_EOF forever at end. Invalid bytes produce a
  * diagnostic and are skipped (lexer never wedges: bear INV-212/213 lesson —

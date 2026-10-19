@@ -184,3 +184,31 @@ cell short : fn(n: u64) -> u64 | ok | err.Bad
         prefix = "cell choice : fn() -> u64 | ok fuel 100 { ret ok }\n"
         refused("missing_none", prefix + "cell f : fn() -> u64 fuel 100 { ret choice()? }", "AXI-T015")
         print("frontend W54: PASS (option remapping, nested arguments, recursion, false and early propagation)")
+
+    if GROUP in ("all", "strings"):
+        artifact = compile_source("strings", r'''cell control : fn() -> str
+  fuel 100
+  pure
+{ ret "A\n\t\0\\\"Z" }
+cell literal : fn() -> str
+  fuel 100
+  pure
+{ ret "\\n\\t\\0" }
+cell distinct : fn() -> bool
+  fuel 100
+  pure
+{ ret "\n" != "\\n" }
+''')
+        value(artifact, "control", [], "str 7 410a09005c225a")
+        value(artifact, "literal", [], "str 6 5c6e5c745c30")
+        value(artifact, "distinct", [], "bool true")
+        dis = call("dis", artifact, "--trusted-key", pk)
+        require(dis.returncode == 0 and r'"A\n\t\0\\\"Z"' in dis.stdout, dis.stderr)
+        assembly = root / "strings.axs"
+        assembly.write_text(dis.stdout)
+        rebuilt = root / "strings-rebuilt.axb"
+        p = call("asm", assembly, "-o", rebuilt, "--signing-key", seed)
+        require(p.returncode == 0, p.stderr)
+        value(rebuilt, "control", [], "str 7 410a09005c225a")
+        refused("unknown_escape", r'cell f : fn() -> str fuel 100 { ret "\r" }', "AXI-L003")
+        print("frontend W55: PASS (five exact escapes and source/AXS/v7 round trip)")

@@ -7,6 +7,7 @@
  */
 #include "axi_bc.h"
 #include "axi.h"   /* axi_str_unescape: the one string decoder door */
+#include "axi_string.h"
 #include "axi_alloc.h"
 #include "axi_arena.h"
 #include "axi_builtin.h"
@@ -2087,20 +2088,20 @@ static void ts_ch(text_sink *s, int ch)
     if (!s->failed) { s->p[s->len++] = (char)ch; s->p[s->len] = '\0'; }
 }
 
-/* INV-386 / AXI-INV-125: bounded contract AXS has no spelling for controls;
- * both string tags use declared length without changing legacy v5 output. */
+/* Text-string contract v1: both tags preserve declared byte lengths and
+ * spell supported controls with the same escapes consumed by the lexer. */
 static void ts_quoted(text_sink *s, const char *p, uint32_t len)
 {
     uint32_t i;
     ts_ch(s, '"');
     for (i = 0; i < len && !s->failed; i++) {
         unsigned char ch = (unsigned char)p[i];
-        if (s->strict_strings && (ch < 0x20 || ch == 0x7f)) {
-            s->failed = 1;
-            break;
-        }
-        if (ch == '"' || ch == '\\') ts_ch(s, '\\');
-        ts_ch(s, ch);
+        char escaped[2];
+        int count = axi_string_escape_byte(ch, escaped);
+        if (!count) {
+            if (s->strict_strings) { s->failed = 1; break; }
+            ts_ch(s, ch);
+        } else for (int j = 0; j < count; j++) ts_ch(s, escaped[j]);
     }
     ts_ch(s, '"');
 }
@@ -2128,13 +2129,9 @@ static void render_module(const axb_mod *m, text_sink *out) {
                 break;
             }
             case AXB_KERR:
-                if (out->strict_strings) {
-                    ts_printf(out, "  k%u err ", j);
-                    ts_quoted(out, k->s, k->slen);
-                    ts_ch(out, '\n');
-                } else {
-                    ts_printf(out, "  k%u err \"%s\"\n", j, k->s);
-                }
+                ts_printf(out, "  k%u err ", j);
+                ts_quoted(out, k->s, k->slen);
+                ts_ch(out, '\n');
                 break;
             }
         }
