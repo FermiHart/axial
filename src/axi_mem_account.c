@@ -133,10 +133,12 @@ static int header_valid(const struct axi_mem_allocation_header *header,
         && header->charged == expected;
 }
 
-static int account_valid(const axi_mem_account *account)
+static int account_valid(const axi_mem_account *account, const void *ptr,
+                          struct axi_mem_allocation_header **found)
 {
     const struct axi_mem_allocation_header *header;
     const struct axi_mem_allocation_header *previous = NULL;
+    struct axi_mem_allocation_header *candidate = NULL;
     size_t total = 0;
     size_t i;
 
@@ -148,27 +150,41 @@ static int account_valid(const axi_mem_account *account)
         return 0;
     header = account->active;
     for (i = 0; i < account->active_count; i++) {
+        size_t before = total;
         if (!header || !header_valid(header, account)
-                || header->previous != previous
-                || header->charged > (size_t)-1 - total)
+                || header->previous != previous)
             return 0;
         total += header->charged;
+        if (total < before) return 0;
+        if ((const void *)(header + 1) == ptr)
+            candidate = (struct axi_mem_allocation_header *)header;
         previous = header;
         header = header->next;
     }
-    return !header && account->fixed <= (size_t)-1 - total
-        && total + account->fixed == account->live;
+    if (header || account->fixed > (size_t)-1 - total
+            || total + account->fixed != account->live) return 0;
+    /* Do not stop at a matching pointer: every header and the total must
+     * still validate. Publish the match only after the complete scan. */
+    if (found) *found = candidate;
+    return 1;
 }
 
-static int begin_operation(axi_mem_account *account)
+static int begin_operation_find(axi_mem_account *account, const void *ptr,
+                                 struct axi_mem_allocation_header **found)
 {
+    if (found) *found = NULL;
     if (!account) return 0;
     clear_failure(account);
-    if (!account_valid(account)) {
+    if (!account_valid(account, ptr, found)) {
         fail(account, AXI_MEM_ACCOUNT_CORRUPTION, 0);
         return 0;
     }
     return 1;
+}
+
+static int begin_operation(axi_mem_account *account)
+{
+    return begin_operation_find(account, NULL, NULL);
 }
 
 static void *payload(struct axi_mem_allocation_header *header)
@@ -203,18 +219,6 @@ int axi_mem_release(axi_mem_account *account, size_t size)
     account->fixed -= size;
     account->live -= size;
     return 1;
-}
-
-static struct axi_mem_allocation_header *find_allocation(
-    axi_mem_account *account, const void *ptr)
-{
-    struct axi_mem_allocation_header *header = account->active;
-    size_t i;
-    for (i = 0; i < account->active_count; i++) {
-        if (payload(header) == ptr) return header;
-        header = header->next;
-    }
-    return NULL;
 }
 
 static void link_first(axi_mem_account *account,
@@ -310,8 +314,7 @@ void *axi_mem_realloc(axi_mem_account *account, void *ptr, size_t size)
     size_t growth;
 
     if (!ptr) return axi_mem_alloc(account, size);
-    if (!begin_operation(account)) return NULL;
-    header = find_allocation(account, ptr);
+    if (!begin_operation_find(account, ptr, &header)) return NULL;
     if (!header) {
         fail(account, AXI_MEM_ACCOUNT_CORRUPTION, 0);
         return NULL;
@@ -360,9 +363,8 @@ int axi_mem_free(axi_mem_account *account, void *ptr)
     struct axi_mem_allocation_header *header;
     size_t charged;
 
-    if (!begin_operation(account)) return 0;
+    if (!begin_operation_find(account, ptr, &header)) return 0;
     if (!ptr) return 1;
-    header = find_allocation(account, ptr);
     if (!header) {
         fail(account, AXI_MEM_ACCOUNT_CORRUPTION, 0);
         return 0;

@@ -176,3 +176,28 @@ sequential baseline/final run.
 
 **Limits.** The existing 511-byte line limit, 256-cell encoding and source
 string escape meanings remain unchanged. No assembler language was added.
+
+## W19 — one integrity scan for accounted free and realloc
+
+**Problem.** Every free/realloc first validated the complete allocation list
+and then walked it again to locate the supplied pointer. Oldest-first frees
+were particularly wasteful. A tempting direct header lookup would dereference
+untrusted foreign/interior pointers and bypass unrelated-account corruption.
+
+**Change.** Find the allocation during the mandatory integrity walk and
+publish the match only after all headers, links, charges and totals validate.
+Use one checked unsigned addition for each running total and keep lookup
+branch-free inside the walk. Quotas, header format, ownership checks, full
+validation and sticky denial history remain unchanged.
+
+**Evidence.** 802 normal and ASan+UBSan checks pass, including foreign,
+interior and invalid-address pointers, same-size/moving realloc, corruption
+after an early pointer match, later successful cleanup and no-op free(NULL).
+A quick same-build pre-W19/final probe (five runs, median, 4,096 allocations)
+reduced oldest-first free time from 37.06 ms to 22.94 ms; allocation time was
+28.46 ms versus 23.23 ms. These are local exploratory timings; final audit
+performance conclusions use the separate sequential baseline/final runner.
+
+**Limits.** Full integrity validation is still O(live allocations) per
+operation. This removes redundant traversal without weakening that contract;
+an O(1) redesign would require a separately reviewed corruption model.

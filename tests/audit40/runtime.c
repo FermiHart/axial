@@ -564,6 +564,43 @@ static void assembly_spans_and_strings(void)
     }
 }
 
+static void memory_account_integrity(void)
+{
+    axi_mem_account account, wrong;
+    unsigned char *first, *middle, *last;
+    size_t live;
+    axi_mem_account_init(&account, 65536);
+    axi_mem_account_init(&wrong, 65536);
+    first = axi_mem_alloc(&account, 11);
+    middle = axi_mem_alloc(&account, 17);
+    last = axi_mem_alloc(&account, 23);
+    CHECK(first && middle && last);
+    if (!first || !middle || !last) return;
+    memset(first, 0x5a, 11); memset(middle, 0xa5, 17); memset(last, 0x3c, 23);
+    live = account.live;
+    CHECK(!axi_mem_free(&account, first + 1));
+    CHECK(account.failure == AXI_MEM_ACCOUNT_CORRUPTION && account.live == live);
+    CHECK(axi_mem_realloc(&account, (void *)(uintptr_t)1, 100) == NULL);
+    CHECK(account.failure == AXI_MEM_ACCOUNT_CORRUPTION && account.live == live);
+    CHECK(!axi_mem_free(&wrong, first) && wrong.live == 0);
+    CHECK(axi_mem_realloc(&account, middle, 17) == middle
+          && account.failure == AXI_MEM_FAILURE_NONE && account.live == live);
+    /* A match at the list head must not bypass total-account validation. */
+    account.fixed = 1;
+    CHECK(!axi_mem_free(&account, last));
+    CHECK(account.failure == AXI_MEM_ACCOUNT_CORRUPTION && account.live == live);
+    account.fixed = 0;
+    middle = axi_mem_realloc(&account, middle, 4096);
+    CHECK(middle != NULL && middle[0] == 0xa5 && middle[16] == 0xa5);
+    CHECK(axi_mem_free(&account, middle));
+    CHECK(axi_mem_free(&account, first));
+    CHECK(last[0] == 0x3c && last[22] == 0x3c);
+    CHECK(axi_mem_free(&account, last));
+    CHECK(account.live == 0 && account.active_count == 0);
+    CHECK(axi_mem_free(&account, NULL) && account.failure == AXI_MEM_FAILURE_NONE);
+    CHECK(account.denied_failure == AXI_MEM_ACCOUNT_CORRUPTION);
+}
+
 static int worker_exit_without_frame(void *opaque)
 {
     int *marker = opaque;
@@ -615,6 +652,7 @@ int main(int argc, char **argv)
     replay_effect_refusal();
     resource_transactions();
     assembly_spans_and_strings();
+    memory_account_integrity();
     printf("audit40 runtime: %u checks, %u failures\n", checks, failures);
     return failures != 0;
 }
