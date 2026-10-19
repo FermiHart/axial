@@ -75,3 +75,19 @@ identify this revision rather than silently reusing the previous identity.
 Validation: `frontend.py build/axi strings`; compile `frontend_strings.c`
 with `axi_lex.c`, `axi_diag.c`, and `axi_alloc.c` for exact bytes, sentinel
 preservation, insufficient capacity, invalid escapes and overlap refusal.
+
+## W56 — canonical strings and complete source representation contract
+
+Canonicalization now uses the shared byte escape mapping instead of copying
+the raw lexeme. In particular raw TAB and `\t` have identical canonical text
+and decoded bytes. This path validates without an intermediate allocation.
+SPEC-GRAMMAR now explicitly defines error constructors, bounded names,
+left-to-right early propagation and the v7 scalar/tagged return distinction.
+Text-string v1 is a documented semantic revision, not an assertion that the
+old implementation already decoded the five advertised escapes correctly.
+
+Validation: `sh tests/audit80/frontend.sh build/axi` covers W51–W56 together,
+UTF-8/control/quote/backslash canonical fixed points, exact binary results,
+and all 16 propagated atoms. `make gate-fast` retains the original goldens.
+The runner accepts CFLAGS for sanitizers and an explicitly built product
+executable. No generic error payload syntax or new authority is added.

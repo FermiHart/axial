@@ -212,3 +212,29 @@ cell distinct : fn() -> bool
         value(rebuilt, "control", [], "str 7 410a09005c225a")
         refused("unknown_escape", r'cell f : fn() -> str fuel 100 { ret "\r" }', "AXI-L003")
         print("frontend W55: PASS (five exact escapes and source/AXS/v7 round trip)")
+
+    if GROUP in ("all", "canonical"):
+        for i, content in enumerate(("\t", "x\t#y", "a\nb\0c", '\\n"', "é\t\\\"")):
+            spelling = content.replace("\\", "\\\\").replace('"', '\\"').replace("\n", "\\n").replace("\0", "\\0")
+            source = root / ("canonical" + str(i) + ".axi")
+            source.write_text('cell f : fn() -> str\n  fuel 100\n  pure\n{ ret "' + spelling + '" }\n')
+            p = call("canon", source)
+            require(p.returncode == 0 and "\t" not in p.stdout, p.stderr)
+            canonical = p.stdout
+            source.write_text(canonical)
+            again = call("canon", source)
+            checked = call("check", source)
+            require(again.stdout == canonical and checked.returncode == 0, (again.stderr, checked.stderr))
+            artifact = compile_source("canonical-run" + str(i), canonical)
+            raw = content.encode()
+            value(artifact, "f", [], "str %d %s" % (len(raw), raw.hex()))
+        errors = ["E" + str(i) for i in range(16)]
+        shape = "u64 | " + " | ".join("err." + e for e in errors)
+        body = " ".join("if n == %d { ret err.%s }" % (i, e) for i, e in enumerate(errors))
+        artifact = compile_source("all_errors", "cell f : fn(n: u64) -> " + shape +
+            " fuel 1000 pure { " + body + " ret n }\ncell g : fn(n: u64) -> " + shape +
+            " fuel 2000 pure { ret f(n)? }\n")
+        for i, e in enumerate(errors):
+            value(artifact, "g", [str(i)], error(e))
+        value(artifact, "g", ["17"], "u64 17")
+        print("frontend W56: PASS (canonical byte semantics and all 16 propagated error atoms)")

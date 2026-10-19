@@ -1,7 +1,9 @@
 # axial SPEC-GRAMMAR v0 — Bear Core
 
 SPDX-License-Identifier: LicenseRef-SPL-1.0
-Status: v0. Normative for the parser and the canonical form.
+Status: v0 grammar with text-string semantic profile v1 (Audit80).
+Normative for the parser and the canonical form. Migration from the former
+two-escape implementation is explicit in `docs/audit80/frontend.md` W55–W56.
 Companion: src/axi_lex.c (lexer of record).
 
 > Publication note: markers like (W02)/(W04)/(AXI-T007) are traces of the
@@ -45,6 +47,9 @@ and ONE canonical fix. What elsewhere is style, here is law.
 - Float: `INT "." INT` (v0; no exponent until a proven need exists).
 - String: `"..."` on a single line. Valid escapes: `\n \t \\ \" \0`.
   Unknown escape → AXI-L003. Unterminated on the line → AXI-L002.
+  These decode to LF, TAB, backslash, quote and NUL respectively. Embedded
+  NUL is length-delimited data. Raw TAB is normalized to `\t`; other raw
+  ASCII controls and DEL are refused. Source and AXS use this same contract.
 - Identifier: `[A-Za-z][A-Za-z0-9_]*`.
 - Operators/punctuation: `( ) { } [ ] , . : | ? = -> < > <= >= == != ! + - * / %`
 
@@ -67,7 +72,7 @@ type      = scalar | "cap" path | path ;
 scalar    = "u64" | "f64" | "bool" ;
 path      = ID { "." ID } ;
 rettype   = rtatom { "|" rtatom } ;
-rtatom    = "ok" | "err" "." ID | type ;
+rtatom    = "ok" | "err" "." path | type ;
 meta      = "fuel" INT | "pure" ;
 block     = "{" { stmt } "}" ;
 stmt      = "let" ID "=" expr
@@ -82,12 +87,22 @@ unary     = [ "!" | "-" ] postfix ;
 postfix   = atom { "." ID | call | index | "?" } ;
 call      = "(" [ expr { "," expr } ] ")" ;
 index     = "[" expr "]" ;
-atom      = INT | FLOAT | STR | "true" | "false" | "ok" | ID
+atom      = INT | FLOAT | STR | "true" | "false" | "ok" | ID | "err" "." path
           | "(" expr ")" | "[" [ expr { "," expr } ] "]" ;
 ```
 
 Notes:
-- `?` is postfix: it propagates `err.*` to the cell's return (runtime).
+- Error paths contain at most two components and 63 ASCII bytes, matching
+  manifest v1. `err.Name` constructs a payloadless named error, which can be
+  bound or returned; its bytes never implicitly become a string or vice versa.
+- `?` is postfix and evaluates its operand once. Declared errors return
+  immediately before any subsequent expression. For payload|ok, ok returns
+  the caller's own ok representation and payload continues unwrapped.
+  Every propagated error/ok must be declared by the caller. An error-only
+  callee has no continuing path; a plain scalar does not accept `?`.
+- In frozen v7, errors are scalar error values. A single normal return is
+  scalar; payload|ok uses manifest-sorted tags 0 (payload) and 1 (ok),
+  independently of declaration order. Bool false is a payload, not absence.
 - `pure` forbids `cap` in the signature — a semantic check, not a
   grammatical one.
 - v0 has no `while`/`loop`: recursion + fuel is the model until the VM
@@ -116,6 +131,9 @@ Notes:
     (tab = AXI-C005), exactly one blank line between cells.
 11. Fixpoint law (gate): `canon(canon(x)) == canon(x)` and
     `check(canon(x))` is green silence, for every parse-green fixture.
+12. Strings encode LF/TAB/NUL/backslash/quote with the five escapes above;
+    other admitted bytes remain literal. Canonicalization preserves decoded
+    byte length and content and never treats embedded NUL as a terminator.
 
 Non-canonical → `AXI-C0xx` diag with the exact replacement text (the fix
 is the canonical text itself; an agent applies it without thinking).

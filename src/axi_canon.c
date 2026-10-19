@@ -21,6 +21,7 @@
 #include "axi.h"
 #include "axi_ast.h"
 #include "axi_alloc.h"
+#include "axi_string.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -288,7 +289,25 @@ static void render_expr_naked(sb *b, const axi_node *n)
     switch (n->kind) {
     case N_INT:   sb_int(b, n->ival); return;
     case N_FLOAT: sb_float(b, n); return;
-    case N_STR:   render_lex(b, n); return; /* slice keeps quotes+escapes */
+    case N_STR: {
+        uint32_t decoded;
+        if (axi_str_decoded_length(n->lex, n->lexlen, &decoded) != 0) {
+            b->failed = 1; return;
+        }
+        (void)decoded;
+        sb_ch(b, '"');
+        for (size_t i = 1; i + 1 < n->lexlen; i++) {
+            unsigned char ch = (unsigned char)n->lex[i];
+            char escaped[2];
+            int count;
+            if (ch == '\\')
+                (void)axi_string_unescape_byte((unsigned char)n->lex[++i], &ch);
+            count = axi_string_escape_byte(ch, escaped);
+            if (!count) { b->failed = 1; return; }
+            for (int j = 0; j < count; j++) sb_ch(b, escaped[j]);
+        }
+        sb_ch(b, '"'); return;
+    }
     case N_TRUE:  sb_str(b, "true");  return;
     case N_FALSE: sb_str(b, "false"); return;
     case N_OK:    sb_str(b, "ok");    return;
