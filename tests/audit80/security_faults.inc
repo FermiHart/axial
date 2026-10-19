@@ -39,6 +39,9 @@ static void delayed_expiry(int mode)
     CHECK(!exists(f.dir, "config") && !exists(f.dir, ".tmp.attempt"));
     CHECK(axi_local_attempt_v1_status(f.dir, f.grant_root, &out) == 0);
     CHECK(out.state == AXI_LOCAL_ATTEMPT_V1_UNKNOWN && !out.effect_performed);
+    CHECK(axi_local_authority_v1_status(owner, f.grant_root, 0, &out) == 0);
+    CHECK(out.state == AXI_LOCAL_ATTEMPT_V1_UNKNOWN && !out.effect_performed);
+    restarted_status(&f, owner, AXI_LOCAL_ATTEMPT_V1_UNKNOWN);
     CHECK(axi_local_authority_v1_commit(prepared, f.grant, sizeof f.grant, 0, &out)
             == AXI_LOCAL_AUTHORITY_V1_REFUSED);
     CHECK(out.state == AXI_LOCAL_ATTEMPT_V1_UNKNOWN && !out.effect_performed);

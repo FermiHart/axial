@@ -120,4 +120,17 @@ int axi_local_authority_v1_commit(const axi_local_authority_v1_prepared *prepare
                                    uint64_t deadline_mono_ns,
                                    axi_local_attempt_v1_outcome *out);
 
+/* Read-only reconciliation using the held directory and shared owner lock.
+ * No action, live grant window, config contents or active epoch is required:
+ * retired/expired authority must not hide existing durable records. Context
+ * process/credential, store/control and lock identity checks still apply.
+ * A restarted process opens a fresh context before querying known grant roots.
+ * ATTEMPTED maps to UNKNOWN; a terminal record describes history, not current
+ * config truth. Outputs are published only on OK and effect_performed is 0.
+ * Deadline has the same CLOCK_MONOTONIC semantics as previous/prepare. */
+int axi_local_authority_v1_status(const axi_local_authority_v1 *owner,
+                                   const uint8_t grant_root[32],
+                                   uint64_t deadline_mono_ns,
+                                   axi_local_attempt_v1_outcome *out);
+
 #endif

@@ -581,6 +581,91 @@ static void w47(void)
     concurrent_prior();
 }
 
+static void restarted_status(fixture *f, axi_local_authority_v1 *inherited, uint8_t state)
+{
+    pid_t child = fork();
+    int status;
+    CHECK(child >= 0);
+    if (child == 0) {
+        axi_local_authority_v1 *reopened = NULL;
+        axi_local_attempt_v1_outcome out, sentinel;
+        memset(&out, 0xa5, sizeof out); sentinel = out;
+        CHECK(axi_local_authority_v1_status(inherited, f->grant_root, 0, &out)
+                == AXI_LOCAL_AUTHORITY_V1_REFUSED);
+        CHECK(!memcmp(&out, &sentinel, sizeof out));
+        CHECK(axi_local_authority_v1_open(f->dir, &reopened) == 0);
+        CHECK(axi_local_authority_v1_status(reopened, f->grant_root, 0, &out) == 0);
+        CHECK(out.state == state && !out.effect_performed);
+        axi_local_authority_v1_close(reopened);
+        _exit(0);
+    }
+    CHECK(waitpid(child, &status, 0) == child && WIFEXITED(status) && WEXITSTATUS(status) == 0);
+}
+
+static void w48(void)
+{
+    fixture f;
+    axi_local_authority_v1 *owner = NULL;
+    axi_local_authority_v1_prepared *prepared;
+    axi_local_authority_v1_facts facts, sentinel_facts;
+    axi_local_attempt_v1_outcome out, sentinel;
+    uint8_t missing[32] = {0x99}, zero[32] = {0};
+    char original[256], relocated[256], path[512], recname[73];
+    const char hex[] = "0123456789abcdef";
+    int lockfd, n;
+    unsigned i;
+    new_fixture(&f); provision(&f);
+    CHECK(axi_local_authority_v1_enable(f.dir, f.pk) == 0);
+    CHECK(axi_local_authority_v1_open(f.dir, &owner) == 0);
+    prepared = ready(&f, owner);
+    CHECK(axi_local_authority_v1_commit(prepared, f.grant, sizeof f.grant, 0, &out) == 0);
+    CHECK(out.state == AXI_LOCAL_ATTEMPT_V1_COMMITTED && out.effect_performed);
+    axi_local_authority_v1_prepared_close(prepared);
+    CHECK(axi_local_authority_v1_status(owner, f.grant_root, 0, &out) == 0);
+    CHECK(out.state == AXI_LOCAL_ATTEMPT_V1_COMMITTED && !out.effect_performed);
+    CHECK(axi_local_authority_v1_status(owner, missing, 0, &out) == 0);
+    CHECK(out.state == AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED && !out.effect_performed);
+    memset(&out, 0xa5, sizeof out); sentinel = out;
+    CHECK(axi_local_authority_v1_status(owner, zero, 0, &out) == AXI_LOCAL_AUTHORITY_V1_REFUSED);
+    CHECK(!memcmp(&out, &sentinel, sizeof out));
+    path_of(path, f.dir, "owner.lock"); lockfd = open(path, O_RDONLY);
+    CHECK(lockfd >= 0 && flock(lockfd, LOCK_EX | LOCK_NB) == 0);
+    CHECK(axi_local_authority_v1_status(owner, f.grant_root, 0, &out) == AXI_LOCAL_AUTHORITY_V1_TIMEOUT);
+    CHECK(!memcmp(&out, &sentinel, sizeof out));
+    CHECK(flock(lockfd, LOCK_UN) == 0 && close(lockfd) == 0);
+
+    strcpy(original, f.dir);
+    n = snprintf(relocated, sizeof relocated, "%s.held", f.dir);
+    CHECK(n > 0 && (size_t)n < sizeof relocated);
+    CHECK(rename(original, relocated) == 0 && mkdir(original, 0700) == 0);
+    strcpy(f.dir, relocated);
+    CHECK(axi_local_attempt_v1_status(original, f.grant_root, &out) == 0);
+    CHECK(out.state == AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED);
+    CHECK(axi_local_authority_v1_status(owner, f.grant_root, 0, &out) == 0);
+    CHECK(out.state == AXI_LOCAL_ATTEMPT_V1_COMMITTED && !out.effect_performed);
+    f.pins.trust_snapshot_root[0] ^= 1; provision(&f);
+    CHECK(axi_local_authority_v1_status(owner, f.grant_root, 0, &out) == 0);
+    CHECK(out.state == AXI_LOCAL_ATTEMPT_V1_COMMITTED && !out.effect_performed);
+    path_of(path, f.dir, "epoch_active"); CHECK(unlink(path) == 0);
+    memset(&facts, 0xa5, sizeof facts); sentinel_facts = facts;
+    CHECK(axi_local_authority_v1_observe(owner, &facts, 0) == AXI_LOCAL_AUTHORITY_V1_REFUSED);
+    CHECK(!memcmp(&facts, &sentinel_facts, sizeof facts));
+    CHECK(axi_local_authority_v1_status(owner, f.grant_root, 0, &out) == 0);
+    CHECK(out.state == AXI_LOCAL_ATTEMPT_V1_COMMITTED && !out.effect_performed);
+    restarted_status(&f, owner, AXI_LOCAL_ATTEMPT_V1_COMMITTED);
+    check_config(f.dir, "payload", 7);
+
+    memcpy(recname, "records/", 8);
+    for (i = 0; i < 32; i++) { recname[8 + i * 2] = hex[f.grant_root[i] >> 4]; recname[9 + i * 2] = hex[f.grant_root[i] & 15]; }
+    recname[72] = 0; path_of(path, f.dir, recname); put_file(path, "x", 1);
+    memset(&out, 0xa5, sizeof out); sentinel = out;
+    CHECK(axi_local_authority_v1_status(owner, f.grant_root, 0, &out) == AXI_LOCAL_AUTHORITY_V1_CORRUPT);
+    CHECK(!memcmp(&out, &sentinel, sizeof out));
+    check_config(f.dir, "payload", 7);
+    axi_local_authority_v1_close(owner);
+    CHECK(rmdir(original) == 0); rm_fixture(f.dir);
+}
+
 static int setup_host(void)
 {
     if (geteuid() == 0) {
@@ -607,7 +692,8 @@ int main(int argc, char **argv)
     if (argc == 1 || !strcmp(argv[1], "W45")) w45();
     if (argc == 1 || !strcmp(argv[1], "W46")) w46();
     if (argc == 1 || !strcmp(argv[1], "W47")) w47();
-    if (argc == 2 && strcmp(argv[1], "W41") && strcmp(argv[1], "W42") && strcmp(argv[1], "W43") && strcmp(argv[1], "W44") && strcmp(argv[1], "W45") && strcmp(argv[1], "W46") && strcmp(argv[1], "W47")) return 2;
+    if (argc == 1 || !strcmp(argv[1], "W48")) w48();
+    if (argc == 2 && strcmp(argv[1], "W41") && strcmp(argv[1], "W42") && strcmp(argv[1], "W43") && strcmp(argv[1], "W44") && strcmp(argv[1], "W45") && strcmp(argv[1], "W46") && strcmp(argv[1], "W47") && strcmp(argv[1], "W48")) return 2;
     printf("audit80 security: %u checks PASS (ruid=%lu euid=%lu)\n", checks,
            (unsigned long)getuid(), (unsigned long)geteuid());
     return 0;

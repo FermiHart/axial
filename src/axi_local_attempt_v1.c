@@ -502,6 +502,24 @@ int axi_local_attempt_v1_status(const char *store_dir,
     return rc;
 }
 
+int axi_local_authority_v1_status(const axi_local_authority_v1 *owner,
+                                   const uint8_t grant_root[32],
+                                   uint64_t deadline_mono_ns,
+                                   axi_local_attempt_v1_outcome *out)
+{
+    axi_local_attempt_v1_outcome staged;
+    int lockfd = -1, rc;
+    if (!owner || !grant_root || root_zero(grant_root) || !out)
+        return AXI_LOCAL_AUTHORITY_V1_REFUSED;
+    rc = axi_local_authority_lock(owner, LOCK_SH, deadline_mono_ns, &lockfd);
+    if (rc != 0) return rc;
+    rc = status_at(owner->dirfd, grant_root, &staged);
+    if (flock(lockfd, LOCK_UN) != 0 && rc == 0) rc = AXI_LOCAL_AUTHORITY_V1_REFUSED;
+    if (close(lockfd) != 0 && rc == 0) rc = AXI_LOCAL_AUTHORITY_V1_REFUSED;
+    if (rc == 0) *out = staged;
+    return rc;
+}
+
 static int commit_impl(const char *store_dir,
                        const uint8_t *grant_signed, size_t grant_len,
                        const uint8_t trusted_pk[32],
