@@ -88,3 +88,23 @@ failures from returning success.
 Validation: negative option cases across 11 command forms, original CLI
 goldens and the Linux /dev/full write-failure test. Normal command results
 and documented options retain their exit-status contracts.
+
+## W37 — Immutable public-embed cell index
+
+The frozen v1 API previously scanned every cell name (including repeated
+strlen calls) on each evaluation. Context admission now builds a private
+sorted index with cached lengths. Lookup is bounded binary search; manifests,
+cell IDs, interface hashes and wire order are unchanged. The additional
+storage is 512 bytes per context, with no extra allocation or mutable global
+state. Setup work is paid once per admitted context.
+
+The legacy boolean-only policy door also removes its unreachable generic
+JSON serializer, initializes the entire argument value and checks canonical
+boolean bits before publishing true/false. This preserves its existing
+failure-output contract.
+
+Validation: 776 checks through the real public v1 API over 256 reverse-ordered
+cells, exact values/fuel, prefixes, absent cells, interface mismatch and zero
+fuel. The same test executable supports `--bench ITERATIONS CELLS` for a
+warm-context comparison against pristine sources. Small modules and context
+creation must be assessed separately from repeated large-module lookup.
