@@ -72,3 +72,9 @@ Validação: 35 checks cobrindo strings com LF/NUL semântico, constantes de
 erro em namespace próprio, geração de código, interface textual/JSON e
 cotas insuficientes. Fonte e AST permanecem contabilizadas enquanto cada
 projeção ocorre; o saldo volta a zero no encerramento.
+
+## W61 — one budget through assembly and signing
+
+Contract generation, AXS parsing, manifest storage, disassembly, hashing, verification, signature scratch, signed framing and atomic publication now have explicit accounted paths. Builder models retain their owning backend account; destruction frees every partially assembled object through that owner. Existing APIs remain malloc/free compatible. Source generation copies its final text to the invocation owner before its temporary backend account leaves scope, and releases the intermediate legacy AXS immediately after assembly.
+
+Validation: `compiler_backend.c` passes 71 assertions. The full budgeted path produces byte-identical signed artifacts to the legacy path for the same source and disposable test seed, and the trusted decoder accepts them. Separate codegen, assembly, signing and publication quota refusals restore the retained-source baseline. A publication refused for quota leaves an existing target byte-for-byte intact. Cleanup restores zero live bytes, allocations and fixed reservations.

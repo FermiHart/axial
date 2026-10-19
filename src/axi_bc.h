@@ -223,6 +223,7 @@ typedef struct {
     size_t    body_len;
     uint8_t   sig_pk[32];
     uint8_t   sig_sig[64];
+    axi_mem_account *builder_account; /* Private builder ownership, never serialized. */
 } axb_mod;
 
 int axb_mod_eff_index(const axb_mod *m, const char *name);  /* -1 if undeclared */
@@ -253,6 +254,8 @@ int  axb_mod_read_diag(axb_mod *m, const uint8_t *p, size_t len,
                        const char *path, struct axi_arena *ar,
                        axi_diags *diags);
 int  axb_mod_verify(const axb_mod *m, const char *path, axi_diags *diags);
+int axb_asm_text_accounted(const char *src, size_t n, const char *path,
+                            axb_mod *m, axi_mem_account *account);
 void axb_mod_free(axb_mod *m);                     /* builder modules only */
 int  axb_mod_load(axb_mod *m, const char *path, struct axi_arena *ar);
 

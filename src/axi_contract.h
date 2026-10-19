@@ -63,6 +63,18 @@ typedef struct {
     int body_arena_owned;
 } axb_contract_mod;
 
+int axb_contract_v1_parse_accounted(const char *src, size_t len,
+                                    axb_contract_mod *out, axi_mem_account *account);
+char *axb_contract_v1_render_accounted(const axb_contract_mod *m, size_t *out_len,
+                                       axi_mem_account *account);
+int axb_contract_v7_encode_signed_accounted(const axb_contract_mod *m,
+    const uint8_t seed[32], uint8_t **out, size_t *out_len, axi_mem_account *account);
+int axb_contract_v7_write_signed_accounted(const axb_contract_mod *m,
+    const uint8_t seed[32], const char *out_path, axi_mem_account *account);
+int axb_contract_v1_write_signed_text_accounted(const char *src, size_t len,
+    const char *source_path, const char *out_path, const char *signing_key_path,
+    axi_mem_account *account);
+
 int axb_contract_v1_parse(const char *src, size_t len,
                           axb_contract_mod *out);
 char *axb_contract_v1_render(const axb_contract_mod *m, size_t *out_len);

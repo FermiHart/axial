@@ -25,6 +25,7 @@ typedef struct {
     char *p;
     size_t n, cap, max;
     int failed;
+    axi_mem_account *account;
 } cbuf;
 
 typedef struct {
@@ -53,7 +54,7 @@ static void cb_grow(cbuf *b, size_t need)
         if (cap > (size_t)-1 / 2) { b->failed = 1; return; }
         cap *= 2;
     }
-    p = axi_realloc(b->p, cap);
+    p = b->account ? axi_mem_realloc(b->account, b->p, cap) : axi_realloc(b->p, cap);
     if (!p) { b->failed = 1; return; }
     b->p = p;
     b->cap = cap;
@@ -231,12 +232,15 @@ static int derivation_all_zero(const uint8_t h[32])
     return 1;
 }
 
+static int contract_free_owned(axi_mem_account *account, void *ptr);
+
 void axb_contract_mod_free(axb_contract_mod *m)
 {
     if (!m) return;
     if (!m->body_arena_owned) {
+        axi_mem_account *account = m->body.builder_account;
         axb_mod_free(&m->body);
-        free(m->manifest);
+        (void)contract_free_owned(account, m->manifest);
     }
     axi_arena_free(&m->arena);
     memset(m, 0, sizeof *m);
@@ -524,6 +528,12 @@ int axb_contract_v1_verify(const axb_contract_mod *m)
 
 int axb_contract_v1_parse(const char *src, size_t len, axb_contract_mod *out)
 {
+    return axb_contract_v1_parse_accounted(src, len, out, NULL);
+}
+
+int axb_contract_v1_parse_accounted(const char *src, size_t len,
+                                    axb_contract_mod *out, axi_mem_account *account)
+{
     axb_contract_mod tmp;
     cbuf body = {0};
     lines it;
@@ -537,7 +547,10 @@ int axb_contract_v1_parse(const char *src, size_t len, axb_contract_mod *out)
     memset(&tmp, 0, sizeof tmp);
     if (!src || len == 0 || len > CONTRACT_MODULE_MAX || memchr(src, 0, len))
         return 1;
-    axi_arena_init(&tmp.arena, CONTRACT_MODULE_MAX);
+    if (account && !axi_mem_reserve(account, sizeof tmp + sizeof diags)) return 1;
+    tmp.body.builder_account = account;
+    body.account = account;
+    axi_arena_init_accounted(&tmp.arena, CONTRACT_MODULE_MAX, account);
     it.src = src; it.len = len; it.off = 0;
     while (line_next(&it, &line)) {
         if (prefix(line, "cell ")) {
@@ -548,7 +561,9 @@ int axb_contract_v1_parse(const char *src, size_t len, axb_contract_mod *out)
             cb_raw(&body, line.p, line.n); cb_ch(&body, '\n');
             if (!line_next(&it, &contract) || !seq(contract, "  contract 1"))
                 goto bad;
-            v = axi_realloc(tmp.manifest,
+            v = account ? axi_mem_realloc(account, tmp.manifest,
+                            (ncontracts + 1) * sizeof *tmp.manifest)
+                        : axi_realloc(tmp.manifest,
                             (ncontracts + 1) * sizeof *tmp.manifest);
             if (!v) goto bad;
             tmp.manifest = v;
@@ -562,7 +577,7 @@ int axb_contract_v1_parse(const char *src, size_t len, axb_contract_mod *out)
         cb_raw(&body, line.p, line.n); cb_ch(&body, '\n');
     }
     if (in_cell || body.failed || ncontracts == 0) goto bad;
-    if (axb_asm_text(body.p, body.n, "<contract-v1>", &tmp.body) != 0)
+    if (axb_asm_text_accounted(body.p, body.n, "<contract-v1>", &tmp.body, account) != 0)
         goto bad;
     /* INV-387 / AXI-INV-126: src_hash names the exact contract AXS, not the
      * temporary legacy projection with its contract blocks removed. */
@@ -575,35 +590,37 @@ int axb_contract_v1_parse(const char *src, size_t len, axb_contract_mod *out)
     axb_compiler_hash(tmp.derivation.compiler_hash);
     /* INV-476 / AXI-INV-145: a failed derivation hash must fail the build,
      * never publish an artifact whose provenance silently dropped out. */
-    if (axb_mod_body_hash(&tmp.body, tmp.derivation.body_hash) != 0)
+    if (axb_mod_body_hash_accounted(&tmp.body, tmp.derivation.body_hash, account) != 0)
         goto bad;
     {
-        char *ir_text = axb_mod_dis_text_bounded(&tmp.body, CONTRACT_MODULE_MAX,
-                                                 &i);
+        char *ir_text = axb_mod_dis_text_bounded_accounted(&tmp.body, CONTRACT_MODULE_MAX,
+                                                 &i, account);
         if (!ir_text) goto bad;
         axi_sha256(ir_text, i, tmp.derivation.ir_hash);
-        free(ir_text);
+        (void)contract_free_owned(account, ir_text);
     }
     if (tmp.body.n != ncontracts) goto bad;
     axi_diags_init(&diags);
     if (axb_mod_verify(&tmp.body, "<contract-v1>", &diags) != 0) goto bad;
     tmp.nmanifest = ncontracts;
     for (i = 0; i < ncontracts; i++) {
-        if (axi_manifest_iface_hash_v1(tmp.body.cells[i].name,
+        if (axi_manifest_iface_hash_v1_accounted(tmp.body.cells[i].name,
                                        &tmp.manifest[i],
-                                       tmp.manifest[i].iface_hash) != 0
-                || axb_cell_body_hash_v1(&tmp.body.cells[i],
-                                         tmp.manifest[i].body_hash) != 0
+                                       tmp.manifest[i].iface_hash, account) != 0
+                || axb_cell_body_hash_v1_accounted(&tmp.body.cells[i],
+                                         tmp.manifest[i].body_hash, account) != 0
                 || axb_manifest_v1_verify(&tmp.manifest[i]) != 0)
             goto bad;
     }
-    if (axb_contract_v1_verify(&tmp) != 0) goto bad;
-    free(body.p);
+    if (axb_contract_v1_verify_accounted(&tmp, account) != 0) goto bad;
+    (void)contract_free_owned(account, body.p);
     *out = tmp;
+    (void)contract_release_owned(account, sizeof tmp + sizeof diags);
     return 0;
 bad:
-    free(body.p);
+    (void)contract_free_owned(account, body.p);
     axb_contract_mod_free(&tmp);
+    (void)contract_release_owned(account, sizeof tmp + sizeof diags);
     return 1;
 }
 
@@ -660,14 +677,21 @@ static void render_contract(cbuf *b, const axb_manifest *m)
 
 char *axb_contract_v1_render(const axb_contract_mod *m, size_t *out_len)
 {
+    return axb_contract_v1_render_accounted(m, out_len, NULL);
+}
+
+char *axb_contract_v1_render_accounted(const axb_contract_mod *m, size_t *out_len,
+                                       axi_mem_account *account)
+{
     cbuf out = {0};
     char *body;
     size_t body_len, off = 0;
     uint32_t cell = 0;
     if (out_len) *out_len = 0;
     out.max = CONTRACT_MODULE_MAX;
-    if (axb_contract_v1_verify(m) != 0) return NULL;
-    body = axb_mod_dis_text_bounded(&m->body, CONTRACT_MODULE_MAX, &body_len);
+    out.account = account;
+    if (axb_contract_v1_verify_accounted(m, account) != 0) return NULL;
+    body = axb_mod_dis_text_bounded_accounted(&m->body, CONTRACT_MODULE_MAX, &body_len, account);
     if (!body) return NULL;
     cell = 0;
     while (off < body_len) {
@@ -681,9 +705,9 @@ char *axb_contract_v1_render(const axb_contract_mod *m, size_t *out_len)
             render_contract(&out, &m->manifest[cell++]);
         }
     }
-    free(body);
+    (void)contract_free_owned(account, body);
     if (out.failed || out.n > CONTRACT_MODULE_MAX || cell != m->nmanifest) {
-        free(out.p);
+        (void)contract_free_owned(account, out.p);
         return NULL;
     }
     if (out_len) *out_len = out.n;
@@ -697,17 +721,27 @@ char *axi_codegen_contract_v1(const axi_node *unit, size_t *out_len)
     size_t legacy_len = 0, ir_len = 0;
     uint32_t i;
     axi_diags diags;
+    axi_mem_account storage, *account = NULL;
     if (out_len) *out_len = 0;
     memset(&model, 0, sizeof model);
     if (!unit || !unit->contract_checked) return NULL;
+    if (unit->budget) {
+        axi_compile_account_init(&storage, unit->budget);
+        account = &storage;
+        if (!axi_mem_reserve(account, sizeof model + sizeof diags)) return NULL;
+    }
+    model.body.builder_account = account;
     legacy = axi_codegen(unit, &legacy_len);
-    if (!legacy || axb_asm_text(legacy, legacy_len, "<codegen-contract-v1>",
-                                &model.body) != 0) goto done;
+    if (!legacy || axb_asm_text_accounted(legacy, legacy_len, "<codegen-contract-v1>",
+                                &model.body, account) != 0) goto done;
     if (model.body.n == 0) goto done;
+    (void)axi_compile_free(unit->budget, legacy);
+    legacy = NULL;
     axi_diags_init(&diags);
     if (axb_mod_verify(&model.body, "<codegen-contract-v1>", &diags) != 0)
         goto done;
-    model.manifest = axi_calloc(model.body.n, sizeof *model.manifest);
+    model.manifest = account ? axi_mem_calloc(account, model.body.n, sizeof *model.manifest)
+                             : axi_calloc(model.body.n, sizeof *model.manifest);
     if (!model.manifest) goto done;
     model.nmanifest = model.body.n;
     /* AXI-CA17: the synthetic builder path has no .axi source; provenance is
@@ -717,28 +751,37 @@ char *axi_codegen_contract_v1(const axi_node *unit, size_t *out_len)
     memset(model.body.src_hash, 0, sizeof model.body.src_hash);
     memset(model.derivation.src_hash, 0, sizeof model.derivation.src_hash);
     {
-        char *ir_text = axb_mod_dis_text_bounded(&model.body,
-                                                 CONTRACT_MODULE_MAX, &ir_len);
+        char *ir_text = axb_mod_dis_text_bounded_accounted(&model.body,
+                                                 CONTRACT_MODULE_MAX, &ir_len, account);
         if (!ir_text) goto done;
         axi_sha256(ir_text, ir_len, model.derivation.ir_hash);
-        free(ir_text);
+        (void)contract_free_owned(account, ir_text);
     }
     axb_compiler_hash(model.derivation.compiler_hash);
-    if (axb_mod_body_hash(&model.body, model.derivation.body_hash) != 0)
+    if (axb_mod_body_hash_accounted(&model.body, model.derivation.body_hash, account) != 0)
         goto done;
-    axi_arena_init(&model.arena, CONTRACT_MODULE_MAX);
+    axi_arena_init_accounted(&model.arena, CONTRACT_MODULE_MAX, account);
     for (i = 0; i < model.body.n; i++) {
         const axb_cell *cell = &model.body.cells[i];
         if (axi_iface_manifest_v1(unit, cell->name, strlen(cell->name),
                                   &model.manifest[i], &model.arena) != 0
-                || axb_cell_body_hash_v1(cell,
-                                         model.manifest[i].body_hash) != 0)
+                || axb_cell_body_hash_v1_accounted(cell,
+                                         model.manifest[i].body_hash, account) != 0)
             goto done;
     }
-    rendered = axb_contract_v1_render(&model, out_len);
+    rendered = axb_contract_v1_render_accounted(&model, out_len, account);
+    if (rendered && account) {
+        size_t size = strlen(rendered) + 1;
+        char *owned = axi_compile_malloc(unit->budget, size);
+        if (owned) memcpy(owned, rendered, size);
+        (void)contract_free_owned(account, rendered);
+        rendered = owned;
+        if (!rendered && out_len) *out_len = 0;
+    }
 done:
-    free(legacy);
+    (void)axi_compile_free(unit->budget, legacy);
     axb_contract_mod_free(&model);
+    (void)contract_release_owned(account, sizeof model + sizeof diags);
     return rendered;
 }
 
@@ -848,13 +891,22 @@ int axb_contract_v1_write_signed_text(const char *src, size_t len,
                                       const char *out_path,
                                       const char *signing_key_path)
 {
+    return axb_contract_v1_write_signed_text_accounted(src, len, source_path,
+        out_path, signing_key_path, NULL);
+}
+
+int axb_contract_v1_write_signed_text_accounted(const char *src, size_t len,
+    const char *source_path, const char *out_path, const char *signing_key_path,
+    axi_mem_account *account)
+{
     axb_contract_mod model;
     uint8_t seed[32];
     int rc = 1;
+    if (account && !axi_mem_reserve(account, sizeof model + sizeof seed)) return 1;
     memset(&model, 0, sizeof model);
     memset(seed, 0, sizeof seed);
     if (!src || !len || !source_path || !out_path || !signing_key_path
-            || axb_contract_v1_parse(src, len, &model) != 0) {
+            || axb_contract_v1_parse_accounted(src, len, &model, account) != 0) {
         fprintf(AXI_ERR, "AXI-B025 %s: exact contract-bearing AXS required\n",
                 source_path ? source_path : "<missing>");
         goto done;
@@ -864,13 +916,14 @@ int axb_contract_v1_write_signed_text(const char *src, size_t len,
                 "32-byte raw seed\n", signing_key_path);
         goto done;
     }
-    rc = axb_contract_v7_write_signed(&model, seed, out_path);
+    rc = axb_contract_v7_write_signed_accounted(&model, seed, out_path, account);
     if (rc != 0)
         fprintf(AXI_ERR, "AXI-N004 %s: signed AXB v7 publication failed\n",
                 out_path);
 done:
     axi_private_wipe(seed, sizeof seed);
     axb_contract_mod_free(&model);
+    (void)contract_release_owned(account, sizeof model + sizeof seed);
     return rc;
 }
 
