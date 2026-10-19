@@ -426,6 +426,23 @@ static void fill_out(axi_local_attempt_v1_outcome *out, uint8_t state,
     }
 }
 
+/* No effect has begun, but an incomplete/unconfirmed spend may exist.
+ * A failed write/fsync does not prove its record vanished. Publish absence
+ * only after unlink and directory synchronization succeed; otherwise keep
+ * uncertainty explicit and let read-only reconciliation inspect the file.
+ * A partial file left by failed cleanup will subsequently report CORRUPT. */
+static int discard_unconfirmed_spend(int recfd, const char *name,
+                                      const uint8_t grant_root[32],
+                                      axi_local_attempt_v1_outcome *out)
+{
+    if ((unlinkat(recfd, name, 0) != 0 && errno != ENOENT) || fsync(recfd) != 0) {
+        fill_out(out, AXI_LOCAL_ATTEMPT_V1_UNKNOWN, 0, grant_root);
+    } else {
+        fill_out(out, AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED, 0, grant_root);
+    }
+    return AXI_LOCAL_ATTEMPT_V1_REFUSED;
+}
+
 static int status_at(int sdfd,
                                 const uint8_t grant_root[32],
                                 axi_local_attempt_v1_outcome *out)
@@ -902,10 +919,7 @@ static int commit_impl(const char *store_dir,
                         continue;
                     }
                     close(fd);
-                    unlinkat(recfd, hex, 0);
-                    fill_out(out, AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED, 0,
-                             grant_root);
-                    rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
+                    rc = discard_unconfirmed_spend(recfd, hex, grant_root, out);
                     goto done;
                 }
                 off += (size_t)w;
@@ -913,17 +927,13 @@ static int commit_impl(const char *store_dir,
         }
         if (fsync(fd) != 0) {
             close(fd);
-            unlinkat(recfd, hex, 0);
-            fill_out(out, AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED, 0, grant_root);
-            rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
+            rc = discard_unconfirmed_spend(recfd, hex, grant_root, out);
             goto done;
         }
         close(fd);
     }
     if (fsync(recfd) != 0) {
-        unlinkat(recfd, hex, 0);
-        fill_out(out, AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED, 0, grant_root);
-        rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
+        rc = discard_unconfirmed_spend(recfd, hex, grant_root, out);
         goto done;
     }
     /* A newly created records directory must itself have a durable name
@@ -993,8 +1003,11 @@ static int commit_impl(const char *store_dir,
         renameat(recfd, ".tmp.rec", recfd, hex) != 0 ||
         fsync(recfd) != 0) {
         unlinkat(recfd, ".tmp.rec", 0);
-        /* Effect is durable but terminal is not: report UNKNOWN, keep the
-         * ATTEMPTED record so recovery cannot mistake it for success. */
+        /* Effect is durable but terminal durability is uncertain. If its
+         * rename happened, COMMITTED may already be visible to a later
+         * read-only query; otherwise recovery sees ATTEMPTED as UNKNOWN.
+         * This call cannot prove which state survives a power failure and
+         * never retries or rewrites the effect to resolve that uncertainty. */
         fill_out(out, AXI_LOCAL_ATTEMPT_V1_UNKNOWN, 1, grant_root);
         rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
         goto done;

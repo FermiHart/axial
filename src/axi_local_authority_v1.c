@@ -35,7 +35,7 @@ static uint64_t get64(const uint8_t *p)
     return n;
 }
 
-static int control_read(int dirfd, uint8_t raw[AXI_LOCAL_AUTHORITY_CONTROL_SIZE])
+static int control_read(int dirfd, uint8_t raw[AXI_LOCAL_AUTHORITY_CONTROL_SIZE], int durable)
 {
     size_t n = 0;
     ssize_t got;
@@ -49,6 +49,7 @@ static int control_read(int dirfd, uint8_t raw[AXI_LOCAL_AUTHORITY_CONTROL_SIZE]
         n += (size_t)got;
     }
     do { got = read(fd, &extra, 1); } while (got < 0 && errno == EINTR);
+    if (got == 0 && durable && fsync(fd) != 0) { (void)close(fd); return -1; }
     if (close(fd) != 0 || got != 0) return -1;
     return 0;
 }
@@ -79,7 +80,9 @@ int axi_local_authority_v1_enable(const char *store_dir, const uint8_t issuer_pk
     fd = axi_local_store_open_file_at(dirfd, AXI_LOCAL_AUTHORITY_CONTROL,
                                       O_WRONLY | O_CREAT | O_EXCL);
     if (fd < 0) {
-        if (errno != EEXIST || control_read(dirfd, raw) != 0
+        /* A previous call may have written all bytes but failed its fsync.
+         * Idempotence must confirm the file as well as the directory. */
+        if (errno != EEXIST || control_read(dirfd, raw, 1) != 0
                 || control_valid(dirfd, raw) != 0
                 || memcmp(raw + 8, issuer_pk, 32) != 0) goto done;
         rc = fsync(dirfd) == 0 ? AXI_LOCAL_AUTHORITY_V1_OK : rc;
@@ -119,7 +122,7 @@ int axi_local_authority_v1_open(const char *store_dir, axi_local_authority_v1 **
     lockfd = axi_local_store_open_file_at(dirfd, "owner.lock", O_RDONLY);
     if (lockfd < 0 || flock(lockfd, LOCK_SH | LOCK_NB) != 0
             || fstat(lockfd, &lock_stat) != 0) goto done;
-    if (control_read(dirfd, raw) != 0 || control_valid(dirfd, raw) != 0) goto done;
+    if (control_read(dirfd, raw, 0) != 0 || control_valid(dirfd, raw) != 0) goto done;
     owner = axi_calloc(1, sizeof *owner);
     if (!owner) goto done;
     owner->dirfd = dirfd;
@@ -170,7 +173,7 @@ int axi_local_authority_validate_locked(const axi_local_authority_v1 *owner)
             || !S_ISREG(lock.st_mode) || lock.st_nlink != 1
             || (lock.st_mode & 077) != 0 || lock.st_uid != geteuid()
             || (uint64_t)lock.st_dev != owner->lock_device || (uint64_t)lock.st_ino != owner->lock_inode
-            || control_read(owner->dirfd, raw) != 0
+            || control_read(owner->dirfd, raw, 0) != 0
             || control_valid(owner->dirfd, raw) != 0
             || memcmp(owner->issuer_pk, raw + 8, 32) != 0
             || get64(raw + 40) != owner->device

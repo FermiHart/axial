@@ -32,6 +32,7 @@ credential changes in disposable subprocesses where authorized.
 | W46 | Fresh boot-time checks after lock wait, before spend, after spend fsyncs and immediately before config rename; checked monotonic conversion. Preserve irreversible spend if I/O crosses expiration. | 128 ordinary checks cover expired action/grant, real wait past expiry, no-write timeout. 92 fault-harness checks delay real fsyncs until real clock expiry: no config publication, UNKNOWN/effect=0, replay suppressed. | A sample before rename is not a hard real-time completion guarantee. Expiration after durable spend does not refund the grant or claim NOT_ATTEMPTED. |
 | W47 | Pin the actual owner.lock device/inode at context open and verify the held lock/name before use and publication. Missing locks are not recreated by activation or a legacy attempt on enabled stores; interrupted lock waits keep their deadline. | 93 parent checks plus two process workers: replaced/missing lock refuses without records/config writes; two signed requests prepared for the same prior state yield exactly one committed effect and one unspent refusal. | Concurrent service operations must obey this lock; the trusted administrator must quiesce the service before replacing lock/control state. Open uses one nonblocking shared-lock attempt. |
 | W48 | Add read-only status through the retained directory and shared lock. Existing record recovery remains available after epoch retirement and grant expiration; no action/epoch is recreated to query history. | 77 checks cover moved/replaced pathname, missing/rotated epoch, bounded busy-lock refusal, unchanged output on error, malformed record and a reopened process. Expanded expiry harness: 100 checks plus child assertions recover UNKNOWN through retained/reopened contexts. | A terminal record describes its historical operation, not the current config. Fresh process open still requires the declared host provider and process credentials; absent/corrupt control state refuses. |
+| W49 | Confirm unlink plus directory fsync before reporting an unconfirmed spend absent; cleanup failure yields UNKNOWN. Confirm control-file fsync on idempotent activation after an earlier failed sync. Clarify terminal visibility after failed final fsync. | Both pre-fix reproducers failed their required assertions. Fixed fault suite: 504 checks plus child assertions; all ordinary W41–W48: 939 checks. Covers failed spend/file/dir sync plus failed unlink, partial spend corruption, failed cleanup sync, incomplete activation, actual short reads/EINTR, read errors, invalid/unavailable clock provider, OOM and dupfd exhaustion with fd counts. | Fault injection proves program response to these syscall outcomes, not power-loss durability on every filesystem. UNKNOWN may reconcile to a currently visible terminal or absence; that read does not prove which state survives a future crash. |
 
 ## Executed evidence
 
@@ -54,6 +55,8 @@ W46 I/O expiry: audit80 security faults: 92 checks PASS (real-clock expiry)
 W47: audit80 security: 93 checks PASS (ruid=1000 euid=1001)
 W48: audit80 security: 77 checks PASS (ruid=1000 euid=1001)
 W48 I/O recovery: audit80 security faults: 100 checks PASS (real-clock expiry)
+W49 ordinary regression: audit80 security: 939 checks PASS (ruid=1000 euid=1001)
+W49 fault regression: audit80 security faults: 504 checks PASS (real host, injected failures)
 ```
 
 `security_faults.sh` links an instrumented attempt object only for tests. Its
@@ -61,6 +64,29 @@ fsync wrapper delays a successful real fsync; it never fabricates UID, clock
 values or trust. The real kernel clock advances beyond the signed window.
 Configuration is not published, the durable attempt stays UNKNOWN on recovery,
 and another commit cannot repeat its effect.
+
+W49 extends redirection to the authority owner as well. Both test-only owner
+objects disable fortified libc inline aliases so read redirection cannot be
+silently bypassed; every selected failure must record a hook hit. The normal
+product objects retain their configured hardening. Successful reads and
+identities remain kernel-derived. Invalid provider values are injected only
+to assert refusal, never used to authenticate a successful request.
+
+Two executable W49 counterexamples preceded their fixes:
+
+```
+cleanup (pre-fix): out.state == UNKNOWN && !out.effect_performed failed (errno=13)
+activation retry (pre-fix): second enable == REFUSED && fsync_hits == 2 failed
+cleanup (fixed): 181 checks PASS
+all fault modes (fixed): 504 checks PASS
+```
+
+The first left an actual complete or partial record when cleanup failed. A
+complete retained ATTEMPTED record queries as UNKNOWN; a partial retained
+record queries as CORRUPT. If unlink succeeded but its directory fsync failed,
+the call reports uncertainty although a later read currently observes absence.
+The second allowed a retry to report successful activation after only syncing
+the directory; the retry now also confirms the already-written control file.
 
 Facts now include the mandatory `epoch_active` pins and generation. These are
 read from the held private store under the owner lock, not request fields.
