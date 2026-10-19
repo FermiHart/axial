@@ -22,8 +22,28 @@ before/after reproductions; test sources always come from this audited tree.
 | W27 | I/O failure could become false evidence: rename succeeded but failing directory fsync produced FAILED/effect=0; `readdir` errors looked like complete scans; zero-progress writes looped forever. Preserve UNKNOWN/effect=1 after rename, persist the records directory entry before effect, reject incomplete scans, stop zero writes, retry trailing-read EINTR and preserve transient-error classification. | `security_faults.sh` redirects I/O names only in test objects: 109 checks for read failures, EINTR, zero writes, directory enumeration failure, pre-effect fsync failure, post-rename failure, and replay suppression. Pristine code reproduces false FAILED after rename, false successful scan, and alarm-terminated zero-write loop. | Injected failures validate control flow; this is not a real power-loss or filesystem durability certification. No production fault hooks were added. |
 | W28 | Selective disclosure hashed each value twice, and overwrote aliased inputs before finishing. Delegation verification repeatedly rehashed all earlier links. Stage one leaf commitment and retain already-validated chain roots. | 44 semantic/alias/refusal checks. `security_costs.sh` measures primitive work: a 4096-byte leaf falls from 4 hashes/8444 bytes to 2/4222; a depth-32 chain from 560 hashes/309680 bytes to 32/17696, with identical leaf authority. | These are deterministic reductions in hash work (50% and 94.29%), not whole-application latency claims. Depth-32 cache adds 1024 bounded stack bytes; all attenuation and duplicate checks remain. |
 | W29 | RF1 duplicate detection repeatedly rescanned the remainder of the input, with quadratic comparisons. Validate framing first and heapsort compact line offsets for adjacent duplicate checks; preserve the original bytes for hashing. | 128 varied-size accepted fixtures and their nonadjacent duplicate variants, independent digest reconstruction, 4096 records, exact 64-KiB boundary, unknown records, malformed framing, and injected failure of either allocation. On 2048 descending unique records, comparisons fall from 2,098,177 to 41,069 (98.04%). | Counts describe comparison work, not end-to-end speed. The index is bounded heap memory, freed before the pre-existing root buffer is allocated; framing validity still does not establish fact truth or authority. |
+| W30 | Caller-owned coverage state could contain a terminal bit beyond its high-water mark; the next reservation then appeared already complete. Validate identity, bounds, binary active flags and zero unused slots across reserve/terminal/gap/root operations; support aliased ID initialization. | Reproduced successful reservation of a pre-completed future slot. Regressions cover every slot through 64, corrupt high-water/flags/identity, unchanged state on refusal, duplicate terminals and full-channel exhaustion. | A consistent channel proves only internal bookkeeping. It does not authenticate a restored image or establish runtime/guest coverage outside the observed consumer. |
 
-Further waves are recorded here with their concrete results as completed.
+## Remaining authority boundaries
+
+The public `axi_local_action_v1` codec explicitly says its hashes bind data,
+not the truth of caller facts. `resource_device`, `resource_inode`,
+`previous.*`, `uid`, and `executor_uid` are serialized and bound into roots;
+the local attempt consumer does not re-observe all of them at the effect door.
+The repository references an ADR-059 that is not shipped here, and does not
+specify whether the resource inode identifies the parent directory or target
+object. This audit therefore does not invent a new resource authority or claim
+that declaring these facts confines an external guest.
+
+Before a production consumer relies on these fields, its owner must define
+the actual held object each identity denotes, measure it at the final effect
+door under the same lock, and refuse wrong-device/wrong-inode and stale
+previous-content scenarios before spending a grant. UID/executor claims need
+an actual authenticated caller boundary. Suggested acceptance: mint for one
+resource, submit at another, and prove no spend, no write, and explicit refusal;
+then mutate previous content between appraisal and commit and prove refusal.
+Clock values, pinned trust roots and coverage observations are likewise
+caller-supplied by design; this library does not make them true.
 
 Fault harness: `sh tests/audit40/security_faults.sh`. It also accepts `read`,
 `zero-write`, `dir-read`, `pre-effect`, or `post-rename`. Its `.inc` test unit is

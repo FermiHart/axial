@@ -10,6 +10,7 @@
 #include "axi_local_epoch_v1.h"
 #include "axi_selective_disclosure_v1.h"
 #include "axi_rf1_pin_v1.h"
+#include "axi_coverage_v1.h"
 #include "ed25519.h"
 
 #include <stdio.h>
@@ -439,8 +440,56 @@ static void w29(void)
     CHECK(axi_rf1_pin_v1_parse(bytes, n, &out) == AXI_RF1_PIN_V1_REFUSED);
 }
 
+static void w30(void)
+{
+    axi_coverage_v1_channel channel, bad, saved;
+    uint8_t id[32] = {1}, digest[32];
+    uint64_t seq = 99;
+    unsigned i;
+    axi_coverage_v1_channel_init(&channel, id);
+    CHECK(axi_coverage_v1_channel_has_gap(&channel) == 0);
+    bad = channel; bad.terminal[0] = 1; saved = bad;
+    CHECK(axi_coverage_v1_channel_reserve(&bad, &seq) == -1);
+    CHECK(memcmp(&bad, &saved, sizeof bad) == 0 && seq == 99);
+    CHECK(axi_coverage_v1_channel_has_gap(&bad) == 1);
+    CHECK(axi_coverage_v1_channel_root(&bad, digest) == -1);
+    CHECK(axi_coverage_v1_channel_reserve(&channel, &seq) == 0 && seq == 1);
+    CHECK(axi_coverage_v1_channel_has_gap(&channel) == 1);
+    CHECK(axi_coverage_v1_channel_terminal(&channel, 1) == 0);
+    CHECK(axi_coverage_v1_channel_terminal(&channel, 1) == 0);
+    CHECK(axi_coverage_v1_channel_has_gap(&channel) == 0);
+    for (i = 0; i < 4; i++) {
+        bad = channel;
+        switch (i) {
+        case 0: bad.high_water = UINT64_MAX; break;
+        case 1: bad.terminal[0] = 2; break;
+        case 2: bad.terminal[63] = 1; break;
+        case 3: memset(bad.channel_id, 0, 32); break;
+        }
+        saved = bad;
+        CHECK(axi_coverage_v1_channel_terminal(&bad, 1) == -1);
+        CHECK(axi_coverage_v1_channel_reserve(&bad, &seq) == -1);
+        CHECK(axi_coverage_v1_channel_has_gap(&bad) == 1);
+        CHECK(axi_coverage_v1_channel_root(&bad, digest) == -1);
+        CHECK(memcmp(&bad, &saved, sizeof bad) == 0);
+    }
+    for (i = 2; i <= AXI_COVERAGE_V1_MAX_CHANNEL; i++) {
+        CHECK(axi_coverage_v1_channel_reserve(&channel, &seq) == 0 && seq == i);
+        CHECK(axi_coverage_v1_channel_has_gap(&channel) == 1);
+        CHECK(axi_coverage_v1_channel_terminal(&channel, seq) == 0);
+    }
+    CHECK(axi_coverage_v1_channel_has_gap(&channel) == 0);
+    CHECK(axi_coverage_v1_channel_root(&channel, digest) == 0);
+    saved = channel;
+    CHECK(axi_coverage_v1_channel_reserve(&channel, &seq) == -1);
+    CHECK(memcmp(&channel, &saved, sizeof channel) == 0);
+    axi_coverage_v1_channel_init(&channel, channel.channel_id);
+    CHECK(memcmp(channel.channel_id, id, 32) == 0 && channel.high_water == 0);
+}
+
 int main(int argc, char **argv)
 {
+    if (argc > 2) { fprintf(stderr, "usage: security [W21..W26|W28..W30]\n"); return 2; }
     if (argc == 1 || strcmp(argv[1], "W21") == 0) w21();
     if (argc == 1 || strcmp(argv[1], "W22") == 0) w22();
     if (argc == 1 || strcmp(argv[1], "W23") == 0) w23();
@@ -449,6 +498,11 @@ int main(int argc, char **argv)
     if (argc == 1 || strcmp(argv[1], "W26") == 0) w26();
     if (argc == 1 || strcmp(argv[1], "W28") == 0) w28();
     if (argc == 1 || strcmp(argv[1], "W29") == 0) w29();
+    if (argc == 1 || strcmp(argv[1], "W30") == 0) w30();
+    if (checks == 0) {
+        fprintf(stderr, "unknown wave; W27 uses security_faults.sh\n");
+        return 2;
+    }
     printf("audit40 security: %u checks passed\n", checks);
     return 0;
 }
