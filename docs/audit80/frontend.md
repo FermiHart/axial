@@ -91,3 +91,54 @@ UTF-8/control/quote/backslash canonical fixed points, exact binary results,
 and all 16 propagated atoms. `make gate-fast` retains the original goldens.
 The runner accepts CFLAGS for sanitizers and an explicitly built product
 executable. No generic error payload syntax or new authority is added.
+
+## W63 — exact decimal-to-binary64 core
+
+`axi_numeric.c` introduces an original C99 integer-only conversion. It
+compares an exact decimal rational against binary64 rounding boundaries,
+searches the ordered positive bit patterns, and resolves a midpoint toward
+the even significand. It never calls `strtod`, uses floating-point arithmetic,
+consults locale/rounding mode, or allocates. A caller-owned workspace contains
+all numeric arrays; `AXI_NUMERIC_SCRATCH_BYTES` exposes their simultaneous
+size to the compiler quota. The input scan is linear; subsequent arithmetic
+has a fixed bound independent of input length. Overflow is a distinct
+refusal and does not overwrite output; gradual underflow includes positive
+zero. Source sign handling remains a separate frontend operation.
+
+The retained 800 significant digits are **not** an approximate precision
+promise. Every nonnegative finite binary64 `M * 2^E` has an upper rounding
+boundary `(2*M + 1) * 2^(E-1)`, including zero, the subnormal/normal transition
+and the overflow boundary. A boundary's integer significand has at most
+54 bits and its negative exponent has magnitude at most 1075. Its exact
+decimal significand is therefore smaller than `2^54 * 5^1075 < 10^768`;
+positive-exponent boundaries require at most 309 digits. A boundary cannot
+lie strictly inside a bucket determined by 800 decimal significant digits.
+The scan records whether any discarded digit is nonzero: that sticky bit
+changes a boundary comparison only when the retained prefix equals the
+boundary. Arbitrarily long zero prefixes/suffixes cannot change this proof.
+
+For relevant magnitudes the retained decimal exponent is between -1123
+and 308. Numerators require at most 2658 bits; a power-of-five denominator
+times a 54-bit boundary requires fewer than 2664 bits. Each integer has
+3072 bits of capacity; larger binary shifts are compared virtually. No
+input-sized integer or buffer is constructed. Saturated decimal-position
+counters cannot cancel later: before significance only leading fractional
+zeroes decrease the position; significant integer digits only increase it.
+
+Validation: compile `tests/audit80/numeric_driver.c` with `src/axi_numeric.c`
+using `-std=c99 -Wall -Wextra -Werror -Wpedantic -O1`; run
+`python3 tests/audit80/numeric.py build/numeric80-driver`. The 1,996 reader
+fixtures include both midpoint parities, smallest subnormals, the normal
+transition, overflow, 800/801/1,500-digit inputs and nonzero tails hundreds
+of digits beyond exact midpoints. The independent Python oracle retains
+the complete integer numerator/denominator and rounds a scaled quotient;
+it does not use the production binary search, bounded prefix, `float()`,
+libc conversion or a formatter round trip to obtain expected bits.
+
+Numerical background: [Clinger, *How to Read Floating Point Numbers
+Accurately*](https://scholarsbank.uoregon.edu/server/api/core/bitstreams/ba79372c-1283-483a-9915-24e45d1417dd/content),
+[Burger and Dybvig, *Printing Floating-Point Numbers Quickly and
+Accurately*](https://www.burgerrg.com/FP-Printing-PLDI96.pdf), and
+[David Gay's original dtoa implementation](https://www.netlib.org/fp/dtoa.c)
+explain why a correct reader and a correct printer must agree on rounding
+boundaries. No code from those implementations was imported.
