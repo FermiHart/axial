@@ -153,3 +153,30 @@ cc -std=c99 -O1 -Wall -Wextra -Werror -Isrc \
 build/frontend-json
 build/frontend-json 256  # matched-build CPU benchmark, 16 MiB input
 ```
+
+## W09 — parseable float canonicalization with stable values
+
+**Problem.** Canonical output used libc exponent notation, although the
+source lexer refuses exponents. For example `0.0000001` became
+`1.0000000000000005e-07`, which could not be parsed again. The round-trip
+test used `strtod`, even though the actual lexer accumulates decimal digits
+with a different rounding path.
+
+**Change.** Expand candidates into plain decimal syntax and verify each
+candidate through the actual lexer before publishing it. Preserve the
+evaluated bits; introduce no exponent grammar. If no compact candidate
+works, normalize the already-accepted original decimal by removing
+separators and redundant zeroes. This also handles values near the u64
+integer-part bound and tiny decimal fractions without altering arithmetic.
+
+**Validation.** `python3 tests/audit40/frontend_codegen.py build/axi canon`
+checks 75 boundary and deterministically generated literals: parse succeeds,
+`canon(canon(x)) == canon(x)`, `check(canon(x))` succeeds, and the evaluated
+float is unchanged.
+
+**Remaining limit.** This repairs parsing, value preservation and fixed
+points. It does not replace the inherited decimal accumulator with a
+correctly-rounded decimal-to-binary algorithm. The rare normalized-source
+fallback does not prove one globally unique spelling for all source strings
+that happen to accumulate to the same float. A stronger numeric redesign
+requires separate semantic/version decisions; it is not claimed here.

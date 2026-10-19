@@ -5,6 +5,8 @@ import subprocess
 import sys
 import tempfile
 import resource
+import random
+import re
 
 AXI = pathlib.Path(sys.argv[1]).resolve()
 GROUP = sys.argv[2] if len(sys.argv) > 2 else "all"
@@ -225,3 +227,33 @@ cell deny : fn() -> bool
         check(result.returncode != 0 and "AXI-T019" in result.stdout + result.stderr,
               "transitive pure caller escaped capability analysis")
         print("frontend W07: PASS (256-cell forward/reverse, diamond, cycles, purity)")
+
+    if GROUP in ("all", "canon"):
+        rng = random.Random(4909)
+        values = ["0.0000001", "1000000000000000000.0",
+                  "18446744073709551615.0", "0.33333333333333333333",
+                  "3.14159265358979323846", "00001.230000", "0.0",
+                  "1_000_000.000_000_1"]
+        values += ["0." + "0" * zeros + "1" for zeros in (19, 35, 99, 299, 322, 323, 350)]
+        values += [str(rng.randrange(100000)) + "."
+                   + "".join(str(rng.randrange(10)) for _ in range(25)) for _ in range(60)]
+        for index, value in enumerate(values):
+            src = tmp / f"float{index}.axi"
+            src.write_text("cell value : fn() -> f64\n  fuel 1000\n  pure\n"
+                           "{\n  ret " + value + "\n}\n")
+            parsed = invoke("parse", src)
+            original = re.search(r"\(float (\S+) @", parsed.stdout)
+            check(parsed.returncode == 0 and original, f"float fixture refused: {value}")
+            first = invoke("canon", src)
+            check(first.returncode == 0, f"first canon refused: {value}")
+            src.write_text(first.stdout)
+            second = invoke("canon", src)
+            parsed = invoke("parse", src)
+            after = re.search(r"\(float (\S+) @", parsed.stdout)
+            check(second.returncode == 0 and first.stdout == second.stdout,
+                  f"canon is not a fixed point: {value} -> {first.stdout!r}")
+            check(after and after.group(1) == original.group(1),
+                  f"canonicalization changed evaluated f64: {value}")
+            checked = invoke("check", src)
+            check(checked.returncode == 0, f"canonical output rejected: {value}: {checked.stderr}")
+        print(f"frontend W09: PASS ({len(values)} decimal fixpoints preserve float values)")
