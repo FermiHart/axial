@@ -126,3 +126,28 @@ subject/checker fields are refused. A well-formed but false fuel assertion
 passes structural verification and fails re-execution, explicitly preserving
 the distinction between signed facts and checked behavior. One-byte memory
 limits refuse cleanly. `seal --bench ITERATIONS LAWS` is a matched probe.
+
+## W39 — Reproducible checker identity and public ABI guard
+
+The public tree referenced an absent identity-generation tool and carried a
+fixed source root. Keeping that root after changing VM behavior would confuse
+old and new checker semantics. The restored tool commits to sorted paths,
+byte lengths and SHA-256 file digests for all C, header, inc and def files in
+src/include/vendor, with an explicit versioned domain and little-endian
+length framing. It excludes only the generated identity header. Added and
+removed source files change the commitment. `--check` refuses stale identity;
+`--write` is an explicit maintainer operation after reviewing changes.
+
+The gate also pins the original public header and ABI-profile bytes and
+compiles independent sizeof/alignment/offsetof checks against the recorded
+amd64 SysV LP64 layout. The original header is byte-for-byte unchanged.
+Negative probes show that source additions and public-header drift are
+refused; even `--write` cannot silently accept a changed public ABI.
+
+Compatibility: the checker identity intentionally changes. Existing CHECKED
+certificates must be re-executed and explicitly resealed by the new checker;
+they are not relabeled or automatically upgraded. The AXB encoding, ordinary
+signature framing and public v1 ABI remain unchanged. A source commitment
+does not attest the compiled binary, prove implementation correctness or
+establish native/guest enforcement. Building still needs C99/POSIX tools;
+the identity and extended audit gates additionally need Python 3.

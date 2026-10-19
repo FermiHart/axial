@@ -1,8 +1,9 @@
 # axial — public build. SPDX-License-Identifier: LicenseRef-SPL-1.0
-# No network or dependencies beyond a C99 compiler and POSIX build tools.
+# Build: C99 compiler and POSIX tools. Identity/full audit gates also use Python 3.
 .DEFAULT_GOAL := all
 
 HOSTCC ?= cc
+PYTHON ?= python3
 CPPFLAGS ?=
 CFLAGS ?= -std=c99 -Wall -Wextra -Werror -O1 -D_POSIX_C_SOURCE=200809L
 LDFLAGS ?=
@@ -21,7 +22,7 @@ AUDIT_BIN := $(patsubst tests/audit40/%.c,$(BUILD)/audit40/%,$(AUDIT_SRC))
 AXI_INC := -Isrc -Iinclude -Ivendor
 CONFIG := $(BUILD)/.build-config
 
-.PHONY: all dev demo gate-fast gate-cli gate-audit gate clean FORCE
+.PHONY: all dev demo gate-fast gate-cli gate-audit gate-identity gate clean FORCE
 all: dev
 dev: $(AXI)
 demo: $(DEMO)
@@ -59,7 +60,10 @@ gate-cli: dev
 gate-audit: $(AUDIT_BIN)
 	@set -e; for test in $(AUDIT_BIN); do "$$test"; done
 
-gate: gate-fast gate-cli gate-audit
+gate-identity:
+	$(PYTHON) tools/axi-checker-identity.py --check
+
+gate: gate-identity gate-fast gate-cli gate-audit
 
 clean:
 	rm -rf $(BUILD)
