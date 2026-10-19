@@ -516,6 +516,37 @@ static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent)
         c->err = 1;
         return 0;
     }
+    case N_TRY: {
+        const axi_node *type;
+        int has_ok = 0, has_payload = 0;
+        int r;
+        if (!n->result_type) { c->err = 1; return 0; }
+        r = gen_expr(c, o, n->a, indent);
+        for (type = n->result_type->list; type; type = type->next) {
+            if (type->kind == N_OKT) has_ok = 1;
+            else if (type->kind != N_ERRT) has_payload = 1;
+            else {
+                int atom = alloc_reg(c), predicate = alloc_reg(c);
+                int k = add_k_err(c, type->lex, type->lexlen);
+                /* Closed source errors are payloadless atoms. A different
+                 * scalar kind or a tagged success never equals this KERR. */
+                ob_indent(o, indent); ob_printf(o, "ldk r%d k%d\n", atom, k);
+                ob_indent(o, indent); ob_printf(o, "eq r%d r%d r%d\n", predicate, r, atom);
+                ob_indent(o, indent); ob_printf(o, "jf r%d +2\n", predicate);
+                emit_return(c, o, r, AXI_RET_PLAIN, indent);
+                free_reg(c, atom); free_reg(c, predicate);
+            }
+        }
+        if (has_ok && has_payload) { c->err = 1; return 0; }
+        if (!has_ok && !has_payload) {
+            /* An error-only callee has no continuing path. Do not turn an
+             * impossible result into a successful UNIT return. */
+            ob_indent(o, indent); ob_puts(o, "halt\n");
+            free_reg(c, r);
+            return alloc_unit_reg(c);
+        }
+        return r;
+    }
     case N_BIN: {
         int rl = gen_expr(c, o, n->a, indent);
         int rr = gen_expr(c, o, n->b, indent);

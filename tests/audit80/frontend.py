@@ -97,3 +97,40 @@ cell text : fn() -> str
         value(artifact, "choose", ["{}", "false"], "union 0 json 2 7b7d")
         value(artifact, "choose", ["{}", "true"], "union 1 ok")
         print("frontend W52: PASS (all admitted option payloads and canonical manifest tags)")
+
+    if GROUP in ("all", "result"):
+        artifact = compile_source("result", '''cell risky : fn(n: u64) -> u64 | err.One | err.Two
+  fuel 1000
+  pure
+{ if n == 1 { ret err.One } if n == 2 { ret err.Two } ret n }
+cell middle : fn(n: u64) -> u64 | err.Two | err.One
+  fuel 1000
+  pure
+{ let value = risky(n)? ret value + 1 }
+cell outer : fn(a: u64, b: u64) -> u64 | err.One | err.Two
+  fuel 1000
+  pure
+{ ret middle(a)? + middle(b)? }
+cell before_trap : fn(a: u64) -> u64 | err.One | err.Two
+  fuel 1000
+  pure
+{ ret risky(a)? + 1 / 0 }
+cell always : fn() -> err.One
+  fuel 1000
+  pure
+{ ret err.One }
+cell only_errors : fn() -> ok | err.One
+  fuel 1000
+  pure
+{ always()? ret ok }
+''')
+        value(artifact, "outer", ["4", "5"], "u64 11")
+        value(artifact, "outer", ["1", "0"], error("One"))
+        value(artifact, "outer", ["0", "2"], error("Two"))
+        value(artifact, "before_trap", ["1"], error("One"))
+        value(artifact, "only_errors", [], error("One"))
+        prefix = "cell r : fn() -> u64 | err.X fuel 100 { ret err.X }\n"
+        refused("missing_error", prefix + "cell f : fn() -> u64 fuel 100 { ret r()? }", "AXI-T015")
+        refused("leaked_result", prefix + "cell f : fn() -> u64 | err.X fuel 100 { ret r() }", "AXI-T013")
+        refused("try_scalar", "cell f : fn() -> u64 fuel 100 { ret 1? }", "AXI-T014")
+        print("frontend W53: PASS (named-error propagation, nested calls, short circuit and refusals)")

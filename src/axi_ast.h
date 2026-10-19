@@ -47,6 +47,8 @@ struct axi_node {
                                   * N_RET: AXI_RET_* representation note.
                                   * The codegen never re-infers a type. */
     uint8_t      contract_checked; /* AXI-INV-122: unit passed type/cap closure */
+    /* Borrowed shape established by check_try; not an owned AST child. */
+    const axi_node *result_type;
 };
 
 /* Parse a whole unit. Syntax errors return a partial tree and AXI-P0xx

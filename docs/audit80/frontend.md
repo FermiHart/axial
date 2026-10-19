@@ -27,3 +27,17 @@ needed and boolean false remains a payload, distinct from the ok arm.
 
 Validation: `frontend.py build/axi returns` executes both arms for all seven
 admitted payload types, both source declaration orders and bound values.
+
+## W53 — explicit propagation of named errors
+
+`?` now carries the callee's checked return shape into codegen. It compares
+each possible source error atom and returns that exact scalar error before
+evaluating subsequent expressions. This uses existing EQ/JF/RET semantics;
+UCHK is deliberately not repurposed, because its bytecode union convention
+does not represent v7 scalar errors. Error-only calls have no continuing
+path and retain a defensive HALT. The new AST shape pointer borrows the
+existing signature and allocates no extra object.
+
+Validation: `frontend.py build/axi result` covers nested/reordered error sets,
+multiple call operands, error propagation before a later division trap,
+error-only calls and unhandled/undeclared/nonunion refusals.

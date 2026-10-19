@@ -789,6 +789,9 @@ static ty check_try(ck *c, const axi_node *n)
 
     rshape_of(c, inner.rt, &rs, 0);
     rshape_of(c, c->cell->a->b, &mine, 0);
+    ((axi_node *)n)->result_type = inner.rt;
+    ((axi_node *)n)->tyann = mine.has_ok && mine.payload
+        ? AXI_RET_NONE : AXI_RET_PLAIN;
 
     for (i = 0; i < rs.nerr; i++) {
         if (!rshape_has_err(&mine, rs.errs[i]->lex, rs.errs[i]->lexlen)) {
