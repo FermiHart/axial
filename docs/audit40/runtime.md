@@ -150,3 +150,29 @@ it deliberately includes the handle implementation for boundary setup.
 **Limits.** After 4,294,967,295 process-wide generations, creating a new handle
 fails safely. Applications requiring a larger lifetime need a separately
 versioned handle representation; this audit does not change that format.
+
+## W18 — exact assembly input bounds and amortized builder growth
+
+**Problem.** `axb_asm_text(src, n, ...)` hashed n bytes but both parser passes
+read until NUL, executing a suffix outside that span and reading past a
+nonterminated buffer. The forward-reference prescan disagreed about tabs.
+The tokenizer misread quotes after escaped backslashes, accepted junk after
+a quoted token and shared a static argv array. Every constant/instruction
+append called realloc separately.
+
+**Change.** Both passes consume the exact supplied span; reject more than 256
+cells before builder allocation; use matching space/tab delimiters; tokenize
+with caller-owned argv and escaped-pair scanning; require exact quoted-token
+and `end` framing. Constant/code arrays grow geometrically with overflow
+checks. For 10,001 instructions the code array grows 11 times instead of
+10,001, while encoded bytes and counts are unchanged.
+
+**Evidence.** 785 normal checks pass; ASan+UBSan pass for the nonterminated
+input, ignored suffix, quoted-backslash/comment, malformed suffix, tabbed
+forward call, large-cell construction and 257-cell refusal. The benchmark
+fixture `runtime_bench.c` exposes vm/alloc/asm modes and has been smoke-tested
+with small inputs; comparative timings are intentionally left to the final
+sequential baseline/final run.
+
+**Limits.** The existing 511-byte line limit, 256-cell encoding and source
+string escape meanings remain unchanged. No assembler language was added.

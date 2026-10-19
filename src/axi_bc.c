@@ -1587,6 +1587,7 @@ bad:
 typedef struct {
     const char *path;
     const char *src;
+    size_t      len;
     size_t      off;
     uint32_t    line;
     int         errs;
@@ -1594,16 +1595,27 @@ typedef struct {
     uint32_t    ncells;
 } asm_st;
 
+static void aerr(asm_st *a, const char *code, const char *msg, const char *fix);
+
 /* prescan cell names so `call @name` may point forward */
 static void prescan_cells(asm_st *a) {
-    const char *s = a->src;
-    while (*s) {
-        while (*s == ' ' || *s == '\t') s++;
-        if (strncmp(s, "cell ", 5) == 0) {
-            const char *b = s + 5;
-            while (*b == ' ') b++;
-            const char *e = b;
-            while (*e && *e != ' ' && *e != '\t' && *e != '\n') e++;
+    size_t off = 0;
+    uint32_t line = 1;
+    while (off < a->len) {
+        while (off < a->len && (a->src[off] == ' ' || a->src[off] == '\t')) off++;
+        if (a->len - off >= 5 && memcmp(a->src + off, "cell", 4) == 0
+                && (a->src[off + 4] == ' ' || a->src[off + 4] == '\t')) {
+            size_t b = off + 5, e;
+            if (a->ncells == 256) {
+                a->line = line;
+                aerr(a, "AXI-B024", "module has more than 256 cells",
+                     "the encoded call index is one byte");
+                return;
+            }
+            while (b < a->len && (a->src[b] == ' ' || a->src[b] == '\t')) b++;
+            e = b;
+            while (e < a->len && a->src[e] != ' ' && a->src[e] != '\t'
+                    && a->src[e] != '\n') e++;
             char **names = axi_realloc(
                 a->cellnames, (a->ncells + 1) * sizeof(char *));
             char *nm;
@@ -1613,17 +1625,20 @@ static void prescan_cells(asm_st *a) {
                 return;
             }
             a->cellnames = names;
-            nm = axi_malloc((size_t)(e - b) + 1);
+            nm = axi_malloc(e - b + 1);
             if (!nm) {
                 fprintf(AXI_ERR, "AXI-D999 %s: out of memory\n", a->path);
                 a->errs++;
                 return;
             }
-            memcpy(nm, b, (size_t)(e - b)); nm[e - b] = 0;
+            memcpy(nm, a->src + b, e - b); nm[e - b] = 0;
             a->cellnames[a->ncells++] = nm;
         }
-        while (*s && *s != '\n') s++;
-        if (*s) s++;
+        while (off < a->len && a->src[off] != '\n') off++;
+        if (off < a->len) {
+            off++;
+            if (line != UINT32_MAX) line++;
+        }
     }
 }
 
@@ -1634,15 +1649,15 @@ static void aerr(asm_st *a, const char *code, const char *msg, const char *fix) 
 
 /* one line at a time; returns 0 at EOF */
 static int next_line(asm_st *a, char *buf, size_t cap) {
-    if (a->src[a->off] == 0) return 0;
+    if (a->off == a->len) return 0;
     size_t n = 0;
     int overflow = 0;
-    while (a->src[a->off] && a->src[a->off] != '\n') {
+    while (a->off < a->len && a->src[a->off] != '\n') {
         if (n + 1 < cap) buf[n++] = a->src[a->off];
         else overflow = 1;
         a->off++;
     }
-    if (a->src[a->off] == '\n') a->off++;
+    if (a->off < a->len && a->src[a->off] == '\n') a->off++;
     buf[n] = 0;
     a->line++;
     if (overflow) {
@@ -1660,8 +1675,7 @@ static int next_line(asm_st *a, char *buf, size_t cap) {
  * An unterminated quote is left with its opening '"' and no closing one, so the
  * const parser refuses it with AXI-B007 instead of silently truncating.
  * /AXI-INV-041/ */
-static char **split_ws(char *s, int *argc) {
-    static char *argv[8];
+static void split_ws(char *s, int *argc, char *argv[8]) {
     int n = 0;
     while (*s && n < 8) {
         while (*s == ' ' || *s == '\t') s++;
@@ -1669,8 +1683,13 @@ static char **split_ws(char *s, int *argc) {
         argv[n++] = s;
         if (*s == '"') {
             s++;                                  /* opening quote */
-            while (*s && !(*s == '"' && (s == argv[n-1]+1 || s[-1] != '\\'))) s++;
-            if (*s == '"') s++;                   /* closing quote, kept in token */
+            while (*s && *s != '"') {
+                if (*s == '\\' && s[1]) s++;
+                s++;
+            }
+            if (*s != '"') { *argc = 9; return; }
+            s++;                                  /* closing quote, kept in token */
+            if (*s && *s != ' ' && *s != '\t') { *argc = 9; return; }
         } else {
             while (*s && *s != ' ' && *s != '\t') s++;
         }
@@ -1679,7 +1698,32 @@ static char **split_ws(char *s, int *argc) {
     while (*s == ' ' || *s == '\t') s++;
     if (*s && *s != '#') n = 9; /* token overflow is malformed, never ignored */
     *argc = n;
-    return argv;
+}
+
+static void *asm_array_grow(asm_st *a, void *array, size_t *capacity,
+                            size_t count, size_t element)
+{
+    size_t max = (size_t)-1 / element;
+    size_t grown;
+    void *storage;
+    if (count <= *capacity) return array;
+    if (count > max) {
+        aerr(a, "AXI-B024", "assembly table size overflow",
+             "reduce the cell's constants or instructions");
+        return NULL;
+    }
+    grown = *capacity ? *capacity : 16;
+    while (grown < count) {
+        if (grown > max / 2) { grown = count; break; }
+        grown *= 2;
+    }
+    storage = axi_realloc(array, grown * element);
+    if (!storage) {
+        aerr(a, "AXI-D999", "out of memory", "retry with enough host memory");
+        return NULL;
+    }
+    *capacity = grown;
+    return storage;
 }
 
 /* INV-342 / AXI-INV-108: numeric fields have one complete grammar. */
@@ -1797,8 +1841,11 @@ static int parse_sbc(asm_st *a, const char *t, uint16_t *out) {
 static int asm_module(asm_st *a, axb_mod *m) {
     char line[512];
     axb_cell *c = NULL;
+    size_t konst_capacity = 0, code_capacity = 0;
     while (next_line(a, line, sizeof line)) {
-        int argc; char **argv = split_ws(line, &argc);
+        int argc;
+        char *argv[8];
+        split_ws(line, &argc, argv);
         if (argc == 0) continue;
         if (strcmp(argv[0], ".eff") == 0) {
             /* W19: the module declares, in its own text — therefore inside
@@ -1855,6 +1902,7 @@ static int asm_module(asm_st *a, axb_mod *m) {
             m->cells = cells;
             c = &m->cells[m->n++];
             memset(c, 0, sizeof *c);
+            konst_capacity = code_capacity = 0;
             c->name = axi_strdup(argv[1]);
             if (!c->name) {
                 aerr(a, "AXI-D999", "out of memory", "retry with enough host memory");
@@ -1864,6 +1912,10 @@ static int asm_module(asm_st *a, axb_mod *m) {
             continue;
         }
         if (strcmp(argv[0], "end") == 0) {
+            if (argc != 1) {
+                aerr(a, "AXI-B008", "end takes no operands", "spell it: end");
+                continue;
+            }
             if (!c) aerr(a, "AXI-B006", "end without cell", "delete the stray `end`");
             c = NULL;
             continue;
@@ -1877,12 +1929,9 @@ static int asm_module(asm_st *a, axb_mod *m) {
                 aerr(a, "AXI-B007", "const out of order or malformed", "declare k0,k1,... in order: kN u64|i64|f64|str|err <payload>");
                 continue;
             }
-            axb_konst *konsts = axi_realloc(
-                c->k, (c->nk + 1) * sizeof(axb_konst));
-            if (!konsts) {
-                aerr(a, "AXI-D999", "out of memory", "retry with enough host memory");
-                return 1;
-            }
+            axb_konst *konsts = asm_array_grow(a, c->k, &konst_capacity,
+                                               (size_t)c->nk + 1, sizeof *c->k);
+            if (!konsts) return 1;
             c->k = konsts;
             axb_konst *k = &c->k[c->nk];
             memset(k, 0, sizeof *k);
@@ -1945,12 +1994,14 @@ static int asm_module(asm_st *a, axb_mod *m) {
         if (oi->ops == AXB_OPS_RA_KBC || oi->ops == AXB_OPS_RA_SBC || oi->ops == AXB_OPS_SBC) {
             rb = (uint8_t)(bc16 >> 8); rc = (uint8_t)bc16;
         }
-        uint32_t *code = axi_realloc(
-            c->code, (c->nc + 1) * sizeof(uint32_t));
-        if (!code) {
-            aerr(a, "AXI-D999", "out of memory", "retry with enough host memory");
+        if (c->nc == UINT32_MAX) {
+            aerr(a, "AXI-B024", "too many instructions in one cell",
+                 "the encoded instruction count is 32 bits");
             return 1;
         }
+        uint32_t *code = asm_array_grow(a, c->code, &code_capacity,
+                                       (size_t)c->nc + 1, sizeof *c->code);
+        if (!code) return 1;
         c->code = code;
         c->code[c->nc++] = (uint32_t)op | (uint32_t)ra << 8 | (uint32_t)rb << 16 | (uint32_t)rc << 24;
     }
@@ -2207,13 +2258,15 @@ static int src_bind_hash(const char *src, size_t n, const char *path,
 /* W12: the one door from .axs text to a module. The seal runner and
  * cmd_asm both enter here — a second assembler would be a second truth. */
 int axb_asm_text(const char *src, size_t n, const char *path, axb_mod *m) {
-    asm_st a = { path, src, 0, 0, 0, NULL, 0 };
+    asm_st a = { .path = path ? path : "<assembly>",
+                 .src = src ? src : "", .len = n };
     int rc;
+    if (!m || (!src && n)) return 1;
     /* W14: bind the module to the exact text it derives from — computed
      * here, at the one door, so seal and asm can never disagree on it. */
-    if (src_bind_hash(src, n, path, m->src_hash) != 0) return 1;
+    if (src_bind_hash(a.src, n, a.path, m->src_hash) != 0) return 1;
     prescan_cells(&a);
-    rc = asm_module(&a, m);
+    rc = a.errs ? 1 : asm_module(&a, m);
     for (uint32_t i = 0; i < a.ncells; i++) free(a.cellnames[i]);
     free(a.cellnames);
     return rc;

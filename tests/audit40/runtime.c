@@ -3,8 +3,10 @@
 #include "axi_replay.h"
 #include "axi_json.h"
 #include "axi_platform.h"
+#include "axi_hash.h"
 
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
@@ -486,6 +488,82 @@ static void resource_transactions(void)
     CHECK(!axi_resource_envelope_valid(&resources));
 }
 
+static void assembly_spans_and_strings(void)
+{
+    static const char prefix[] = "cell first nregs=1\nret r0\nend\n";
+    static const char with_suffix[] = "cell first nregs=1\nret r0\nend\n"
+                                      "cell hidden nregs=1\nret r0\nend\n";
+    static const char quoted[] = "cell strings nregs=1\n"
+        "k0 str \"tail\\\\\"   # a quoted string ending in a backslash\n"
+        "ldk r0 k0\nret r0\nend\n";
+    static const char bad_suffix[] = "cell strings nregs=1\n"
+        "k0 str \"ok\"x\nret r0\nend\n";
+    static const char tabs[] = "cell first nregs=1\ncall r0 @last 0\nret r0\nend\n"
+        "cell\tlast\tnregs=1\nret r0\nend\n";
+    axb_mod module;
+    uint8_t root[32];
+    char *exact = malloc(sizeof prefix - 1);
+    CHECK(exact != NULL);
+    if (!exact) return;
+    memcpy(exact, prefix, sizeof prefix - 1);
+    memset(&module, 0, sizeof module);
+    CHECK(axb_asm_text(exact, sizeof prefix - 1, "bounded", &module) == 0);
+    CHECK(module.n == 1 && module.cells[0].nc == 1);
+    axb_mod_free(&module);
+    free(exact);
+    memset(&module, 0, sizeof module);
+    CHECK(axb_asm_text(with_suffix, sizeof prefix - 1, "prefix", &module) == 0);
+    CHECK(module.n == 1);
+    axi_sha256(with_suffix, sizeof prefix - 1, root);
+    CHECK(memcmp(root, module.src_hash, 32) == 0);
+    axb_mod_free(&module);
+    memset(&module, 0, sizeof module);
+    CHECK(axb_asm_text(quoted, sizeof quoted - 1, "quoted", &module) == 0);
+    CHECK(module.n == 1 && module.cells[0].nk == 1
+          && module.cells[0].k[0].slen == 5
+          && memcmp(module.cells[0].k[0].s, "tail\\", 5) == 0);
+    axb_mod_free(&module);
+    memset(&module, 0, sizeof module);
+    CHECK(axb_asm_text(bad_suffix, sizeof bad_suffix - 1, "bad-quoted", &module) != 0);
+    axb_mod_free(&module);
+    memset(&module, 0, sizeof module);
+    CHECK(axb_asm_text(tabs, sizeof tabs - 1, "tabs", &module) == 0);
+    CHECK(module.n == 2 && ((module.cells[0].code[0] >> 16) & 255u) == 1);
+    axb_mod_free(&module);
+    CHECK(axb_asm_text(NULL, 1, "missing", &module) != 0);
+    CHECK(axb_asm_text(prefix, sizeof prefix - 1, "missing", NULL) != 0);
+    {
+        const uint32_t nops = 10000;
+        size_t bytes = sizeof prefix + (size_t)nops * 4;
+        char *source = malloc(bytes);
+        size_t used;
+        CHECK(source != NULL);
+        if (!source) return;
+        used = (size_t)sprintf(source, "cell many nregs=1\n");
+        for (uint32_t i = 0; i < nops; i++) {
+            memcpy(source + used, "nop\n", 4); used += 4;
+        }
+        memcpy(source + used, "ret r0\nend\n", 11); used += 11;
+        memset(&module, 0, sizeof module);
+        CHECK(axb_asm_text(source, used, "many", &module) == 0);
+        CHECK(module.n == 1 && module.cells[0].nc == nops + 1);
+        CHECK(axb_mod_verify(&module, "many", NULL) == 0);
+        axb_mod_free(&module);
+        free(source);
+    }
+    {
+        char source[257 * 48];
+        size_t used = 0;
+        for (unsigned i = 0; i < 257; i++)
+            used += (size_t)snprintf(source + used, sizeof source - used,
+                                     "cell c%u nregs=1\nret r0\nend\n", i);
+        memset(&module, 0, sizeof module);
+        CHECK(axb_asm_text(source, used, "too-many-cells", &module) != 0);
+        CHECK(module.n == 0);
+        axb_mod_free(&module);
+    }
+}
+
 static int worker_exit_without_frame(void *opaque)
 {
     int *marker = opaque;
@@ -536,6 +614,7 @@ int main(int argc, char **argv)
     effect_records_and_grants();
     replay_effect_refusal();
     resource_transactions();
+    assembly_spans_and_strings();
     printf("audit40 runtime: %u checks, %u failures\n", checks, failures);
     return failures != 0;
 }
