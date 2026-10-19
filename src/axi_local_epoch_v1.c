@@ -2,6 +2,7 @@
 #include "axi_local_epoch_v1.h"
 
 #include "axi_local_attempt_v1.h"
+#include "axi_local_store_v1.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -99,15 +100,15 @@ static int epoch_unpack(const uint8_t in[EPOCH_RECORD_SIZE],
 static int write_full_fsync_at(int dirfd, const char *name, const void *data,
                                size_t len)
 {
-    int fd = openat(dirfd, name, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    int fd = axi_local_store_open_file_at(dirfd, name, O_WRONLY | O_CREAT | O_TRUNC);
     size_t off = 0;
     if (fd < 0) {
         return -1;
     }
     while (off < len) {
         ssize_t w = write(fd, (const char *)data + off, len - off);
-        if (w < 0) {
-            if (errno == EINTR) {
+        if (w <= 0) {
+            if (w < 0 && errno == EINTR) {
                 continue;
             }
             close(fd);
@@ -125,7 +126,7 @@ static int write_full_fsync_at(int dirfd, const char *name, const void *data,
 static int read_exact_at(int dirfd, const char *name,
                          uint8_t out[EPOCH_RECORD_SIZE], int *present)
 {
-    int fd = openat(dirfd, name, O_RDONLY);
+    int fd = axi_local_store_open_file_at(dirfd, name, O_RDONLY);
     size_t off = 0;
     uint8_t extra;
     ssize_t r;
@@ -157,8 +158,13 @@ static int read_exact_at(int dirfd, const char *name,
         close(fd);
         return -1;
     }
-    r = read(fd, &extra, 1);
-    close(fd);
+    do { r = read(fd, &extra, 1); } while (r < 0 && errno == EINTR);
+    if (r < 0) {
+        int t = err_transient();
+        close(fd);
+        return t ? -2 : -1;
+    }
+    if (close(fd) != 0) return -2;
     if (r != 0) {
         return -1;
     }
@@ -187,16 +193,18 @@ int axi_local_epoch_v1_provision(const char *store_dir,
         AXI_LOCAL_ATTEMPT_V1_OK) {
         return AXI_LOCAL_EPOCH_V1_REFUSED;
     }
-    sdfd = open(store_dir, O_RDONLY | O_DIRECTORY);
+    sdfd = axi_local_store_open(store_dir);
     if (sdfd < 0) {
         return AXI_LOCAL_EPOCH_V1_REFUSED;
     }
-    lockfd = openat(sdfd, "owner.lock", O_WRONLY | O_CREAT, 0600);
+    lockfd = axi_local_store_open_file_at(sdfd, "owner.lock", O_WRONLY | O_CREAT);
     if (lockfd < 0 || flock(lockfd, LOCK_EX) != 0) {
         rec = AXI_LOCAL_EPOCH_V1_REFUSED;
         goto done;
     }
-    if (read_exact_at(sdfd, "epoch_active", raw, &present) != 0
+    rec = read_exact_at(sdfd, "epoch_active", raw, &present);
+    if (rec == -2) { rec = AXI_LOCAL_EPOCH_V1_REFUSED; goto done; }
+    if (rec != 0
             || (present && epoch_unpack(raw, &cur) != 0)) {
         rec = AXI_LOCAL_EPOCH_V1_CORRUPT;
         goto done;
@@ -252,11 +260,11 @@ int axi_local_epoch_v1_activate(const char *store_dir, uint64_t generation)
         AXI_LOCAL_ATTEMPT_V1_OK) {
         return AXI_LOCAL_EPOCH_V1_REFUSED;
     }
-    sdfd = open(store_dir, O_RDONLY | O_DIRECTORY);
+    sdfd = axi_local_store_open(store_dir);
     if (sdfd < 0) {
         return AXI_LOCAL_EPOCH_V1_REFUSED;
     }
-    lockfd = openat(sdfd, "owner.lock", O_WRONLY | O_CREAT, 0600);
+    lockfd = axi_local_store_open_file_at(sdfd, "owner.lock", O_WRONLY | O_CREAT);
     if (lockfd < 0 || flock(lockfd, LOCK_EX) != 0) {
         rec = AXI_LOCAL_EPOCH_V1_REFUSED;
         goto done;
@@ -266,7 +274,9 @@ int axi_local_epoch_v1_activate(const char *store_dir, uint64_t generation)
         rec = AXI_LOCAL_EPOCH_V1_REFUSED;
         goto done;
     }
-    if (read_exact_at(sdfd, "epoch_active", raw, &active_present) != 0
+    rec = read_exact_at(sdfd, "epoch_active", raw, &active_present);
+    if (rec == -2) { rec = AXI_LOCAL_EPOCH_V1_REFUSED; goto done; }
+    if (rec != 0
             || (active_present && epoch_unpack(raw, &cur) != 0)) {
         rec = AXI_LOCAL_EPOCH_V1_CORRUPT;
         goto done;
@@ -298,6 +308,7 @@ int axi_local_epoch_v1_current(const char *store_dir,
                                axi_local_epoch_v1 *out)
 {
     int sdfd = -1;
+    int rr;
     uint8_t raw[EPOCH_RECORD_SIZE];
     int present = 0;
     if (!out) {
@@ -308,13 +319,14 @@ int axi_local_epoch_v1_current(const char *store_dir,
         AXI_LOCAL_ATTEMPT_V1_OK) {
         return AXI_LOCAL_EPOCH_V1_REFUSED;
     }
-    sdfd = open(store_dir, O_RDONLY | O_DIRECTORY);
+    sdfd = axi_local_store_open(store_dir);
     if (sdfd < 0) {
         return AXI_LOCAL_ATTEMPT_V1_REFUSED;
     }
-    if (read_exact_at(sdfd, "epoch_active", raw, &present) != 0) {
+    rr = read_exact_at(sdfd, "epoch_active", raw, &present);
+    if (rr != 0) {
         close(sdfd);
-        return AXI_LOCAL_EPOCH_V1_CORRUPT;
+        return rr == -2 ? AXI_LOCAL_EPOCH_V1_REFUSED : AXI_LOCAL_EPOCH_V1_CORRUPT;
     }
     close(sdfd);
     if (!present) {

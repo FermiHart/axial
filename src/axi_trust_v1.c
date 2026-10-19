@@ -69,7 +69,7 @@ typedef struct {
 static const uint8_t *rd(trust_reader *r, size_t len)
 {
     const uint8_t *p;
-    if (!r || r->err || len > r->len - r->off) {
+    if (!r || r->err || r->off > r->len || len > r->len - r->off) {
         if (r) r->err = 1;
         return NULL;
     }
@@ -169,7 +169,9 @@ static int parse_snapshot(trust_snapshot *s, const uint8_t *bytes, size_t len)
     uint16_t ni, nk, ng, np, nr;
     size_t i;
 
-    if (!s || !bytes || len == 0 || memcmp(rd(&r, 4), AXI_TRUST_V1_MAGIC, 4) != 0
+    /* Read the complete fixed prefix before passing a pointer to memcmp.
+     * rd() returns NULL for 1--3-byte inputs, not an empty byte string. */
+    if (!s || !bytes || len < 8 || memcmp(rd(&r, 4), AXI_TRUST_V1_MAGIC, 4) != 0
             || rd_u32(&r) != AXI_TRUST_V1_VERSION)
         return -1;
     memset(s, 0, sizeof *s);
@@ -182,7 +184,9 @@ static int parse_snapshot(trust_snapshot *s, const uint8_t *bytes, size_t len)
     s->valid_until = rd_u64(&r);
     ni = rd_u16(&r); nk = rd_u16(&r); ng = rd_u16(&r);
     np = rd_u16(&r); nr = rd_u16(&r);
-    if (r.err || s->has_predecessor > 1 || (!s->has_predecessor && !root_zero(s->predecessor_root))
+    if (r.err || s->has_predecessor > 1
+            || (s->has_predecessor ? root_zero(s->predecessor_root)
+                                   : !root_zero(s->predecessor_root))
             || root_zero(s->org_id) || root_zero(s->time_domain)
             || s->valid_from >= s->valid_until
             || ni == 0 || ni > AXI_TRUST_V1_MAX_IDENTITIES
@@ -316,6 +320,9 @@ int axi_trust_v1_check_transition(const uint8_t *previous, size_t previous_len,
         return -1;
     axi_sha256(previous, previous_len, prev_root);
     if (!cur.has_predecessor || memcmp(cur.predecessor_root, prev_root, 32) != 0
+            || memcmp(cur.org_id, prev.org_id, 32) != 0
+            || memcmp(cur.time_domain, prev.time_domain, 32) != 0
+            || prev.sequence == UINT64_MAX
             || cur.sequence != prev.sequence + 1)
         return -1;
     for (i = 0; i < prev.nrevocations; i++) {

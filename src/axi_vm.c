@@ -69,6 +69,19 @@ typedef char vm_invocation_args_scratch_probe[
  * not the compiler front end. One width is now shared instead of restated. */
 #define VM_MAX_DEPTH    256          /* call depth: deterministic wall */
 
+/* The dispatcher needs only operands and cost. Derive its compact table
+ * from the same declaration as assembler/disassembler metadata, avoiding
+ * one cross-translation-unit lookup per executed instruction. */
+typedef struct {
+    uint8_t ops;
+    uint8_t fuel;
+} vm_opinfo;
+static const vm_opinfo VM_OPINFO[OP__COUNT] = {
+#define X(up, nm, operands, cost, doc) [OP_##up] = {operands, cost},
+    AXB_OPCODES(X)
+#undef X
+};
+
 typedef struct {
     const axb_mod *m;
     const axb_manifest *manifest; /* NULL keeps the production v5 semantics. */
@@ -148,6 +161,59 @@ static void vm_plain_scratch_free(vm *V)
 }
 
 static vval VUNIT(void) { vval v; memset(&v, 0, sizeof v); return v; }
+
+/* Return by value: callers may publish over the union's own register. */
+static vval union_payload(const vval *value)
+{
+    vval payload = VUNIT();
+    payload.kind = value->pay_kind;
+    payload.bits = value->bits;
+    payload.s = value->s;
+    payload.slen = value->slen;
+    payload.atom = value->atom;
+    payload.atom_len = value->atom_len;
+    return payload;
+}
+
+static int bytes_equal(const char *a, uint32_t alen,
+                        const char *b, uint32_t blen)
+{
+    return alen == blen && (alen == 0 || (a && b && memcmp(a, b, alen) == 0));
+}
+
+/* Equality uses the same closed kind for a scalar and a union payload. A
+ * union's arm and payload kind are part of its value, as are error payloads. */
+static int value_equal(const vval *x, const vval *y)
+{
+    uint8_t kind = x->kind;
+    if (kind != y->kind) return 0;
+    if (kind == VK_UNION) {
+        if (x->aux != y->aux || x->pay_kind != y->pay_kind) return 0;
+        kind = x->pay_kind;
+    }
+    switch (kind) {
+    case VK_STR: case VK_BYTES:
+        return bytes_equal(x->s, x->slen, y->s, y->slen);
+    case VK_ERR:
+        return bytes_equal(x->atom, x->atom_len, y->atom, y->atom_len)
+            && bytes_equal(x->s, x->slen, y->s, y->slen);
+    case VK_CAP:
+        return x->cap_generation == y->cap_generation
+            && x->cap_slot == y->cap_slot
+            && memcmp(x->cap_proof, y->cap_proof, sizeof x->cap_proof) == 0
+            && bytes_equal(x->atom, x->atom_len, y->atom, y->atom_len);
+    case VK_F64: {
+        double a, b;
+        memcpy(&a, &x->bits, sizeof a);
+        memcpy(&b, &y->bits, sizeof b);
+        return a == b;
+    }
+    case VK_UNIT: case VK_U64: case VK_I64: case VK_BOOL:
+        return x->bits == y->bits;
+    default:
+        return 0;
+    }
+}
 
 static void vtrap(vm *V, const axb_cell *c, uint32_t pc, const char *code,
                    const char *msg, const char *fix) {
@@ -439,7 +505,6 @@ static int arith(vm *V, const axb_cell *c, uint32_t pc, uint8_t op,
               "no coercion at runtime either: convert in source");
         return 0;
     }
-    *out = *x;
     if (x->kind == VK_F64) {
         double a, b, r;
         memcpy(&a, &x->bits, 8); memcpy(&b, &y->bits, 8);
@@ -453,6 +518,9 @@ static int arith(vm *V, const axb_cell *c, uint32_t pc, uint8_t op,
                   "use u64/i64, or wait for the stdlib cell (W21)");
             return 0;
         }
+        /* Destination registers may alias either input. Publish only after
+         * both operands have been consumed, including a divisor of zero. */
+        *out = *x;
         memcpy(&out->bits, &r, 8);
         out->bits = canonical_f64_bits(out->bits);
         return 1;
@@ -482,6 +550,7 @@ static int arith(vm *V, const axb_cell *c, uint32_t pc, uint8_t op,
         } else r = a % b;
         break;
     }
+    *out = *x;
     out->bits = r;
     return 1;
 }
@@ -798,7 +867,7 @@ static int run_cell_execute(vm *V, uint32_t ci, vval *reg, vval *ret,
         uint8_t op = (uint8_t)w, a = (uint8_t)(w >> 8),
                 b = (uint8_t)(w >> 16), cc = (uint8_t)(w >> 24);
         uint16_t bc16 = (uint16_t)(b << 8 | cc);
-        const axb_opinfo *oi = axb_op_info(op);
+        const vm_opinfo *oi = op < OP__COUNT ? &VM_OPINFO[op] : NULL;
         {   /* W18 — fuel first, and a cell never spends what it does not have.
              * The charge is checked BEFORE it is applied (cost > remaining,
              * written as a subtraction so no u64 can wrap): the ledger is
@@ -890,29 +959,7 @@ static int run_cell_execute(vm *V, uint32_t ci, vval *reg, vval *ret,
             if (!arith(V, c, pc, op, &reg[b], &reg[cc], &reg[a])) return 0;
             break;
         case OP_EQ: {
-            const vval *x = &reg[b], *y = &reg[cc];
-            int eq = 0;
-            if (x->kind == y->kind) {
-                if (x->kind == VK_STR || x->kind == VK_BYTES)
-                    eq = x->slen == y->slen
-                        && memcmp(x->s, y->s, x->slen) == 0;
-                else if (x->kind == VK_ERR)
-                    eq = x->atom_len == y->atom_len
-                        && memcmp(x->atom, y->atom, x->atom_len) == 0;
-                else if (x->kind == VK_CAP)
-                    eq = x->cap_generation == y->cap_generation
-                        && x->cap_slot == y->cap_slot
-                        && memcmp(x->cap_proof, y->cap_proof,
-                                  sizeof x->cap_proof) == 0
-                        && x->atom_len == y->atom_len
-                        && x->atom && y->atom
-                        && memcmp(x->atom, y->atom, x->atom_len) == 0;
-                else if (x->kind == VK_F64) {
-                    double da, db; memcpy(&da, &x->bits, 8); memcpy(&db, &y->bits, 8);
-                    eq = (da == db);
-                }
-                else eq = x->bits == y->bits && x->aux == y->aux;
-            }
+            int eq = value_equal(&reg[b], &reg[cc]);
             reg[a] = VUNIT(); reg[a].kind = VK_BOOL; reg[a].bits = (uint64_t)eq;
             break;
         }
@@ -935,7 +982,8 @@ static int run_cell_execute(vm *V, uint32_t ci, vval *reg, vval *ret,
             }
             if (!reg[a].bits) { pc = (uint32_t)((int32_t)pc + (int16_t)bc16); continue; }
             break;
-        case OP_UMAKE:
+        case OP_UMAKE: {
+            vval result;
             if (reg[b].kind != VK_U64) {
                 vtrap(V, c, pc, "AXI-R004", "union tag must be u64",
                       "umake rDST rTAG rPAYLOAD");
@@ -958,23 +1006,28 @@ static int run_cell_execute(vm *V, uint32_t ci, vval *reg, vval *ret,
                       "payloads are unit/u64/i64/f64/bool/str; nested unions do not exist");
                 return 0;
             }
-            reg[a] = VUNIT(); reg[a].kind = VK_UNION;
-            reg[a].aux  = (uint8_t)reg[b].bits;
-            reg[a].pay_kind = reg[cc].kind;
-            reg[a].bits = reg[cc].bits;
-            reg[a].s    = reg[cc].s;
-            reg[a].slen = reg[cc].slen;
-            reg[a].atom = reg[cc].atom;
-            reg[a].atom_len = reg[cc].atom_len;
+            result = VUNIT(); result.kind = VK_UNION;
+            result.aux  = (uint8_t)reg[b].bits;
+            result.pay_kind = reg[cc].kind;
+            result.bits = reg[cc].bits;
+            result.s    = reg[cc].s;
+            result.slen = reg[cc].slen;
+            result.atom = reg[cc].atom;
+            result.atom_len = reg[cc].atom_len;
+            reg[a] = result;
             break;
-        case OP_UTAG:
+        }
+        case OP_UTAG: {
+            uint8_t tag;
             if (reg[b].kind != VK_UNION) {
                 vtrap(V, c, pc, "AXI-R004", "utag needs a union",
                       "only unions carry a tag");
                 return 0;
             }
-            reg[a] = VUNIT(); reg[a].kind = VK_U64; reg[a].bits = reg[b].aux;
+            tag = reg[b].aux;
+            reg[a] = VUNIT(); reg[a].kind = VK_U64; reg[a].bits = tag;
             break;
+        }
         case OP_UPAY:
             if (reg[b].kind != VK_UNION) {
                 vtrap(V, c, pc, "AXI-R004", "upay needs a union",
@@ -982,13 +1035,7 @@ static int run_cell_execute(vm *V, uint32_t ci, vval *reg, vval *ret,
                 return 0;
             }
             /* INV-322 / AXI-INV-104: value AND kind come back bit-exact. */
-            reg[a] = VUNIT();
-            reg[a].kind = reg[b].pay_kind;
-            reg[a].bits = reg[b].bits;
-            reg[a].s    = reg[b].s;
-            reg[a].slen = reg[b].slen;
-            reg[a].atom = reg[b].atom;
-            reg[a].atom_len = reg[b].atom_len;
+            reg[a] = union_payload(&reg[b]);
             break;
         case OP_UCHK:
             /* W13 — the `?` in one deterministic step: tag 0 (ok/some)
@@ -1003,13 +1050,7 @@ static int run_cell_execute(vm *V, uint32_t ci, vval *reg, vval *ret,
                 if (!contract_return_ok(V, c, pc, &reg[b])) return 0;
                 *ret = reg[b]; return 1;
             }
-            reg[a] = VUNIT();
-            reg[a].kind = reg[b].pay_kind;
-            reg[a].bits = reg[b].bits;
-            reg[a].s = reg[b].s;
-            reg[a].slen = reg[b].slen;
-            reg[a].atom = reg[b].atom;
-            reg[a].atom_len = reg[b].atom_len;
+            reg[a] = union_payload(&reg[b]);
             break;
         case OP_CALL: {
             if (b >= V->m->n) {
@@ -2672,6 +2713,20 @@ static int cli_aer_publish(cli_run_fixed *fixed,
                                     options->aer_path) == 0;
 }
 
+static int cli_recorder_independent(const uint8_t seed[32],
+                                    const uint8_t producer_pk[32],
+                                    axi_mem_account *account)
+{
+    uint8_t pk[ED25519_PUBKEY], sk[ED25519_SECKEY];
+    int independent;
+    if (!axi_mem_reserve(account, sizeof pk + sizeof sk)) return 0;
+    ed25519_keypair_from_seed(seed, pk, sk);
+    independent = memcmp(pk, producer_pk, sizeof pk) != 0;
+    secure_zero(sk, sizeof sk);
+    secure_zero(pk, sizeof pk);
+    return axi_mem_release(account, sizeof pk + sizeof sk) && independent;
+}
+
 int cmd_run_contract_trusted(const char *path, const char *cellname,
                              const char *trusted_key_path,
                              int argc, char **argv)
@@ -2757,6 +2812,12 @@ int cmd_run_contract_trusted(const char *path, const char *cellname,
                 || axi_signing_seed_load(options.recorder_key_path,
                                          fixed.recorder_seed) != 0) {
             fprintf(AXI_ERR, "AXI-R025 signed replay binding is invalid\n");
+            goto done;
+        }
+        if (!cli_recorder_independent(fixed.recorder_seed, fixed.producer_pk,
+                                      &account)) {
+            fprintf(AXI_ERR, "AXI-R025 replay recorder key must differ from "
+                    "the artifact producer key\n");
             goto done;
         }
     }

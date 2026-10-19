@@ -80,7 +80,9 @@ make dev                          # builds ./build/axi — C99 only
 ./build/axi run /tmp/fib.axb fib 10 --trusted-key <key>
 # u64 55
 
-make gate-fast                     # 67 checks. Green is the definition of "works".
+make gate-fast                     # 67 original golden checks
+make gate                          # extended audit gate; also requires Python 3
+make release                       # separate build-release/axi, portable -O2
 ```
 
 Want the full story — embed it in C, sign a policy, watch a shell ask permission?
@@ -101,11 +103,30 @@ Seriously. Don't.
 Trust is the old model — trust the package, trust the registry, trust the install script. Axial was built for people who stopped trusting. So verify instead:
 
 ```sh
-git clone <repo> && cd axial
+git clone https://github.com/FermiHart/axial.git && cd axial
 make dev && make gate
 ```
 
-67 checks. Your machine. Your verdict. If a single one fails, open an issue — that's the deal. Green here is never decoration: it's always a machine talking.
+The original 67 goldens remain available through `make gate-fast`. The full
+`make gate` also covers signed CLI effects/replay, compiler regressions, C API
+boundaries, allocation and I/O failures, worker IPC, checker source identity
+and the recorded public ABI. It requires Python 3 and a host that permits
+local Unix sequenced-packet sockets. All fixtures use public deterministic
+test identities and temporary directories.
+
+## 40-wave audit
+
+The [audit report](docs/audit40/REPORT.md) records the fixes, compatibility
+changes, reproducible tests, measured performance and remaining limits.
+[Raw before/after samples](docs/audit40/benchmark.json) use identical `-O1`
+builds; the optional `release` target is a separate `-O2` profile. The CI
+workflow runs the full gate in normal, optimized and ASan/UBSan profiles.
+
+The public embed header and recorded ABI bytes are unchanged. The corrected
+checker has a new source identity: artifacts carrying an old CHECKED seal
+must be explicitly re-executed and resealed, including when admitted under
+SIGNATURE_VALID. Ordinary signed artifacts without seals keep their existing
+framing. CLI input files must be regular files of at most 64 MiB.
 
 ## The honest fine print (short)
 
@@ -125,7 +146,7 @@ It is not yet end-to-end attestation to a boot root, not yet a universal policy 
 | `scripts/` | Policy demo + sealed supply-chain demo |
 | `docs/` | `SPEC-GRAMMAR.md` (normative), `BETA-LANGUAGE.md` (scope), `OVERVIEW.md` |
 | `tests/` | Golden fixtures across 10 suites |
-| `tools/` | `check.sh` — the public gate (67 checks) |
+| `tools/` | Original goldens, source-identity guard and reproducible audit benchmarks |
 | `website/` | This story as a page. Open `website/index.html`. Static, no build, no trackers. |
 
 ## License

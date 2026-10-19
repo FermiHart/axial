@@ -65,10 +65,28 @@ int axi_json_escape(const char *bytes, size_t len,
     size_t i = 0;
     if ((!bytes && len != 0) || !sink) return -1;
     while (i < len) {
-        unsigned char c = (unsigned char)bytes[i];
+        size_t start = i, un;
+        unsigned char c;
         const char *escaped = NULL;
-        size_t escaped_len = 0, un;
+        size_t escaped_len = 0;
         char one[6];
+        /* Most JSON output is unchanged text. Send maximal valid runs to
+         * the sink instead of paying one callback/buffer operation per byte. */
+        while (i < len) {
+            c = (unsigned char)bytes[i];
+            if (c >= 0x20 && c < 0x80 && c != '"' && c != '\\') { i++; continue; }
+            if (c >= 0x80 && (un = utf8_valid_prefix(
+                            (const unsigned char *)bytes + i, len - i)) != 0) {
+                i += un;
+                continue;
+            }
+            break;
+        }
+        if (i != start) {
+            if (sink(ctx, bytes + start, i - start) != 0) return -1;
+            continue;
+        }
+        c = (unsigned char)bytes[i];
         switch (c) {
         case '"':  escaped = "\\\""; escaped_len = 2; break;
         case '\\': escaped = "\\\\"; escaped_len = 2; break;
@@ -82,18 +100,6 @@ int axi_json_escape(const char *bytes, size_t len,
         if (escaped) {
             if (sink(ctx, escaped, escaped_len) != 0) return -1;
             i++;
-        } else if (c < 0x20) {
-            one[0] = '\\'; one[1] = 'u'; one[2] = '0'; one[3] = '0';
-            one[4] = HEX[c >> 4]; one[5] = HEX[c & 15];
-            if (sink(ctx, one, sizeof one) != 0) return -1;
-            i++;
-        } else if (c < 0x80) {
-            if (sink(ctx, bytes + i, 1) != 0) return -1;
-            i++;
-        } else if ((un = utf8_valid_prefix(
-                        (const unsigned char *)bytes + i, len - i)) != 0) {
-            if (sink(ctx, bytes + i, un) != 0) return -1;
-            i += un;
         } else {
             one[0] = '\\'; one[1] = 'u'; one[2] = '0'; one[3] = '0';
             one[4] = HEX[c >> 4]; one[5] = HEX[c & 15];

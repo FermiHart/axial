@@ -41,9 +41,9 @@
     <div class="metric"><b>4</b><span>symbols in the C API</span></div>
     <div class="metric"><b>0</b><span>dependencies. C99 only</span></div>
     <div class="metric"><b>0</b><span>ambient authority, ever</span></div>
-    <div class="metric t-pass"><b>67/67</b><span>gate checks green</span></div>
+    <div class="metric t-pass"><b>67/67</b><span>original golden checks</span></div>
   </div>
-  <p class="metrics-note">Green is never decoration. A machine put it there — run <code>make gate</code> and watch.</p>
+  <p class="metrics-note">Run <code>make gate-fast</code> for the original goldens. The full <code>make gate</code> adds the 40-wave audit regressions and requires Python 3 and local Unix IPC.</p>
 </header>
 
 <main>
@@ -107,7 +107,7 @@ make demo &amp;&amp; sh scripts/jash_policy_demo.sh
 # export secret name    -&gt; DENY
 # unknown builtin       -&gt; ALLOW
 
-make gate-fast                     # 67 checks. Green is "works".</code></pre>
+make gate-fast                     # 67 original golden checks</code></pre>
   <p class="metrics-note">The entire C embedding API is four symbols — <code>abi_version</code>, <code>context_create</code>, <code>context_destroy</code>, <code>eval</code>. That's not minimalism as fashion. That's minimalism as attack surface.</p>
 </section>
 
@@ -115,8 +115,8 @@ make gate-fast                     # 67 checks. Green is "works".</code></pre>
   <p class="kicker">DUE DILIGENCE</p>
   <h2>Don't trust this page.</h2>
   <p class="lede">Seriously. Don't. Trust is the old model — trust the package, trust the registry, trust the install script. Axial was built for people who stopped trusting. So verify instead. Clone it. Build it. Run its gate. On your machine, your verdict.</p>
-  <pre class="check"><code>git clone &lt;repo&gt; &amp;&amp; cd axial
-make dev &amp;&amp; make gate          # 67/67 or it didn't happen</code></pre>
+  <pre class="check"><code>git clone https://github.com/FermiHart/axial.git &amp;&amp; cd axial
+make dev &amp;&amp; make gate          # full audit gate; Python 3 required</code></pre>
   <div class="status-table" aria-label="Scope honesty">
     <div class="status-row status-head"><span>Layer</span><span>Boundary</span><span>State</span></div>
     <div class="status-row"><b>Language</b><span>Grammar, types, bytecode, VM, fuel, effects, ledger, replay, sealing, C API</span><span class="state state-witnessed">GATED</span></div>

@@ -41,6 +41,11 @@ typedef struct {
     uint8_t terminal[AXI_COVERAGE_V1_MAX_CHANNEL];
 } axi_coverage_v1_channel;
 
+/* Channel state is caller-owned. Operations require a nonzero ID, bounded
+ * high_water, binary active terminals, and zero unused slots. Malformed
+ * restored state refuses (has_gap returns 1); it cannot pre-complete a
+ * future reservation. Callers still own synchronization and authenticity. */
+
 size_t axi_coverage_v1_manifest_count(void);
 const axi_coverage_v1_row *axi_coverage_v1_manifest_at(size_t index);
 int axi_coverage_v1_classify(const char *door, axi_coverage_v1_row *out);

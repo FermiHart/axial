@@ -78,90 +78,6 @@ static int sb_json_bytes(void *raw, const char *bytes, size_t len)
     return 0;
 }
 
-/* Serialize a VM value into a freshly malloc'd JSON string. */
-static char *vval_to_json(const axi_vval *v, size_t *out_len)
-{
-    char *buf;
-    size_t n;
-
-    switch (v->kind) {
-    case VB_UNIT:
-        n = 4; buf = axi_malloc(n + 1);
-        if (!buf) return NULL;
-        memcpy(buf, "null", n + 1);
-        break;
-    case VB_BOOL:
-        if (v->bits) {
-            n = 4; buf = axi_malloc(n + 1);
-            if (!buf) return NULL;
-            memcpy(buf, "true", n + 1);
-        } else {
-            n = 5; buf = axi_malloc(n + 1);
-            if (!buf) return NULL;
-            memcpy(buf, "false", n + 1);
-        }
-        break;
-    case VB_U64: {
-        char tmp[32];
-        n = (size_t)snprintf(tmp, sizeof tmp, "%llu",
-                             (unsigned long long)v->bits);
-        buf = axi_malloc(n + 1);
-        if (!buf) return NULL;
-        memcpy(buf, tmp, n + 1);
-        break;
-    }
-    case VB_I64: {
-        char tmp[32];
-        n = (size_t)snprintf(tmp, sizeof tmp, "%lld",
-                             (long long)(int64_t)v->bits);
-        buf = axi_malloc(n + 1);
-        if (!buf) return NULL;
-        memcpy(buf, tmp, n + 1);
-        break;
-    }
-    case VB_F64: {
-        char tmp[32];
-        double d; memcpy(&d, &v->bits, 8);
-        n = (size_t)snprintf(tmp, sizeof tmp, "%.17g", d);
-        buf = axi_malloc(n + 1);
-        if (!buf) return NULL;
-        memcpy(buf, tmp, n + 1);
-        break;
-    }
-    case VB_STR: {
-        size_t cap = 0;
-        embed_json_sink sink = { &buf, &n, &cap };
-        buf = NULL; n = 0;
-        if (sb_json_bytes(&sink, "\"", 1) != 0
-                || axi_json_escape(v->s, v->slen, sb_json_bytes, &sink) != 0
-                || sb_json_bytes(&sink, "\"", 1) != 0) {
-            free(buf); return NULL;
-        }
-        buf[n] = '\0';
-        break;
-    }
-    case VB_ERR: {
-        size_t cap = 0;
-        embed_json_sink sink = { &buf, &n, &cap };
-        buf = NULL; n = 0;
-        if (sb_json_bytes(&sink, "{\"error\":\"", 10) != 0
-                || axi_json_escape(v->s, v->slen, sb_json_bytes, &sink) != 0
-                || sb_json_bytes(&sink, "\"}", 2) != 0) {
-            free(buf); return NULL;
-        }
-        buf[n] = '\0';
-        break;
-    }
-    default:
-        buf = axi_malloc(5);
-        if (!buf) return NULL;
-        memcpy(buf, "null", 5);
-        n = 4;
-        break;
-    }
-    if (out_len) *out_len = n;
-    return buf;
-}
 
 int axi_vm_eval(axi_vm_ctx *ctx, const char *cell_name,
                 const char *input_json, size_t input_len,
@@ -190,6 +106,7 @@ int axi_vm_eval(axi_vm_ctx *ctx, const char *cell_name,
         return -1;
     }
 
+    memset(&arg, 0, sizeof arg);
     arg.kind = VB_STR;
     arg.bits = 0;
     arg.s    = input_json;
@@ -207,13 +124,15 @@ int axi_vm_eval(axi_vm_ctx *ctx, const char *cell_name,
                                               &used, ctx->sink, diags);
     axi_vm_contract_invocation_destroy(inv);
     if (!ok) return -1;
-    if (result.kind != VB_BOOL) { /* INV-276; AXI-INV-074 */
+    if (result.kind != VB_BOOL || result.bits > 1) { /* INV-276; AXI-INV-074 */
         embed_diag(diags, "AXI-E004", "policy returned a non-bool verdict",
                    "a host policy cell must return decision/bool");
         return -1;
     }
 
-    json = vval_to_json(&result, &json_len);
+    /* This door only publishes canonical boolean policy verdicts. */
+    json_len = result.bits ? 4u : 5u;
+    json = axi_strdup(result.bits ? "true" : "false");
     if (!json) {
         embed_diag(diags, "AXI-E005", "verdict serialization failed",
                    "retry with enough host memory to preserve the verdict");

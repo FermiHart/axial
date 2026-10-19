@@ -341,7 +341,23 @@ int axi_lease1_reserve(axi_lease1_state *state, const uint8_t unit[32],
                        uint64_t amount)
 {
     size_t i;
-    if (!state || !unit || root_zero(state->lease_root) || amount == 0) return -1;
+    if (!state || !unit || root_zero(state->lease_root) || amount == 0
+            || state->nquota == 0 || state->nquota > AXI_LEASE1_MAX_QUOTAS)
+        return -1;
+    /* State is caller-owned and may have been restored or modified since
+     * init. Validate the entire bounded image before changing any counter. */
+    for (i = 0; i < state->nquota; i++) {
+        if (root_zero(state->quota_unit[i]) || state->quota_limit[i] == 0
+                || state->quota_reserved[i] > state->quota_limit[i]
+                || (i && memcmp(state->quota_unit[i - 1],
+                                state->quota_unit[i], 32) >= 0))
+            return -1;
+    }
+    for (; i < AXI_LEASE1_MAX_QUOTAS; i++) {
+        if (!root_zero(state->quota_unit[i]) || state->quota_limit[i] != 0
+                || state->quota_reserved[i] != 0)
+            return -1;
+    }
     for (i = 0; i < state->nquota; i++) {
         uint64_t left;
         if (memcmp(state->quota_unit[i], unit, 32) != 0) continue;

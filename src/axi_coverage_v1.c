@@ -76,18 +76,36 @@ int axi_coverage_v1_runtime_root(uint8_t out[32])
     return 0;
 }
 
+static int channel_valid(const axi_coverage_v1_channel *channel)
+{
+    size_t i;
+    uint8_t id_nonzero = 0;
+    if (!channel || channel->high_water > AXI_COVERAGE_V1_MAX_CHANNEL) return 0;
+    for (i = 0; i < 32; i++) id_nonzero |= channel->channel_id[i];
+    if (!id_nonzero) return 0;
+    for (i = 0; i < AXI_COVERAGE_V1_MAX_CHANNEL; i++) {
+        if (channel->terminal[i] > 1
+                || (i >= channel->high_water && channel->terminal[i] != 0))
+            return 0;
+    }
+    return 1;
+}
+
 void axi_coverage_v1_channel_init(axi_coverage_v1_channel *channel,
                                   const uint8_t channel_id[32])
 {
+    axi_coverage_v1_channel staged;
     if (!channel) return;
-    memset(channel, 0, sizeof *channel);
-    if (channel_id) memcpy(channel->channel_id, channel_id, 32);
+    memset(&staged, 0, sizeof staged);
+    if (channel_id) memcpy(staged.channel_id, channel_id, 32);
+    *channel = staged;
 }
 
 int axi_coverage_v1_channel_reserve(axi_coverage_v1_channel *channel,
                                     uint64_t *seq_out)
 {
-    if (!channel || channel->high_water >= AXI_COVERAGE_V1_MAX_CHANNEL) return -1;
+    if (!channel_valid(channel) || channel->high_water >= AXI_COVERAGE_V1_MAX_CHANNEL)
+        return -1;
     channel->high_water++;
     if (seq_out) *seq_out = channel->high_water;
     return 0;
@@ -96,7 +114,7 @@ int axi_coverage_v1_channel_reserve(axi_coverage_v1_channel *channel,
 int axi_coverage_v1_channel_terminal(axi_coverage_v1_channel *channel,
                                      uint64_t seq)
 {
-    if (!channel || seq == 0 || seq > channel->high_water
+    if (!channel_valid(channel) || seq == 0 || seq > channel->high_water
             || seq > AXI_COVERAGE_V1_MAX_CHANNEL)
         return -1;
     channel->terminal[seq - 1] = 1;
@@ -106,7 +124,7 @@ int axi_coverage_v1_channel_terminal(axi_coverage_v1_channel *channel,
 int axi_coverage_v1_channel_has_gap(const axi_coverage_v1_channel *channel)
 {
     uint64_t i;
-    if (!channel || channel->high_water > AXI_COVERAGE_V1_MAX_CHANNEL) return 1;
+    if (!channel_valid(channel)) return 1;
     for (i = 0; i < channel->high_water; i++)
         if (!channel->terminal[i]) return 1;
     return 0;
@@ -119,7 +137,7 @@ int axi_coverage_v1_channel_root(const axi_coverage_v1_channel *channel,
         + AXI_COVERAGE_V1_MAX_CHANNEL];
     size_t off = 0;
     int i;
-    if (!channel || !out || channel->high_water > AXI_COVERAGE_V1_MAX_CHANNEL)
+    if (!channel_valid(channel) || !out)
         return -1;
     memcpy(bytes + off, AXI_COVERAGE_V1_CHANNEL_DOMAIN,
            sizeof(AXI_COVERAGE_V1_CHANNEL_DOMAIN));

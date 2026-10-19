@@ -6,6 +6,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <limits.h>
 
 void axi_diags_init(axi_diags *ds)
 {
@@ -38,7 +39,10 @@ void axi_diag_add_fix(axi_diags *ds, const char *code,
     int at;
 
     if (!ds) return;
-    if (ds->n >= AXI_DIAG_MAX) { ds->dropped++; return; }
+    if (ds->n >= AXI_DIAG_MAX) {
+        if (ds->dropped < INT_MAX) ds->dropped++;
+        return;
+    }
     memset(&d, 0, sizeof d);
     copy_str(d.code, sizeof d.code, code);
     d.line = line; d.col = col; d.len = len; d.off = off;
@@ -83,6 +87,13 @@ void axi_diag_add_source(axi_diags *ds, const char *code, const char *src,
                          const char *msg, const char *fix)
 {
     uint32_t line = 1, col = 1, i;
+    /* A saturated diagnostic set cannot publish these coordinates. Avoid
+     * rescanning the prefix for every rejected byte of a hostile source. */
+    if (!ds) return;
+    if (ds->n >= AXI_DIAG_MAX) {
+        if (ds->dropped < INT_MAX) ds->dropped++;
+        return;
+    }
     if (!src) {
         axi_diag_add(ds, code, 0, 0, 0, msg, fix);
         return;

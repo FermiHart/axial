@@ -41,7 +41,7 @@ static const axi_cap_method CAP_METHODS[] = {
 
 const axi_cap_info *axi_cap_info_by_kind(axi_cap_kind k)
 {
-    return (k < CAP__COUNT) ? &CAP_INFO[k] : NULL;
+    return ((unsigned)k < (unsigned)CAP__COUNT) ? &CAP_INFO[(unsigned)k] : NULL;
 }
 
 const char *axi_cap_name(axi_cap_kind k)

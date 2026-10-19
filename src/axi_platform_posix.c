@@ -186,6 +186,19 @@ void axi_platform_fs_root_close(axi_resource_envelope *resources)
 
 static int host_wait_ready(const axi_host_eff_ctx *ctx, int fd, short events);
 
+static int host_worker_channel(int channel[2])
+{
+    /* Packet boundaries remain exact, and peer exit is observable as HUP.
+     * Datagram socketpairs have no EOF and hide failed workers until timeout.
+     * Unsupported POSIX hosts refuse this effect; there is no weaker fallback. */
+#ifdef SOCK_SEQPACKET
+    return socketpair(AF_UNIX, SOCK_SEQPACKET, 0, channel);
+#else
+    (void)channel;
+    return -1;
+#endif
+}
+
 int axi_platform_blocking_call(const axi_host_eff_ctx *ctx,
                                axi_platform_blocking_fn call, void *opaque)
 {
@@ -194,7 +207,7 @@ int axi_platform_blocking_call(const axi_host_eff_ctx *ctx,
     if (!ctx || !ctx->resources || !call
             || ctx->resources->reserved.children == 0)
         return -1;
-    if (socketpair(AF_UNIX, SOCK_DGRAM, 0, channel) != 0) return -1;
+    if (host_worker_channel(channel) != 0) return -1;
     for (size_t i = 0; i < 2; i++) {
         int fd_flags = fcntl(channel[i], F_GETFD, 0);
         int status_flags = fcntl(channel[i], F_GETFL, 0);
@@ -491,7 +504,9 @@ long axi_host_proc_spawn(const axi_host_eff_ctx *ctx, const void *buf, size_t le
     axi_proc_grants_scratch grants_buf;
     size_t scratch;
     long rc = -1;
-    if (!ctx || !ctx->m || !ctx->mod_path || !ctx->fuel_used || !ctx->fuel_exhausted)
+    if (!ctx || !ctx->m || !ctx->mod_path || !ctx->fuel_used || !ctx->fuel_exhausted
+            || (!buf && len)
+            || (ctx->grants && axi_grants_verify(ctx->grants) != 0))
         return -1;
     /* INV-295 / AXI-INV-090: argv framing is bytes, but NUL has no argv value. */
     if (memchr(buf, '\0', len)) return -1;
@@ -501,6 +516,10 @@ long axi_host_proc_spawn(const axi_host_eff_ctx *ctx, const void *buf, size_t le
     if (cell_len == 0 || cell_len >= AXI_PROC_CELL_CAP) return -1;
 
     /* Remaining fuel is what the child inherits */
+    if (*ctx->fuel_used > ctx->fuel_budget) {
+        *ctx->fuel_exhausted = 1;
+        return -1;
+    }
     uint64_t remaining = ctx->fuel_budget - *ctx->fuel_used;
     if (remaining == 0) { *ctx->fuel_exhausted = 1; return -1; }
 
@@ -991,7 +1010,7 @@ static int net_connect_bounded(const axi_host_eff_ctx *ctx,
 {
     int channel[2], fd = -1, status = 0;
     pid_t child;
-    if (socketpair(AF_UNIX, SOCK_DGRAM, 0, channel) != 0) return -1;
+    if (host_worker_channel(channel) != 0) return -1;
     child = fork();
     if (child < 0) {
         close(channel[0]);

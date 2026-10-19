@@ -19,6 +19,8 @@
 
 #define P_MAX_DEPTH 64
 
+typedef struct parsed_node parsed_node;
+
 typedef struct {
     axi_lexer   lx;
     axi_token   cur;        /* the one lookahead (G6) */
@@ -27,7 +29,17 @@ typedef struct {
     int         block_depth;
     unsigned    expr_operators;
     const char *last_error;
+    parsed_node *allocated;
+    int oom;
 } parser;
+
+/* The node is the first member: ordinary axi_ast_free/free(node) still owns
+ * a successful tree. The private link makes every partial allocation
+ * reclaimable if any later allocation fails, even before AST attachment. */
+struct parsed_node {
+    axi_node node;
+    parsed_node *next;
+};
 
 /* ---- node helpers ------------------------------------------------------- */
 
@@ -35,23 +47,31 @@ typedef struct {
  * hand. One door: there is no way to make a node with a (line,col) that
  * no token vouches for, so the byte anchor can never drift from the
  * human coordinates (AXI-INV-027). */
-static axi_node *nnew_at(axi_nkind k, const axi_token *t)
+static axi_node *nnew_at(parser *p, axi_nkind k, const axi_token *t)
 {
-    axi_node *n = (axi_node *)axi_calloc(1, sizeof(axi_node));
-    if (!n) { fprintf(AXI_ERR, "AXI-D999 out of memory\n"); exit(2); }
+    parsed_node *allocated;
+    axi_node *n;
+    if (p->oom) return NULL;
+    allocated = (parsed_node *)axi_calloc(1, sizeof *allocated);
+    if (!allocated) { p->oom = 1; return NULL; }
+    allocated->next = p->allocated;
+    p->allocated = allocated;
+    n = &allocated->node;
     n->kind = k; n->line = t->line; n->col = t->col; n->pos = t->start;
     return n;
 }
 
-static axi_node *nnew_tok(axi_nkind k, const axi_token *t)
+static axi_node *nnew_tok(parser *p, axi_nkind k, const axi_token *t)
 {
-    axi_node *n = nnew_at(k, t);
+    axi_node *n = nnew_at(p, k, t);
+    if (!n) return NULL;
     n->lex = t->start; n->lexlen = t->len;
     return n;
 }
 
 static void list_push(axi_node *parent, axi_node ***tail, axi_node *item)
 {
+    if (!item) return;
     if (*tail == NULL) *tail = &parent->list;
     **tail = item;
     *tail = &item->next;
@@ -73,6 +93,7 @@ static int accept(parser *p, axi_tok_kind k)
 static void diag_ptr(parser *p, const char *code, const char *at, uint32_t len,
                      const char *msg, const char *fix)
 {
+    if (p->oom) return;
     if (at)
         axi_diag_add_source(p->ds, code, p->lx.src,
                             (uint32_t)(at - p->lx.src), len, msg, fix);
@@ -83,6 +104,7 @@ static void diag_ptr(parser *p, const char *code, const char *at, uint32_t len,
 static void diag_here(parser *p, const char *code, const char *msg,
                        const char *fix)
 {
+    if (p->oom) return;
     /* AX30: one primary diagnostic for an unconsumed token. Coordinates
      * remain derived from the lexer, the sole byte consumer. */
     if (p->last_error == p->cur.start) return;
@@ -129,7 +151,7 @@ static axi_node *parse_path(parser *p, axi_nkind k)
     const char *end;
     axi_node *n;
     if (!expect(p, T_ID, "AXI-P001", "a name", "write an identifier here"))
-        return nnew_at(k, &first);
+        return nnew_at(p, k, &first);
     end = first.start + first.len;
     if (at(p, T_DOT)) {
         advance(p);
@@ -141,7 +163,8 @@ static axi_node *parse_path(parser *p, axi_nkind k)
             advance(p);
         }
     }
-    n = nnew_at(k, &first);
+    n = nnew_at(p, k, &first);
+    if (!n) return NULL;
     n->lex = first.start;
     n->lexlen = (uint32_t)(end - first.start);
     return n;
@@ -156,7 +179,7 @@ static int is_scalar(axi_tok_kind k)
 static axi_node *parse_type(parser *p)
 {
     if (is_scalar(p->cur.kind)) {
-        axi_node *n = nnew_tok(N_TYPE, &p->cur);
+        axi_node *n = nnew_tok(p, N_TYPE, &p->cur); if (!n) return NULL;
         advance(p);
         return n;
     }
@@ -164,32 +187,35 @@ static axi_node *parse_type(parser *p)
         axi_node *n;
         advance(p);
         n = parse_path(p, N_TYPE);
+        if (!n) return NULL;
         n->ival = 1; /* cap-qualified (G4: caps live in signatures only) */
         return n;
     }
     if (at(p, T_ID)) return parse_path(p, N_TYPE);
     diag_here(p, "AXI-P010", "expected a type",
               "scalar (u64 i64 f64 bool bytes str decision), cap path, or path");
-    return nnew_at(N_TYPE, &p->cur);
+    return nnew_at(p, N_TYPE, &p->cur);
 }
 
 /* rettype = rtatom { "|" rtatom } ; rtatom = ok | err "." ID | type */
 static axi_node *parse_rettype(parser *p)
 {
-    axi_node *rt = nnew_at(N_LIST, &p->cur);
+    axi_node *rt = nnew_at(p, N_LIST, &p->cur); if (!rt) return NULL;
     axi_node **tail = NULL;
     do {
         axi_node *atom;
         if (at(p, T_OK)) {
-            atom = nnew_tok(N_OKT, &p->cur);
+            atom = nnew_tok(p, N_OKT, &p->cur);
+            if (!atom) return NULL;
             advance(p);
         } else if (at(p, T_ERR)) {
             axi_token e = p->cur;
             advance(p);
             if (!expect(p, T_DOT, "AXI-P011", "'.' after err",
                         "error atoms are named: err.Io"))
-                { atom = nnew_at(N_ERRT, &e); list_push(rt, &tail, atom); break; }
+                { atom = nnew_at(p, N_ERRT, &e); list_push(rt, &tail, atom); break; }
             atom = parse_path(p, N_ERRT);
+            if (!atom) return NULL;
             atom->line = e.line; atom->col = e.col;
         } else {
             atom = parse_type(p);
@@ -202,7 +228,7 @@ static axi_node *parse_rettype(parser *p)
 /* sig = "fn" "(" [ param { "," param } ] ")" "->" rettype */
 static axi_node *parse_sig(parser *p)
 {
-    axi_node *sig = nnew_at(N_SIG, &p->cur);
+    axi_node *sig = nnew_at(p, N_SIG, &p->cur); if (!sig) return NULL;
     axi_node **tail = NULL;
     if (!expect(p, T_FN, "AXI-P004", "'fn'",
                 "a cell signature is: fn(args) -> type"))
@@ -210,14 +236,14 @@ static axi_node *parse_sig(parser *p)
     expect(p, T_LPAREN, "AXI-P001", "'('", "open the parameter list");
     if (!at(p, T_RPAREN)) {
         do {
-            axi_node *param = nnew_at(N_PARAM, &p->cur);
+            axi_node *param;
             axi_token name = p->cur;
             if (!expect(p, T_ID, "AXI-P001", "parameter name",
                         "parameters are name: type")) {
-                /* INV-312 / AXI-INV-098: rejected partial nodes have no owner. */
-                free(param);
                 break;
             }
+            param = nnew_at(p, N_PARAM, &name);
+            if (!param) return NULL;
             param->lex = name.start; param->lexlen = name.len;
             expect(p, T_COLON, "AXI-P001", "':' after parameter name",
                    "parameters are name: type");
@@ -236,7 +262,7 @@ static axi_node *parse_sig(parser *p)
 /* cap_list = cap_path { "," cap_path } ; used by 'cap' and 'uses' clauses */
 static axi_node *parse_cap_list(parser *p, axi_nkind k)
 {
-    axi_node *list = nnew_at(k, &p->cur);
+    axi_node *list = nnew_at(p, k, &p->cur); if (!list) return NULL;
     axi_node **tail = NULL;
     do {
         list_push(list, &tail, parse_path(p, N_ID));
@@ -251,29 +277,30 @@ static axi_node *parse_atom(parser *p)
     axi_token t = p->cur;
     switch (t.kind) {
     case T_INT: {
-        axi_node *n = nnew_tok(N_INT, &t); n->ival = t.ival;
+        axi_node *n = nnew_tok(p, N_INT, &t); if (!n) return NULL; n->ival = t.ival;
         advance(p); return n;
     }
     case T_FLOAT: {
-        axi_node *n = nnew_tok(N_FLOAT, &t); n->fval = t.fval;
+        axi_node *n = nnew_tok(p, N_FLOAT, &t); if (!n) return NULL; n->fval = t.fval;
         advance(p); return n;
     }
-    case T_STR: { axi_node *n = nnew_tok(N_STR, &t); advance(p); return n; }
-    case T_TRUE:  { axi_node *n = nnew_tok(N_TRUE, &t);  advance(p); return n; }
-    case T_FALSE: { axi_node *n = nnew_tok(N_FALSE, &t); advance(p); return n; }
-    case T_OK:    { axi_node *n = nnew_tok(N_OK, &t);    advance(p); return n; }
+    case T_STR: { axi_node *n = nnew_tok(p, N_STR, &t); if (!n) return NULL; advance(p); return n; }
+    case T_TRUE:  { axi_node *n = nnew_tok(p, N_TRUE, &t); if (!n) return NULL;  advance(p); return n; }
+    case T_FALSE: { axi_node *n = nnew_tok(p, N_FALSE, &t); if (!n) return NULL; advance(p); return n; }
+    case T_OK:    { axi_node *n = nnew_tok(p, N_OK, &t); if (!n) return NULL;    advance(p); return n; }
     case T_ERR: { /* err.Name as a VALUE — an error set nobody can inhabit
                    * is decorative; this is the constructor (W06). */
         axi_node *n;
         advance(p);
         if (!expect(p, T_DOT, "AXI-P011", "'.' after err",
                     "error atoms are named: err.Io"))
-            return nnew_at(N_ERRT, &t);
+            return nnew_at(p, N_ERRT, &t);
         n = parse_path(p, N_ERRT);
+        if (!n) return NULL;
         n->line = t.line; n->col = t.col;
         return n;
     }
-    case T_ID:    { axi_node *n = nnew_tok(N_ID, &t);    advance(p); return n; }
+    case T_ID:    { axi_node *n = nnew_tok(p, N_ID, &t); if (!n) return NULL;    advance(p); return n; }
     case T_LPAREN: {
         axi_node *inner;
         advance(p);
@@ -282,7 +309,7 @@ static axi_node *parse_atom(parser *p)
         return inner;
     }
     case T_LBRACK: {
-        axi_node *lst = nnew_at(N_LIST, &t);
+        axi_node *lst = nnew_at(p, N_LIST, &t); if (!lst) return NULL;
         axi_node **tail = NULL;
         advance(p);
         if (!at(p, T_RBRACK)) {
@@ -296,7 +323,7 @@ static axi_node *parse_atom(parser *p)
         diag_here(p, "AXI-P006", "expected an expression",
                   "a value, name, call, or ( ... ) goes here");
         advance(p); /* consume the offender: never wedge (G8) */
-        return nnew_at(N_ID, &t); /* poison node, empty lex */
+        return nnew_at(p, N_ID, &t); /* poison node, empty lex */
     }
 }
 
@@ -314,13 +341,16 @@ static int expression_operator(parser *p)
 static axi_node *parse_postfix(parser *p)
 {
     axi_node *n = parse_atom(p);
+    if (!n) return NULL;
     for (;;) {
+        if (p->oom) return NULL;
         if ((at(p, T_DOT) || at(p, T_LPAREN) || at(p, T_LBRACK) || at(p, T_QUESTION))
                 && !expression_operator(p)) break;
         if (at(p, T_DOT)) {
             axi_node *f;
             advance(p);
-            f = nnew_at(N_FIELD, &p->cur);
+            f = nnew_at(p, N_FIELD, &p->cur);
+            if (!f) return NULL;
             /* Typed builtin members may use scalar type words after a dot.
              * They remain reserved as variable/cell names. */
             if (at(p, T_ID) || is_scalar(p->cur.kind)) {
@@ -330,7 +360,7 @@ static axi_node *parse_postfix(parser *p)
                            "fields are names: value.field");
             f->a = n; n = f;
         } else if (at(p, T_LPAREN)) {
-            axi_node *call = nnew_at(N_CALL, &p->cur);
+            axi_node *call = nnew_at(p, N_CALL, &p->cur); if (!call) return NULL;
             axi_node **tail = NULL;
             advance(p);
             call->a = n;
@@ -341,13 +371,13 @@ static axi_node *parse_postfix(parser *p)
             expect(p, T_RPAREN, "AXI-P001", "')'", "close the call");
             n = call;
         } else if (at(p, T_LBRACK)) {
-            axi_node *ix = nnew_at(N_INDEX, &p->cur);
+            axi_node *ix = nnew_at(p, N_INDEX, &p->cur); if (!ix) return NULL;
             advance(p);
             ix->a = n; ix->b = parse_expr(p);
             expect(p, T_RBRACK, "AXI-P001", "']'", "close the index");
             n = ix;
         } else if (at(p, T_QUESTION)) {
-            axi_node *tr = nnew_at(N_TRY, &p->cur);
+            axi_node *tr = nnew_at(p, N_TRY, &p->cur); if (!tr) return NULL;
             advance(p);
             tr->a = n; n = tr;
         } else break;
@@ -364,7 +394,7 @@ static axi_node *parse_unary(parser *p)
             while (at(p, T_BANG) || at(p, T_MINUS)) advance(p);
             return parse_postfix(p);
         }
-        axi_node *n = nnew_at(N_UN, &p->cur);
+        axi_node *n = nnew_at(p, N_UN, &p->cur); if (!n) return NULL;
         n->op = p->cur.kind;
         advance(p);
         p->depth++;
@@ -375,9 +405,9 @@ static axi_node *parse_unary(parser *p)
     return parse_postfix(p);
 }
 
-static axi_node *bin(axi_node *lhs, axi_node *rhs, const axi_token *t)
+static axi_node *bin(parser *p, axi_node *lhs, axi_node *rhs, const axi_token *t)
 {
-    axi_node *n = nnew_at(N_BIN, t);
+    axi_node *n = nnew_at(p, N_BIN, t); if (!n) return NULL;
     n->op = t->kind; n->a = lhs; n->b = rhs;
     return n;
 }
@@ -385,10 +415,11 @@ static axi_node *bin(axi_node *lhs, axi_node *rhs, const axi_token *t)
 static axi_node *parse_mul(parser *p)
 {
     axi_node *n = parse_unary(p);
+    if (!n) return NULL;
     while (at(p, T_STAR) || at(p, T_SLASH) || at(p, T_PERCENT)) {
         if (!expression_operator(p)) break;
         axi_token t = p->cur; advance(p);
-        n = bin(n, parse_unary(p), &t);
+        n = bin(p, n, parse_unary(p), &t);
     }
     return n;
 }
@@ -396,20 +427,21 @@ static axi_node *parse_mul(parser *p)
 static axi_node *parse_add(parser *p)
 {
     axi_node *n = parse_mul(p);
+    if (!n) return NULL;
     while (at(p, T_PLUS) || at(p, T_MINUS)) {
         if (!expression_operator(p)) break;
         axi_token t = p->cur; advance(p);
-        n = bin(n, parse_mul(p), &t);
+        n = bin(p, n, parse_mul(p), &t);
     }
     return n;
 }
 
 /* Build a call node: fn(arg1, arg2). Used by 'under' desugaring. */
-static axi_node *make_call2(const axi_token *t, const char *fn, uint32_t fnlen,
+static axi_node *make_call2(parser *p, const axi_token *t, const char *fn, uint32_t fnlen,
                             axi_node *a1, axi_node *a2)
 {
-    axi_node *call = nnew_at(N_CALL, t);
-    axi_node *callee = nnew_at(N_ID, t);
+    axi_node *call = nnew_at(p, N_CALL, t); if (!call) return NULL;
+    axi_node *callee = nnew_at(p, N_ID, t); if (!callee) return NULL;
     callee->lex = fn;
     callee->lexlen = fnlen;
     call->a = callee;
@@ -426,7 +458,7 @@ static axi_node *parse_expr(parser *p)
         diag_here(p, "AXI-P009", "expression nests deeper than 64",
                   "flatten it with let bindings");
         advance(p); /* consume; fail-closed, never wedge */
-        return nnew_at(N_ID, &p->cur);
+        return nnew_at(p, N_ID, &p->cur);
     }
     if (p->depth == 0) p->expr_operators = 0;
     p->depth++;
@@ -438,10 +470,10 @@ static axi_node *parse_expr(parser *p)
         if (t.kind == T_UNDER) {
             /* ADR-008: 'a under b' desugars to 'fs.path_under(a, b)' */
             advance(p);
-            n = make_call2(&t, "fs.path_under", 13, n, parse_add(p));
+            n = make_call2(p, &t, "fs.path_under", 13, n, parse_add(p));
         } else {
             advance(p);
-            n = bin(n, parse_add(p), &t);
+            n = bin(p, n, parse_add(p), &t);
         }
     }
     p->depth--;
@@ -458,7 +490,7 @@ static axi_node *parse_stmt(parser *p)
 {
     axi_token t = p->cur;
     if (at(p, T_LET)) {
-        axi_node *n = nnew_at(N_LET, &t);
+        axi_node *n = nnew_at(p, N_LET, &t); if (!n) return NULL;
         advance(p);
         if (at(p, T_ID)) { n->lex = p->cur.start; n->lexlen = p->cur.len; advance(p); }
         else diag_here(p, "AXI-P001", "expected name after let",
@@ -468,7 +500,7 @@ static axi_node *parse_stmt(parser *p)
         return n;
     }
     if (at(p, T_RET)) {
-        axi_node *n = nnew_at(N_RET, &t);
+        axi_node *n = nnew_at(p, N_RET, &t); if (!n) return NULL;
         advance(p);
         if (!at(p, T_RBRACE) && !at(p, T_LET) && !at(p, T_RET) &&
             !at(p, T_IF) && !at(p, T_EOF))
@@ -476,7 +508,7 @@ static axi_node *parse_stmt(parser *p)
         return n;
     }
     if (at(p, T_IF)) {
-        axi_node *n = nnew_at(N_IF, &t);
+        axi_node *n = nnew_at(p, N_IF, &t); if (!n) return NULL;
         advance(p);
         n->a = parse_expr(p);
         n->b = parse_block(p);
@@ -484,7 +516,7 @@ static axi_node *parse_stmt(parser *p)
         return n;
     }
     {
-        axi_node *n = nnew_at(N_EXPRSTMT, &t);
+        axi_node *n = nnew_at(p, N_EXPRSTMT, &t); if (!n) return NULL;
         n->a = parse_expr(p);
         return n;
     }
@@ -503,7 +535,7 @@ static void skip_nested_block(parser *p)
 
 static axi_node *parse_block(parser *p)
 {
-    axi_node *blk = nnew_at(N_BLOCK, &p->cur);
+    axi_node *blk = nnew_at(p, N_BLOCK, &p->cur); if (!blk) return NULL;
     axi_node **tail = NULL;
     /* Refuse before AST consumers inherit attacker-controlled recursion.
      * INV-287 / AXI-INV-082. */
@@ -518,14 +550,16 @@ static axi_node *parse_block(parser *p)
         return blk;
     }
     p->block_depth++;
-    while (!at(p, T_RBRACE) && !at(p, T_EOF)) {
+    while (!p->oom && !at(p, T_RBRACE) && !at(p, T_EOF)) {
         int before = p->ds->n;
         const char *before_token = p->cur.start;
         list_push(blk, &tail, parse_stmt(p));
+        if (p->oom) break;
         if (p->ds->n > before)
             sync_to(p, stmt_sync, 5); /* panic-mode: realign on stmt start */
         if (p->cur.start == before_token && !at(p, T_EOF)) advance(p);
     }
+    if (p->oom) { p->block_depth--; return NULL; }
     blk->ival = p->cur.line; /* '}' line — W05 flushes comments up to here */
     expect(p, T_RBRACE, "AXI-P005", "'}'", "close the body block");
     p->block_depth--;
@@ -536,7 +570,7 @@ static axi_node *parse_block(parser *p)
 
 static axi_node *parse_cell(parser *p)
 {
-    axi_node *cell = nnew_at(N_CELL, &p->cur);
+    axi_node *cell = nnew_at(p, N_CELL, &p->cur); if (!cell) return NULL;
     axi_node **tail = NULL;
     int have_fuel = 0, have_pure = 0, have_cap = 0, have_uses = 0;
     advance(p); /* 'cell' */
@@ -548,7 +582,7 @@ static axi_node *parse_cell(parser *p)
     cell->a = parse_sig(p);
     for (;;) {
         if (at(p, T_FUEL)) {
-            axi_node *m = nnew_at(N_FUEL, &p->cur);
+            axi_node *m = nnew_at(p, N_FUEL, &p->cur); if (!m) return NULL;
             advance(p);
             if (at(p, T_INT)) { m->ival = p->cur.ival; advance(p); }
             else diag_here(p, "AXI-P003", "fuel expects an integer",
@@ -559,7 +593,7 @@ static axi_node *parse_cell(parser *p)
             have_fuel = 1;
             list_push(cell, &tail, m);
         } else if (at(p, T_PURE)) {
-            axi_node *m = nnew_at(N_PURE, &p->cur);
+            axi_node *m = nnew_at(p, N_PURE, &p->cur); if (!m) return NULL;
             if (have_pure)
                 diag_ptr(p, "AXI-P007", m->pos, 4,
                          "duplicate pure meta", "keep exactly one");
@@ -596,7 +630,7 @@ static axi_node *parse_cell(parser *p)
 /* policy = "policy" ID ":" sig { cap | fuel } block [ proof ] */
 static axi_node *parse_policy(parser *p)
 {
-    axi_node *cell = nnew_at(N_POLICY, &p->cur);
+    axi_node *cell = nnew_at(p, N_POLICY, &p->cur); if (!cell) return NULL;
     axi_node **tail = NULL;
     int have_fuel = 0, have_cap = 0;
     advance(p); /* 'policy' */
@@ -608,7 +642,7 @@ static axi_node *parse_policy(parser *p)
     cell->a = parse_sig(p);
     for (;;) {
         if (at(p, T_FUEL)) {
-            axi_node *m = nnew_at(N_FUEL, &p->cur);
+            axi_node *m = nnew_at(p, N_FUEL, &p->cur); if (!m) return NULL;
             advance(p);
             if (at(p, T_INT)) { m->ival = p->cur.ival; advance(p); }
             else diag_here(p, "AXI-P003", "fuel expects an integer",
@@ -628,7 +662,7 @@ static axi_node *parse_policy(parser *p)
             list_push(cell, &tail, parse_cap_list(p, N_CAP));
         } else if (at(p, T_PURE)) {
             /* P021 deferred to type checker so the AST stays complete */
-            axi_node *m = nnew_at(N_PURE, &p->cur);
+            axi_node *m = nnew_at(p, N_PURE, &p->cur); if (!m) return NULL;
             advance(p);
             list_push(cell, &tail, m);
         } else if (at(p, T_USES)) {
@@ -639,7 +673,7 @@ static axi_node *parse_policy(parser *p)
     }
     if (!have_fuel) {
         /* policy has a default fuel (ADR-008), synthesize a node */
-        axi_node *m = nnew_at(N_FUEL, &p->cur);
+        axi_node *m = nnew_at(p, N_FUEL, &p->cur); if (!m) return NULL;
         m->ival = 500000;
         list_push(cell, &tail, m);
     }
@@ -650,11 +684,11 @@ static axi_node *parse_policy(parser *p)
      * The block is optional HERE (grammar) — sealing without it is the
      * type/seal layer's refusal (AXI-S001), so the parser stays total. */
     if (at(p, T_PROOF)) {
-        axi_node *proof = nnew_at(N_BLOCK, &p->cur);
+        axi_node *proof = nnew_at(p, N_BLOCK, &p->cur); if (!proof) return NULL;
         axi_node **ptail = &proof->list;
         advance(p);
         expect(p, T_LBRACE, "AXI-P001", "`{`", "proof opens with `{`");
-        while (!at(p, T_RBRACE) && !at(p, T_EOF)) {
+        while (!p->oom && !at(p, T_RBRACE) && !at(p, T_EOF)) {
             if (at(p, T_LET) || at(p, T_IF) || at(p, T_RET)) {
                 static const axi_tok_kind proof_sync[] = { T_RBRACE };
                 diag_here(p, "AXI-P010",
@@ -665,7 +699,7 @@ static axi_node *parse_policy(parser *p)
                 break;
             }
             {
-                axi_node *law = nnew_at(N_EXPRSTMT, &p->cur);
+                axi_node *law = nnew_at(p, N_EXPRSTMT, &p->cur); if (!law) return NULL;
                 law->a = parse_expr(p);
                 list_push(proof, &ptail, law);
             }
@@ -681,7 +715,7 @@ static axi_node *parse_policy(parser *p)
 static axi_node *parse_eff(parser *p)
 {
     axi_token t = p->cur;
-    axi_node *eff = nnew_at(N_EFF, &t);
+    axi_node *eff = nnew_at(p, N_EFF, &t); if (!eff) return NULL;
     advance(p); /* '.' */
     if (at(p, T_ID) && p->cur.len == 3 && memcmp(p->cur.start, "eff", 3) == 0) {
         advance(p); /* 'eff' */
@@ -711,14 +745,15 @@ axi_node *axi_parse_unit(const char *src, size_t len, const char *path,
     axi_node *unit;
     memset(&u0, 0, sizeof u0);
     u0.kind = T_EOF; u0.line = 1; u0.col = 1; u0.start = src; u0.len = 0;
-    unit = nnew_at(N_UNIT, &u0);
+    memset(&p, 0, sizeof p);
+    unit = nnew_at(&p, N_UNIT, &u0);
     axi_node **tail = NULL;
     (void)path;
     p.ds = diags; p.depth = 0; p.block_depth = 0;
     p.expr_operators = 0; p.last_error = NULL;
     axi_lex_init(&p.lx, src, len, diags);
-    advance(&p);
-    while (!at(&p, T_EOF)) {
+    if (!p.oom) advance(&p);
+    while (!p.oom && !at(&p, T_EOF)) {
         if (at(&p, T_CELL)) {
             list_push(unit, &tail, parse_cell(&p));
         } else if (at(&p, T_POLICY)) {
@@ -735,6 +770,18 @@ axi_node *axi_parse_unit(const char *src, size_t len, const char *path,
                 sync_to(&p, sync, 3);
             }
         }
+    }
+    if (p.oom) {
+        parsed_node *allocated = p.allocated;
+        while (allocated) {
+            parsed_node *next = allocated->next;
+            free(allocated);
+            allocated = next;
+        }
+        axi_diag_add(diags, "AXI-D999", 0, 0, 0,
+                     "parser allocation failed; no tree was published",
+                     "retry with enough memory to parse the source");
+        return NULL;
     }
     return unit;
 }

@@ -7,12 +7,16 @@ static uint32_t next_generation;
 
 static uint32_t allocate_generation(void)
 {
-    uint32_t generation = __atomic_add_fetch(&next_generation, 1u,
-                                              __ATOMIC_RELAXED);
-    if (generation == 0)
-        generation = __atomic_add_fetch(&next_generation, 1u,
-                                         __ATOMIC_RELAXED);
-    return generation;
+    uint32_t previous = __atomic_load_n(&next_generation, __ATOMIC_RELAXED);
+    for (;;) {
+        /* Generation zero is invalid. Never recycle a nonzero generation:
+         * otherwise a sufficiently old handle can acquire new authority. */
+        if (previous == UINT32_MAX) return 0;
+        if (__atomic_compare_exchange_n(&next_generation, &previous,
+                                         previous + 1u, 0,
+                                         __ATOMIC_RELAXED, __ATOMIC_RELAXED))
+            return previous + 1u;
+    }
 }
 
 static void table_lock(axi_handle_table *table)
@@ -42,6 +46,10 @@ int axi_handle_table_insert_identified(axi_handle_table *table, intptr_t value,
     for (slot = 0; slot < AXI_HANDLE_TABLE_CAP; slot++) {
         if (table->state[slot] == AXI_HANDLE_FREE) {
             uint32_t generation = allocate_generation();
+            if (generation == 0) {
+                table_unlock(table);
+                return -1;
+            }
             table->value[slot] = value;
             table->generation[slot] = generation;
             __atomic_store_n(&table->references[slot], 0u, __ATOMIC_RELAXED);

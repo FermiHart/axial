@@ -16,6 +16,9 @@
 struct axi_embed_v1_context {
     axb_contract_mod model;
     uint32_t admission_profile;
+    /* Private immutable index; cell IDs and manifests keep wire order. */
+    uint8_t cell_order[256];
+    uint8_t cell_name_len[256];
 };
 
 typedef struct {
@@ -422,17 +425,41 @@ static void diag_publish_internal(axi_embed_v1_diag_buffer *public_diags,
                              ? (uint64_t)internal->dropped : 0);
 }
 
-static int find_cell(const axb_contract_mod *model, axi_embed_v1_bytes name,
-                     uint32_t *index)
+static void index_cells(axi_embed_v1_context *context)
 {
     uint32_t i;
+    const axb_contract_mod *model = &context->model;
     for (i = 0; i < model->body.n; i++) {
-        size_t len = strlen(model->body.cells[i].name);
-        if (name.len == len
-                && memcmp(name.data, model->body.cells[i].name, len) == 0) {
-            *index = i;
+        uint32_t at = i;
+        context->cell_name_len[i] = (uint8_t)strlen(model->body.cells[i].name);
+        while (at > 0 && strcmp(model->body.cells[context->cell_order[at - 1]].name,
+                                 model->body.cells[i].name) > 0) {
+            context->cell_order[at] = context->cell_order[at - 1];
+            at--;
+        }
+        context->cell_order[at] = (uint8_t)i;
+    }
+}
+
+static int find_cell(const axi_embed_v1_context *context, axi_embed_v1_bytes name,
+                     uint32_t *index)
+{
+    const axb_contract_mod *model = &context->model;
+    uint32_t lo = 0, hi = model->body.n;
+    if (!name.data || name.len == 0 || name.len > 63) return 0;
+    while (lo < hi) {
+        uint32_t mid = lo + (hi - lo) / 2;
+        uint32_t cell = context->cell_order[mid];
+        size_t len = context->cell_name_len[cell];
+        size_t common = name.len < len ? (size_t)name.len : len;
+        int cmp = memcmp(name.data, model->body.cells[cell].name, common);
+        if (cmp == 0) cmp = name.len < len ? -1 : (name.len > len ? 1 : 0);
+        if (cmp == 0) {
+            *index = cell;
             return 1;
         }
+        if (cmp < 0) hi = mid;
+        else lo = mid + 1;
     }
     return 0;
 }
@@ -522,6 +549,7 @@ axi_embed_v1_status axi_embed_v1_context_create(
                       "remove authority or provide a valid checked certificate");
     }
     context->admission_profile = options->admission_profile;
+    index_cells(context);
     *out = context;
     return AXI_EMBED_V1_STATUS_OK;
 }
@@ -600,7 +628,7 @@ axi_embed_v1_status axi_embed_v1_eval(
                    "provide the exact closed value shape declared by the cell");
             return AXI_EMBED_V1_STATUS_OK;
         }
-    if (!find_cell(&context->model, request->cell, &cell_index)) {
+    if (!find_cell(context, request->cell, &cell_index)) {
         refuse(diags, AXI_EMBED_V1_STATUS_OK,
                "AXI-EV106", AXI_EMBED_V1_PHASE_PREFLIGHT,
                "requested cell is not present in the admitted context",

@@ -16,22 +16,11 @@ SEALED="$TMPD/demo.axb.sealed"
 KEY_STAGE="$TMPD/keys.stage"
 KEYDIR="$TMPD/keys"
 mkdir "$KEY_STAGE"
-python3 - "$KEY_STAGE" <<'PY'
-import pathlib
-import sys
-
-root = pathlib.Path(sys.argv[1])
-root.joinpath("key.seed").write_bytes(bytes(range(32)))
-root.joinpath("producer.pk").write_bytes(bytes.fromhex(
-    "03a107bff3ce10be1d70dd18e74bc099"
-    "67e4d6309ba50d5f1ddc8664125531b8"
-))
-PY
-[ "$(wc -c < "$KEY_STAGE/key.seed")" -eq 32 ]
-[ "$(wc -c < "$KEY_STAGE/producer.pk")" -eq 32 ]
+. ./tools/test-identity.sh
+axi_test_identity "$KEY_STAGE"
 mv "$KEY_STAGE" "$KEYDIR"
-KEY="$KEYDIR/key.seed"
-PK="$KEYDIR/producer.pk"
+KEY="$KEYDIR/test.seed"
+PK="$KEYDIR/test.pk"
 
 # 1. source -> signed-v7 bytecode with an explicit raw Ed25519 seed
 "$AXI" asm "$SRC" -o "$ART" --signing-key "$KEY"

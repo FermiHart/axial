@@ -1,0 +1,14 @@
+original seals fixture: PASS (exit 0)
+
+original accepts its seal: PASS (exit 0)
+
+candidate refuses old checker seal: PASS (exit 1)
+AXI-B025 <WORKSPACE>/axial/build/migration-hj8qkp3a/old.axb: signed AXB v7 is not admitted by the selected trusted key
+
+ordinary candidate run also refuses present old seal: PASS (exit 1)
+AXI-R025 <WORKSPACE>/axial/build/migration-hj8qkp3a/old.axb: signed AXB v7 is not admitted by the selected trusted key
+
+candidate explicitly reseals fixture: PASS (exit 0)
+
+candidate accepts new seal: PASS (exit 0)
+

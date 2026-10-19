@@ -84,8 +84,16 @@ axi_resource_result axi_resource_commit(axi_resource_envelope *envelope,
                                         const axi_resource_vector *reserved,
                                         const axi_resource_vector *actual)
 {
-    if (!envelope || !reserved || !actual)
+    axi_resource_vector reservation, usage;
+    if (!envelope || !reserved || !actual
+            || !axi_resource_envelope_valid(envelope))
         return deny(envelope, AXI_RESOURCE_CORRUPT);
+    /* Inputs may name the envelope's own vectors. Keep their original values
+     * while consuming reservations and publishing the corresponding spend. */
+    reservation = *reserved;
+    usage = *actual;
+    reserved = &reservation;
+    actual = &usage;
 #define COMMIT_CHECK(field) \
     if (!sub_fits(envelope->reserved.field, reserved->field) \
             || actual->field > reserved->field \
@@ -171,7 +179,10 @@ axi_resource_result axi_resource_handle_closed(axi_resource_envelope *envelope)
 
 int axi_resource_envelope_valid(const axi_resource_envelope *envelope)
 {
-    if (!envelope || !envelope->now || envelope->deadline_ns == 0) return 0;
+    if (!envelope || !envelope->now || envelope->deadline_ns == 0
+            || (unsigned)envelope->first_denial > AXI_RESOURCE_CORRUPT
+            || envelope->owned_output_count > AXI_RESOURCE_MAX_OWNED_OUTPUTS
+            || envelope->live_handles > envelope->spent.handles) return 0;
 #define VALID_FIELD(field) \
     if (!add_fits(envelope->spent.field, envelope->reserved.field, 0, \
                   envelope->ceiling.field)) return 0
@@ -215,12 +226,16 @@ void *axi_resource_output_alloc(axi_resource_envelope *envelope,
 int axi_resource_outputs_free(axi_resource_envelope *envelope,
                               axi_mem_account *account)
 {
-    int ok = 1;
-    if (!envelope || !account) return 0;
+    if (!envelope || !account
+            || envelope->owned_output_count > AXI_RESOURCE_MAX_OWNED_OUTPUTS)
+        return 0;
     while (envelope->owned_output_count) {
-        void *output = envelope->owned_outputs[--envelope->owned_output_count];
-        envelope->owned_outputs[envelope->owned_output_count] = NULL;
-        if (!axi_mem_free(account, output)) ok = 0;
+        uint32_t index = envelope->owned_output_count - 1;
+        void *output = envelope->owned_outputs[index];
+        /* An ownership refusal must retain the pointer for correct cleanup. */
+        if (!axi_mem_free(account, output)) return 0;
+        envelope->owned_outputs[index] = NULL;
+        envelope->owned_output_count = index;
     }
-    return ok;
+    return 1;
 }

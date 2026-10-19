@@ -84,6 +84,7 @@ static void ob_init(outbuf *o)
     o->len = 0;
     o->cap = o->buf ? 256 : 0;
     o->failed = o->buf == NULL;
+    if (o->buf) o->buf[0] = '\0';
 }
 
 static void ob_grow(outbuf *o, size_t need)
@@ -147,6 +148,25 @@ static int alloc_reg(cg *c)
             if (i > c->max_reg) c->max_reg = i;
             return i;
         }
+    }
+    c->err = 1;
+    return 0;
+}
+
+/* A call window is contiguous and exclusively owned before evaluating any
+ * arguments. Picking its first hole and reserving unrelated holes later can
+ * overwrite a live binding located in the middle of the supposed window. */
+static int alloc_window(cg *c, int argc)
+{
+    int count = argc > 0 ? argc : 1;
+    if (count > MAX_REG) { c->err = 1; return 0; }
+    for (int base = 0; base <= MAX_REG - count; base++) {
+        int i;
+        for (i = 0; i < count && !c->reg_used[base + i]; i++) {}
+        if (i != count) { base += i; continue; }
+        for (i = 0; i < count; i++) c->reg_used[base + i] = 1;
+        if (base + count - 1 > c->max_reg) c->max_reg = base + count - 1;
+        return base;
     }
     c->err = 1;
     return 0;
@@ -327,18 +347,20 @@ static void extract_call_name(const axi_node *n, char *name, size_t namesz)
 
 static void collect_builtins(cg *c, const axi_node *n)
 {
-    if (!n) return;
-    if (n->kind == N_CALL) {
-        char name[80];
-        extract_call_name(n, name, sizeof name);
-        if (name[0] && is_builtin_name(name))
-            (void)add_builtin(c, name);
+    /* Children are parser-depth bounded; sibling lists are not. Traverse
+     * each list iteratively so a wide valid body cannot exhaust host stack. */
+    for (; n && !c->err && !c->oom; n = n->next) {
+        if (n->kind == N_CALL) {
+            char name[80];
+            extract_call_name(n, name, sizeof name);
+            if (name[0] && is_builtin_name(name))
+                (void)add_builtin(c, name);
+        }
+        collect_builtins(c, n->a);
+        collect_builtins(c, n->b);
+        collect_builtins(c, n->c);
+        collect_builtins(c, n->list);
     }
-    collect_builtins(c, n->a);
-    collect_builtins(c, n->b);
-    collect_builtins(c, n->c);
-    collect_builtins(c, n->list);
-    collect_builtins(c, n->next);
 }
 
 /* The call is a cap method iff the base is a bound cap parameter. Binding
@@ -377,10 +399,8 @@ static const char *bin_op_name(axi_tok_kind op)
 static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent)
 {
     if (!n) {
-        int r = alloc_reg(c);
-        ob_indent(o, indent);
-        ob_printf(o, "ldk r%d k0\n", r);
-        return r;
+        c->err = 1;
+        return 0;
     }
     switch (n->kind) {
     case N_INT: {
@@ -480,22 +500,24 @@ static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent)
         return rd;
     }
     case N_UN: {
+        if (n->op == T_MINUS && n->a && n->a->kind == N_INT) {
+            int k, rd;
+            if (n->a->ival > (UINT64_C(1) << 63)) { c->err = 1; return 0; }
+            /* A signed literal is one constant, not a discarded unsigned
+             * load followed by a second constant. -2^63 remains representable. */
+            k = add_k_num(c, 2, UINT64_C(0) - n->a->ival);
+            rd = alloc_reg(c);
+            if (c->err || c->oom) return 0;
+            ob_indent(o, indent);
+            ob_printf(o, "ldk r%d k%d\n", rd, k);
+            return rd;
+        }
         int ra = gen_expr(c, o, n->a, indent);
         int rd = alloc_reg(c);
         if (c->err || c->oom) return 0;
         if (n->op == T_BANG) {
             ob_indent(o, indent);
             ob_printf(o, "not r%d r%d\n", rd, ra);
-        } else if (n->op == T_MINUS && n->a->kind == N_INT) {
-            /* INV-316 / AXI-INV-101: -<literal> IS an i64 constant (the
-             * checker says so); emit the negated bits directly. Wrap is
-             * defined: -2^63 is the i64 min bit pattern. */
-            int k = add_k_num(c, 2, (uint64_t)(0 - n->a->ival));
-            if (c->err) return 0;
-            free_reg(c, ra);
-            ob_indent(o, indent);
-            ob_printf(o, "ldk r%d k%d\n", rd, k);
-            return rd;
         } else if (n->op == T_MINUS) {
             /* INV-316 / AXI-INV-101: -x expands to 0 - x with the zero of the
              * kind the checker proved (tyann); never a mov that drops the
@@ -545,8 +567,7 @@ static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent)
         if (name[0] && is_builtin_name(name)) {
             int bidx = add_builtin(c, name);
             if (c->oom || c->err) return 0;
-            /* args in consecutive regs starting at base */
-            int base = alloc_reg(c);
+            int base;
             const axi_node *args[16];
             int arg_regs[16] = {0};
             int argc = 0;
@@ -557,16 +578,18 @@ static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent)
                 if (argc >= 16) { c->err = 1; return 0; }
                 args[argc++] = arg;
             }
+            base = alloc_window(c, argc);
+            if (c->err) return 0;
             for (int i = 0; i < argc; i++)
                 arg_regs[i] = gen_expr(c, o, args[i], indent);
+            if (c->err || c->oom) return 0;
             emit_arg_moves(c, o, indent, base, argc, arg_regs);
-            /* reserve regs for args beyond base */
-            for (int i = 1; i < argc; i++) (void)alloc_reg(c);
+            for (int i = 0; i < argc; i++) free_reg(c, arg_regs[i]);
             int rd = alloc_reg(c);
             if (c->err || c->oom) return 0;
             ob_indent(o, indent);
             ob_printf(o, "builtin r%d @%s r%d\n", rd, c->builtins[bidx], base);
-            for (int i = 0; i < argc; i++) free_reg(c, base + i);
+            for (int i = 0; i < (argc ? argc : 1); i++) free_reg(c, base + i);
             /* INV-321 / AXI-INV-103: rd stays live — the caller frees it
              * after the last use, never before. */
             return rd;
@@ -574,7 +597,7 @@ static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent)
         /* Cell call */
         if (n->a && n->a->kind == N_ID && n->a->lex) {
             const axi_node *callee = n->a;
-            int base = alloc_reg(c);
+            int base;
             const axi_node *args[16];
             int arg_regs[16] = {0};
             int argc = 0;
@@ -582,10 +605,13 @@ static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent)
                 if (argc >= 16) { c->err = 1; return 0; }  /* INV-321 */
                 args[argc++] = arg;
             }
+            base = alloc_window(c, argc);
+            if (c->err) return 0;
             for (int i = 0; i < argc; i++)
                 arg_regs[i] = gen_expr(c, o, args[i], indent);
+            if (c->err || c->oom) return 0;
             emit_arg_moves(c, o, indent, base, argc, arg_regs);
-            for (int i = 1; i < argc; i++) (void)alloc_reg(c);
+            for (int i = 0; i < argc; i++) free_reg(c, arg_regs[i]);
             int rd = base; /* VM places callee return value at the base reg. */
             if (c->err || c->oom) return 0;
             ob_indent(o, indent);
@@ -612,7 +638,7 @@ static void gen_block(cg *c, outbuf *o, const axi_node *blk, int indent)
      * bindings born in this block die at its end, and their registers go
      * back to the pool so a later read cannot observe a dead slot. */
     int saved = c->nenv;
-    for (const axi_node *s = blk->list; s; s = s->next)
+    for (const axi_node *s = blk->list; s && !c->err && !c->oom && !o->failed; s = s->next)
         gen_stmt(c, o, s, indent);
     while (c->nenv > saved) {
         c->nenv--;
@@ -667,9 +693,14 @@ static void gen_stmt(cg *c, outbuf *o, const axi_node *n, int indent)
         break;
     }
     case N_RET: {
-        int r = gen_expr(c, o, n->a, indent);
+        /* The checker defines bare ret as ok, not integer zero. A dedicated
+         * never-written UNIT register gives both spellings the same value. */
+        int r = n->a ? gen_expr(c, o, n->a, indent) : alloc_unit_reg(c);
         ob_indent(o, indent);
         ob_printf(o, "ret r%d\n", r);
+        /* There is no successor on this path. A later branch can reuse this
+         * temporary without consuming one permanent register per early ret. */
+        free_reg(c, r);
         break;
     }
     case N_IF: {
@@ -688,12 +719,14 @@ static void gen_stmt(cg *c, outbuf *o, const axi_node *n, int indent)
             size_t else_start = o->len;
             gen_block(c, o, n->c, indent);
             size_t else_end = o->len;
-            /* jf must skip the whole then block plus the trailing jmp. */
+            /* Compute both spans before editing the buffer, then patch the
+             * later site first. Widening the earlier displacement shifts
+             * every saved byte offset after it; a stale jmp_pos can point at
+             * the preceding branch's '+' and leave this jmp at +0. */
             int off_else = (int)count_instrs(o->buf, then_start, else_start);
-            patch_offset(o, jf_pos, off_else + 1);
-            /* jmp must skip the whole else block. */
             int off_end = (int)count_instrs(o->buf, else_start, else_end);
             patch_offset(o, jmp_pos, off_end + 1);
+            patch_offset(o, jf_pos, off_else + 1);
         } else {
             int off = (int)count_instrs(o->buf, then_start, then_end);
             patch_offset(o, jf_pos, off + 1);
@@ -797,9 +830,10 @@ char *axi_codegen(const axi_node *unit, size_t *out_len)
             snprintf(name, sizeof name, "%.*s", (int)n->a->lexlen, n->a->lex);
             add_eff(&c, name);
         }
-        if (n->kind == N_CELL || n->kind == N_POLICY)
-            collect_builtins(&c, n);
     }
+    /* One traversal for the unit, rather than re-walking all later cells
+     * from each cell's sibling pointer (quadratic in the number of cells). */
+    collect_builtins(&c, unit->list);
 
     for (int i = 0; i < c.neffs; i++)
         ob_printf(&o, ".eff %s\n", c.effs[i]);
@@ -808,7 +842,7 @@ char *axi_codegen(const axi_node *unit, size_t *out_len)
     if (c.neffs || c.nbuiltins) ob_puts(&o, "\n");
 
     /* Pass 2: emit cells. */
-    for (const axi_node *n = unit->list; n; n = n->next) {
+    for (const axi_node *n = unit->list; n && !c.err && !c.oom && !o.failed; n = n->next) {
         if (n->kind == N_CELL || n->kind == N_POLICY)
             gen_cell(&c, &o, n);
     }
