@@ -51,6 +51,8 @@ typedef struct {
 
 static ty mkty(tykind k) { ty t; t.k = k; t.lex = 0; t.lexlen = 0; t.rt = 0; return t; }
 
+static int manifest_dotted_name_ok(const axi_node *n);
+
 static const char *tyname(ty t)
 {
     switch (t.k) {
@@ -881,6 +883,11 @@ static ty check_expr(ck *c, const axi_node *n)
     case N_TRUE: case N_FALSE: return mkty(TY_BOOL);
     case N_OK:    return mkty(TY_UNIT);
     case N_ERRT: {
+        if (!manifest_dotted_name_ok(n)) {
+            tdiag(c, "AXI-T002", n, "error atom is outside manifest v1",
+                  "use at most two non-empty path segments and 63 ASCII bytes");
+            return mkty(TY_BAD);
+        }
         ty t = mkty(TY_ERR);
         t.lex = n->lex; t.lexlen = n->lexlen;
         return t;

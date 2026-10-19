@@ -35,7 +35,7 @@ typedef struct {
 } bind;
 
 typedef struct {
-    int tag; /* 0=u64, 1=str, 2=i64, 3=f64 */
+    int tag; /* 0=u64, 1=str, 2=i64, 3=f64, 4=error atom */
     uint64_t u;
     char *s;
     uint32_t slen;
@@ -61,7 +61,7 @@ static void clear_consts(cg *c)
 {
     int i;
     for (i = 0; i < c->nk; i++) {
-        if (c->k[i].tag == 1) free(c->k[i].s);
+        if (c->k[i].tag == 1 || c->k[i].tag == 4) free(c->k[i].s);
         c->k[i].s = NULL;
         c->k[i].slen = 0;
     }
@@ -262,6 +262,26 @@ static int add_k_str(cg *c, const char *s, uint32_t len)
     return c->nk++;
 }
 
+/* Source errors carry a named atom and no payload. Keep their constant
+ * namespace disjoint from strings, even when their bytes are identical. */
+static int add_k_err(cg *c, const char *s, uint32_t len)
+{
+    char *copy;
+    if (!s || !len || len > 63) { c->err = 1; return 0; }
+    for (int i = 0; i < c->nk; i++)
+        if (c->k[i].tag == 4 && c->k[i].slen == len
+                && memcmp(c->k[i].s, s, len) == 0) return i;
+    if (c->nk >= MAX_CONST) { c->err = 1; return 0; }
+    copy = axi_malloc((size_t)len + 1);
+    if (!copy) { c->oom = 1; return 0; }
+    memcpy(copy, s, len); copy[len] = '\0';
+    c->k[c->nk].tag = 4;
+    c->k[c->nk].s = copy;
+    c->k[c->nk].slen = len;
+    c->k[c->nk].u = 0;
+    return c->nk++;
+}
+
 static int add_builtin(cg *c, const char *name)
 {
     for (int i = 0; i < c->nbuiltins; i++)
@@ -412,6 +432,13 @@ static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent)
     }
     case N_STR: {
         int k = add_k_str(c, n->lex, n->lexlen);
+        int r = alloc_reg(c);
+        ob_indent(o, indent);
+        ob_printf(o, "ldk r%d k%d\n", r, k);
+        return r;
+    }
+    case N_ERRT: {
+        int k = add_k_err(c, n->lex, n->lexlen);
         int r = alloc_reg(c);
         ob_indent(o, indent);
         ob_printf(o, "ldk r%d k%d\n", r, k);
@@ -790,7 +817,7 @@ static void gen_cell(cg *c, outbuf *o, const axi_node *cell)
         } else if (c->k[i].tag == 3) {
             ob_printf(o, "  k%d f64 %llx\n", i, (unsigned long long)c->k[i].u);
         } else {
-            ob_printf(o, "  k%d str \"", i);
+            ob_printf(o, "  k%d %s \"", i, c->k[i].tag == 4 ? "err" : "str");
             for (uint32_t j = 0; j < c->k[i].slen; j++) {
                 if (c->k[i].s[j] == '"' || c->k[i].s[j] == '\\') ob_puts(o, "\\");
                 ob_putc(o, (unsigned char)c->k[i].s[j]);
