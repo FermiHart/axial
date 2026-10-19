@@ -1,6 +1,7 @@
 /* Regression cases for audit40 W21--W30. No network or ambient authority. */
 #include "axi_trust_v1.h"
 #include "axi_hash.h"
+#include "axi_time_lease_v1.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -83,10 +84,55 @@ static void w22(void)
     CHECK(axi_trust_v1_check_transition(prev, pn, next, nn) == -1);
 }
 
+static void w23(void)
+{
+    axi_lease1 l;
+    axi_lease1_state s, bad, saved;
+    uint8_t missing[32] = {99};
+    unsigned i;
+    memset(&l, 0, sizeof l);
+    l.principal_root[0] = 1; l.issuer_root[0] = 2;
+    l.trust_snapshot_root[0] = 3; l.lease_nonce[0] = 4;
+    l.time_domain_id[0] = 5; l.scope_root[0] = 6;
+    l.revocation_root[0] = 7; l.scope_kind = AXI_LEASE1_SCOPE_EXACT_OBJECT;
+    l.not_after = 100; l.ncap = 1; strcpy(l.caps[0], "fs.Write");
+    l.nquota = 2; l.quota_unit[0][0] = 10; l.quota_unit[1][0] = 20;
+    l.quota_limit[0] = UINT64_MAX; l.quota_limit[1] = 12;
+    CHECK(axi_lease1_state_init(&s, &l) == 0);
+    CHECK(axi_lease1_reserve(&s, l.quota_unit[0], UINT64_MAX - 1) == 0);
+    CHECK(axi_lease1_reserve(&s, l.quota_unit[0], 1) == 0);
+    saved = s;
+    CHECK(axi_lease1_reserve(&s, l.quota_unit[0], 1) == -1);
+    CHECK(memcmp(&s, &saved, sizeof s) == 0);
+    bad = s; bad.nquota = 255; saved = bad;
+    CHECK(axi_lease1_reserve(&bad, missing, 1) == -1);
+    CHECK(memcmp(&bad, &saved, sizeof bad) == 0);
+    for (i = 0; i < 7; i++) {
+        bad = s;
+        switch (i) {
+        case 0: bad.nquota = AXI_LEASE1_MAX_QUOTAS + 1; break;
+        case 1: bad.nquota = 0; break;
+        case 2: bad.quota_reserved[0] = 1; bad.quota_limit[0] = 0; break;
+        case 3: memcpy(bad.quota_unit[0], bad.quota_unit[1], 32); break;
+        case 4: bad.quota_unit[2][0] = 30; break;
+        case 5: bad.quota_reserved[2] = 1; break;
+        case 6: memset(bad.lease_root, 0, 32); break;
+        }
+        saved = bad;
+        CHECK(axi_lease1_reserve(&bad, l.quota_unit[1], 1) == -1);
+        CHECK(memcmp(&bad, &saved, sizeof bad) == 0);
+    }
+    CHECK(axi_lease1_reserve(&s, l.quota_unit[1], 12) == 0);
+    CHECK(axi_lease1_reserve(&s, l.quota_unit[1], 1) == -1);
+    CHECK(axi_lease1_reserve(&s, missing, 1) == -1);
+    CHECK(axi_lease1_reserve(&s, l.quota_unit[1], 0) == -1);
+}
+
 int main(int argc, char **argv)
 {
     if (argc == 1 || strcmp(argv[1], "W21") == 0) w21();
     if (argc == 1 || strcmp(argv[1], "W22") == 0) w22();
+    if (argc == 1 || strcmp(argv[1], "W23") == 0) w23();
     printf("audit40 security: %u checks passed\n", checks);
     return 0;
 }
