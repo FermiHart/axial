@@ -69,7 +69,7 @@ int main(void)
         char *snapshot = NULL, *canonical;
         watched_source = path;
         source_opens = 0;
-        unit = load_unit_or_null(path, &snapshot, 0);
+        unit = load_unit_or_null(path, &snapshot, 0, NULL);
         watched_source = NULL;
         CHECK(unit != NULL && snapshot != NULL);
         CHECK(source_opens == 1); /* Check and projection share one read. */

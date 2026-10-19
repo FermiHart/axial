@@ -18,11 +18,14 @@ AXI_OBJ := $(CORE_OBJ) $(BUILD)/src/axi_main.o
 DEMO_OBJ := $(CORE_OBJ) $(BUILD)/scripts/jash_policy_demo.o
 AUDIT_SRC := $(filter-out tests/audit40/frontend_%.c tests/audit40/runtime_bench.c,$(wildcard tests/audit40/*.c))
 AUDIT_BIN := $(patsubst tests/audit40/%.c,$(BUILD)/audit40/%,$(AUDIT_SRC))
+COMPILER_AUDIT_SRC := $(wildcard tests/audit80/compiler_*.c)
+COMPILER_AUDIT_BIN := $(patsubst tests/audit80/%.c,$(BUILD)/audit80/%,$(COMPILER_AUDIT_SRC))
 .SECONDARY: $(patsubst %.c,$(BUILD)/%.o,$(AUDIT_SRC)) $(BUILD)/tests/audit40/runtime_bench.o
+.SECONDARY: $(patsubst %.c,$(BUILD)/%.o,$(COMPILER_AUDIT_SRC))
 AXI_INC := -Isrc -Iinclude -Ivendor
 CONFIG := $(BUILD)/.build-config
 
-.PHONY: all dev release demo gate-fast gate-cli gate-audit gate-identity gate-frontend gate-security gate-workers gate bench clean FORCE
+.PHONY: all dev release demo gate-fast gate-cli gate-audit gate-identity gate-frontend gate-security gate-workers gate-compiler gate bench clean FORCE
 all: dev
 dev: $(AXI)
 release:
@@ -36,6 +39,10 @@ $(DEMO): $(DEMO_OBJ)
 	$(HOSTCC) $(LDFLAGS) -o $@ $(DEMO_OBJ) $(LDLIBS)
 
 $(BUILD)/audit40/%: $(BUILD)/tests/audit40/%.o $(CORE_OBJ)
+	@mkdir -p $(dir $@)
+	$(HOSTCC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
+
+$(BUILD)/audit80/compiler_%: $(BUILD)/tests/audit80/compiler_%.o $(CORE_OBJ)
 	@mkdir -p $(dir $@)
 	$(HOSTCC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
@@ -81,7 +88,12 @@ gate-security:
 gate-workers: $(BUILD)/audit40/runtime
 	$< --workers
 
-gate: gate-identity gate-fast gate-cli gate-audit gate-frontend gate-security gate-workers
+gate-compiler: dev $(COMPILER_AUDIT_BIN)
+	@set -e; for test in $(COMPILER_AUDIT_BIN); do "$$test"; done
+	$(MAKE) BUILD='$(BUILD)/compiler-fail' CPPFLAGS='$(CPPFLAGS) -DAXI_ALLOC_FAILPOINT' dev
+	$(PYTHON) tests/audit80/compiler_cli.py $(abspath $(AXI)) $(abspath $(BUILD))/compiler-fail/axi
+
+gate: gate-identity gate-fast gate-cli gate-audit gate-frontend gate-security gate-workers gate-compiler
 
 # Build probes only; measurements are opt-in and have no speed thresholds.
 bench: $(BUILD)/audit40/embed $(BUILD)/audit40/seal $(BUILD)/audit40/runtime_bench
@@ -90,3 +102,4 @@ clean:
 	rm -rf $(BUILD)
 
 -include $(AXI_OBJ:.o=.d) $(DEMO_OBJ:.o=.d) $(patsubst %.c,$(BUILD)/%.d,$(AUDIT_SRC)) $(BUILD)/tests/audit40/runtime_bench.d
+-include $(patsubst %.c,$(BUILD)/%.d,$(COMPILER_AUDIT_SRC))
