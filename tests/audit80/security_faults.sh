@@ -5,15 +5,18 @@ audit_root=$(CDPATH= cd -- "$(dirname -- "$0")/../.." && pwd)
 audit_source=${AXI_AUDIT_SOURCE_ROOT:-$audit_root}
 audit_build=${AXI_AUDIT_BUILD:-$audit_root/build/audit80-security}
 audit_cc=${CC:-cc}
-audit_flags=${AXI_AUDIT_CFLAGS:--std=c99 -Wall -Wextra -Werror -O2 -g -D_POSIX_C_SOURCE=200809L}
+audit_flags=${AXI_AUDIT_CFLAGS:-${CFLAGS:--std=c99 -Wall -Wextra -Werror -O2 -g -D_POSIX_C_SOURCE=200809L}}
+audit_cppflags=${CPPFLAGS:-}
+audit_ldflags=${LDFLAGS:-}
 AXI_AUDIT_BUILD_ONLY=1 sh "$audit_root/tests/audit80/security.sh"
+audit_modes="$*"
 mkdir -p "$audit_build/faults"
 set --
 for audit_unit in axi_local_attempt_v1 axi_local_authority_v1; do
     # shellcheck disable=SC2086
     # Fortified libc inline aliases bypass syscall name redirection. This
     # override is limited to the test-only owner objects, never a product build.
-    "$audit_cc" $audit_flags -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 \
+    "$audit_cc" $audit_cppflags $audit_flags -U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=0 \
         -I"$audit_source/src" -I"$audit_source/include" -I"$audit_source/vendor" \
         -Dfsync=audit80_fsync -Dwrite=audit80_write -Dread=audit80_read \
         -Dunlinkat=audit80_unlinkat -Dclock_gettime=audit80_clock_gettime \
@@ -26,9 +29,10 @@ for audit_object in "$audit_build"/*.o; do
     set -- "$@" "$audit_object"
 done
 # shellcheck disable=SC2086
-"$audit_cc" $audit_flags -I"$audit_source/src" -I"$audit_source/include" -I"$audit_source/vendor" \
+"$audit_cc" $audit_cppflags $audit_flags -I"$audit_source/src" -I"$audit_source/include" -I"$audit_source/vendor" \
     -x c -c "$audit_root/tests/audit80/security_faults.inc" -o "$audit_build/faults/test.o"
 # shellcheck disable=SC2086
-"$audit_cc" $audit_flags "$@" "$audit_build/faults/test.o" -lm -o "$audit_build/faults/security_faults"
+"$audit_cc" $audit_flags "$@" "$audit_build/faults/test.o" $audit_ldflags -lm -o "$audit_build/faults/security_faults"
 [ "${AXI_AUDIT_BUILD_ONLY:-0}" = 1 ] && exit 0
-"$audit_build/faults/security_faults"
+# shellcheck disable=SC2086
+"$audit_build/faults/security_faults" $audit_modes

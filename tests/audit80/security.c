@@ -666,6 +666,57 @@ static void w48(void)
     CHECK(rmdir(original) == 0); rm_fixture(f.dir);
 }
 
+static void w50(void)
+{
+    fixture f;
+    axi_local_authority_v1 *owner = NULL;
+    axi_local_authority_v1_prepared *prepared;
+    axi_local_attempt_v1_outcome out;
+    axi_ag1_v1 original, candidate;
+    uint8_t wrong_seed[32] = {9}, signed_candidate[AXI_AG1_V1_SIGNED_SIZE];
+    uint8_t *roots[] = {candidate.decision_aer_root, candidate.principal_root,
+        candidate.policy_root, candidate.action_root, candidate.resource_root,
+        candidate.budget_root, candidate.trust_snapshot_root, candidate.issuer_key_id};
+    char active[512], saved[512];
+    unsigned i;
+    new_fixture(&f); provision(&f);
+    CHECK(axi_local_authority_v1_enable(f.dir, f.pk) == 0);
+    CHECK(axi_local_authority_v1_open(f.dir, &owner) == 0);
+    path_of(active, f.dir, "config"); put_file(active, "before", 6);
+    prepared = ready(&f, owner);
+    CHECK(axi_ag1_v1_decode_signed(&original, f.grant, sizeof f.grant, f.pk) == 0);
+    for (i = 0; i < 12; i++) {
+        size_t len = sizeof signed_candidate;
+        candidate = original;
+        if (i < 8) roots[i][0] ^= 0x80;
+        if (i == 8) { candidate.has_parent = 1; candidate.parent_root[0] = 1; }
+        CHECK(axi_ag1_v1_encode_signed(&candidate, i == 9 ? wrong_seed : f.seed, signed_candidate) == 0);
+        if (i == 10) signed_candidate[sizeof signed_candidate - 1] ^= 1;
+        if (i == 11) len--;
+        CHECK(axi_local_authority_v1_commit(prepared, signed_candidate, len, 0, &out)
+                == AXI_LOCAL_AUTHORITY_V1_REFUSED);
+        CHECK(!out.effect_performed && !exists(f.dir, "records") && !exists(f.dir, ".tmp.attempt"));
+        check_config(f.dir, "before", 6);
+    }
+    CHECK(chmod(f.dir, 0755) == 0);
+    CHECK(axi_local_authority_v1_commit(prepared, f.grant, sizeof f.grant, 0, &out) == AXI_LOCAL_AUTHORITY_V1_REFUSED);
+    CHECK(!out.effect_performed && !exists(f.dir, "records"));
+    CHECK(chmod(f.dir, 0700) == 0);
+    path_of(active, f.dir, "epoch_active"); path_of(saved, f.dir, "saved_epoch");
+    CHECK(rename(active, saved) == 0); put_file(active, "invalid", 7);
+    CHECK(axi_local_authority_v1_commit(prepared, f.grant, sizeof f.grant, 0, &out) == AXI_LOCAL_AUTHORITY_V1_REFUSED);
+    CHECK(!out.effect_performed && !exists(f.dir, "records"));
+    check_config(f.dir, "before", 6);
+    CHECK(unlink(active) == 0 && rename(saved, active) == 0);
+    CHECK(axi_local_authority_v1_commit(prepared, f.grant, sizeof f.grant, 0, &out) == 0);
+    CHECK(out.state == AXI_LOCAL_ATTEMPT_V1_COMMITTED && out.effect_performed);
+    check_config(f.dir, "payload", 7);
+    CHECK(axi_local_authority_v1_status(owner, f.grant_root, 0, &out) == 0);
+    CHECK(out.state == AXI_LOCAL_ATTEMPT_V1_COMMITTED && !out.effect_performed);
+    axi_local_authority_v1_prepared_close(prepared); axi_local_authority_v1_close(owner);
+    rm_fixture(f.dir);
+}
+
 static int setup_host(void)
 {
     if (geteuid() == 0) {
@@ -693,7 +744,8 @@ int main(int argc, char **argv)
     if (argc == 1 || !strcmp(argv[1], "W46")) w46();
     if (argc == 1 || !strcmp(argv[1], "W47")) w47();
     if (argc == 1 || !strcmp(argv[1], "W48")) w48();
-    if (argc == 2 && strcmp(argv[1], "W41") && strcmp(argv[1], "W42") && strcmp(argv[1], "W43") && strcmp(argv[1], "W44") && strcmp(argv[1], "W45") && strcmp(argv[1], "W46") && strcmp(argv[1], "W47") && strcmp(argv[1], "W48")) return 2;
+    if (argc == 1 || !strcmp(argv[1], "W50")) w50();
+    if (argc == 2 && strcmp(argv[1], "W41") && strcmp(argv[1], "W42") && strcmp(argv[1], "W43") && strcmp(argv[1], "W44") && strcmp(argv[1], "W45") && strcmp(argv[1], "W46") && strcmp(argv[1], "W47") && strcmp(argv[1], "W48") && strcmp(argv[1], "W50")) return 2;
     printf("audit80 security: %u checks PASS (ruid=%lu euid=%lu)\n", checks,
            (unsigned long)getuid(), (unsigned long)geteuid());
     return 0;
