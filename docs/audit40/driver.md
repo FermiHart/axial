@@ -62,3 +62,17 @@ Validation: `make gate-audit` runs the actual reader against regular, empty,
 oversized sparse, absent, directory, device and FIFO inputs (16 checks).
 The 67 original goldens remain green. Source files above 64 MiB and special
 files are intentionally refused; this is a documented CLI resource bound.
+
+## W35 — Project the interface from the checked snapshot
+
+`iface` previously checked a pathname, freed its source/tree, reopened the
+name and parsed it again. The second source did not pass canonical checking;
+an intervening replacement could therefore project an interface for bytes
+that were never accepted by the advertised check ladder. The shared checker
+now optionally transfers ownership of its validated source and typed AST to
+the interface command. Both iface and iface-diff reuse that exact snapshot.
+
+Validation: all interface goldens, plus a reader-open counter and projection
+after the source pathname is unlinked. The path is opened once; canonical
+form and inferred capability annotations remain attached to the same AST.
+This also removes one complete parse/type-check cycle per projected file.

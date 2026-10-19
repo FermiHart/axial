@@ -351,7 +351,8 @@ static void form_diags(const char *src, size_t len, const char *canon,
  *            1 = the full ladder grammar → form → types (`axi check`).
  * The ladder speaks one layer at a time: types stay silent until the
  * form is silent — an agent fixes one kind of red per pass. */
-static int cmd_check_impl(const char *path, int json, int and_types)
+static int cmd_check_snapshot(const char *path, int json, int and_types,
+                               char **source_out, axi_node **unit_out)
 {
     size_t len = 0;
     char *src = read_file(path, &len);
@@ -363,6 +364,8 @@ static int cmd_check_impl(const char *path, int json, int and_types)
     size_t k;
     uint32_t line = 1;
 
+    if (source_out) *source_out = NULL;
+    if (unit_out) *unit_out = NULL;
     if (!src) {
         print_read_error(path, json);
         return 2;
@@ -442,9 +445,14 @@ static int cmd_check_impl(const char *path, int json, int and_types)
                 return 1;
             }
         }
-        axi_ast_free(unit);
-        free(src);
-        return 0; /* canonical + well-typed: silence is the reward */
+        if (source_out && unit_out) {
+            *source_out = src;
+            *unit_out = unit;
+        } else {
+            axi_ast_free(unit);
+            free(src);
+        }
+        return 0; /* Retain the exact validated snapshot when requested. */
     }
 
     form_diags(src, len, canon, &ds);
@@ -455,6 +463,11 @@ static int cmd_check_impl(const char *path, int json, int and_types)
     axi_ast_free(unit);
     free(src);
     return ds.n > 0 ? 1 : 0;
+}
+
+static int cmd_check_impl(const char *path, int json, int and_types)
+{
+    return cmd_check_snapshot(path, json, and_types, NULL, NULL);
 }
 
 /* W16 — the form layer's diagnostics, byte-anchored and repairable. Shared
@@ -613,35 +626,9 @@ static int cmd_compile(const char *in, const char *out_path,
  * A lying interface is worse than no interface at all. */
 static axi_node *load_unit_or_null(const char *path, char **src_out, int json)
 {
-    size_t len = 0;
-    char *src;
-    axi_diags ds;
-    axi_node *unit;
-
-    if (cmd_check_impl(path, json, 1) != 0) /* same diags `check` prints */
+    axi_node *unit = NULL;
+    if (cmd_check_snapshot(path, json, 1, src_out, &unit) != 0)
         return NULL;
-
-    src = read_file(path, &len);
-    if (!src) {
-        print_read_error(path, json);
-        return NULL;
-    }
-    axi_diags_init(&ds);
-    unit = axi_parse_unit(src, len, path, &ds);
-    if (!unit) {
-        if (json) print_diags_json(&ds, path);
-        else print_diags_human(&ds, path);
-        free(src);
-        return NULL;
-    }
-    if (ds.n == 0) axi_type_check(unit, &ds); /* populate inferred iface caps */
-    if (ds.n > 0) { /* unreachable: check was green a moment ago */
-        print_diags_human(&ds, path);
-        axi_ast_free(unit);
-        free(src);
-        return NULL;
-    }
-    *src_out = src;
     return unit;
 }
 
