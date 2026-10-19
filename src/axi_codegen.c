@@ -396,10 +396,8 @@ static const char *bin_op_name(axi_tok_kind op)
 static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent)
 {
     if (!n) {
-        int r = alloc_reg(c);
-        ob_indent(o, indent);
-        ob_printf(o, "ldk r%d k0\n", r);
-        return r;
+        c->err = 1;
+        return 0;
     }
     switch (n->kind) {
     case N_INT: {
@@ -690,9 +688,14 @@ static void gen_stmt(cg *c, outbuf *o, const axi_node *n, int indent)
         break;
     }
     case N_RET: {
-        int r = gen_expr(c, o, n->a, indent);
+        /* The checker defines bare ret as ok, not integer zero. A dedicated
+         * never-written UNIT register gives both spellings the same value. */
+        int r = n->a ? gen_expr(c, o, n->a, indent) : alloc_unit_reg(c);
         ob_indent(o, indent);
         ob_printf(o, "ret r%d\n", r);
+        /* There is no successor on this path. A later branch can reuse this
+         * temporary without consuming one permanent register per early ret. */
+        free_reg(c, r);
         break;
     }
     case N_IF: {

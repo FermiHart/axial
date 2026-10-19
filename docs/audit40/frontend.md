@@ -62,3 +62,19 @@ Nested calls reserve independent windows. The VM call ABI is unchanged.
 **Validation.** `python3 tests/audit40/frontend_codegen.py build/axi calls`
 covers user cells and builtins, preserved locals, nested and zero-argument
 calls, sixteen arguments, and 100 repeated calls without register leakage.
+
+## W04 — correct unit returns and branch-local register lifetime
+
+**Problem.** The checker defines bare `ret` as `ok`, but codegen emitted
+integer zero. Running the signed artifact therefore trapped with `AXI-R025`.
+An early `ret` also kept its temporary register live in subsequent generated
+branches, refusing a function with many independent early returns.
+
+**Change.** Bare and explicit unit returns use the untouched UNIT register.
+Return temporaries are retired after emission; bound locals and the dedicated
+unit register retain their separate lifetimes. A missing expression elsewhere
+is an internal refusal, never implicit integer zero.
+
+**Validation.** `python3 tests/audit40/frontend_codegen.py build/axi returns`
+checks `ok`, `u64 0`, and `bool false` as distinct results, plus both outcomes
+of 80 independent conditional returns.

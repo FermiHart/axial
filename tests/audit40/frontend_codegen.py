@@ -124,3 +124,32 @@ cell twice : fn() -> u64
         artifact = compile_source("sixteen_arguments", source)
         expect_value(artifact, "test", [], "u64 114")
         print("frontend W03: PASS (live bindings, nesting, zero/16 args, reuse)")
+
+    if GROUP in ("all", "returns"):
+        source = """cell unit : fn() -> ok
+  fuel 1000
+  pure
+{ ret }
+cell unit_explicit : fn() -> ok
+  fuel 1000
+  pure
+{ ret ok }
+cell zero : fn() -> u64
+  fuel 1000
+  pure
+{ ret 0 }
+cell deny : fn() -> bool
+  fuel 1000
+  pure
+{ ret false }
+"""
+        artifact = compile_source("return_kinds", source)
+        for cell, value in (("unit", "ok"), ("unit_explicit", "ok"),
+                            ("zero", "u64 0"), ("deny", "bool false")):
+            expect_value(artifact, cell, [], value)
+        many = ("cell early : fn(flag: bool) -> u64\n  fuel 10000\n  pure\n{\n"
+                + "  if flag { ret 7 }\n" * 80 + "  ret 42\n}\n")
+        artifact = compile_source("return_registers", many)
+        expect_value(artifact, "early", ["true"], "u64 7")
+        expect_value(artifact, "early", ["false"], "u64 42")
+        print("frontend W04: PASS (ok/zero/false distinction and early returns)")
