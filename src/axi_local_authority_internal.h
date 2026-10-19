@@ -39,5 +39,9 @@ int axi_local_authority_observe_locked(const axi_local_authority_v1 *owner,
                                          axi_local_authority_v1_facts *facts);
 int axi_local_authority_action_matches(const axi_local_action_v1 *action,
                                          const axi_local_authority_v1_facts *facts);
+int axi_local_attempt_authority_commit(const axi_local_authority_v1_prepared *prepared,
+                                         const uint8_t *grant, size_t grant_len,
+                                         uint64_t deadline,
+                                         axi_local_attempt_v1_outcome *out);
 
 #endif

@@ -28,6 +28,7 @@ credential changes in disposable subprocesses where authorized.
 | W42 | Under-lock prior-config observation: exact bounded read, SHA-256, checked nanosecond mtime, stable metadata and descriptor/name binding. | 56 checks: absent/empty/4096-byte state, digest/metadata, 4097-byte refusal, hardlink/symlink/FIFO/directory refusal and unchanged output on refusal. | Concurrent writers must participate in the owner lock; same-UID noncooperative writers remain in the TCB. |
 | W43 | Observe actual real/effective UID, kernel boot UUID and Linux CLOCK_BOOTTIME; contexts refuse transfer across fork/credential changes. | 22 parent checks plus child assertions: actual identity, stable boot, increasing time, inherited-context refusal, same-UID refusal. Host-disabled source compiles under C99/-Werror. | Requires two nonzero distinct UIDs and Linux boot-time provider. No authenticated remote/guest principal or alternative clock fallback. |
 | W44 | Mandatory active-epoch source for trust/policy pins; prepare owns immutable action/payload/observations and an independent descriptor. Real facts must match before producing the existing admission context for AG1. | W41–W44 combined: 228 parent checks plus child assertions. Missing epoch, wrong UID/executor/resource/boot/trust/policy/previous refuse without records/config creation; successful prepare survives input/owner release. | Epoch provisioning and issuer administration remain trusted. Prepare does not execute policy or mint grants; policy pins are not binary attestation. |
+| W45 | Connect the held-fd profile to the existing signed AG1/attempt owner. Reobserve resource/prior state and exact epoch generation under LOCK_EX before records creation/spend/effect. Read replay state first. | 421 checks: grant for A through B, unseen/edited/replaced prior file, advanced epoch, retained target after directory rename, copied mutable payload/action, committed replay with no effect. All 14,775 existing audit40 security assertions still pass against these objects. | Legacy unsigned assertions remain available only on stores never activated for this profile. Under-lock validation covers the local config effect, not arbitrary direct host writes. |
 
 ## Executed evidence
 
@@ -43,6 +44,8 @@ W41: audit80 security: 55 checks PASS (ruid=1000 euid=1001)
 W42: audit80 security: 56 checks PASS (ruid=1000 euid=1001)
 W43: audit80 security: 22 checks PASS (ruid=1000 euid=1001)
 W41-W44: audit80 security: 228 checks PASS (ruid=1000 euid=1001)
+W45: audit80 security: 421 checks PASS (ruid=1000 euid=1001)
+W45 legacy regression: audit40 security: 14775 checks passed
 ```
 
 Facts now include the mandatory `epoch_active` pins and generation. These are

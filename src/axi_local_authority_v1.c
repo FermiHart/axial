@@ -451,3 +451,12 @@ void axi_local_authority_v1_prepared_close(axi_local_authority_v1_prepared *prep
     axi_private_wipe(prepared, sizeof *prepared);
     free(prepared);
 }
+
+int axi_local_authority_v1_commit(const axi_local_authority_v1_prepared *prepared,
+                                   const uint8_t *grant_signed, size_t grant_len,
+                                   uint64_t deadline_mono_ns,
+                                   axi_local_attempt_v1_outcome *out)
+{
+    return axi_local_attempt_authority_commit(prepared, grant_signed, grant_len,
+                                               deadline_mono_ns, out);
+}

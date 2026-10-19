@@ -19,6 +19,7 @@
 #include "axi_hash.h"
 #include "axi_local_epoch_v1.h"
 #include "axi_local_store_v1.h"
+#include "axi_local_authority_internal.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -401,11 +402,11 @@ static void fill_out(axi_local_attempt_v1_outcome *out, uint8_t state,
     }
 }
 
-int axi_local_attempt_v1_status(const char *store_dir,
+static int status_at(int sdfd,
                                 const uint8_t grant_root[32],
                                 axi_local_attempt_v1_outcome *out)
 {
-    int sdfd, recfd, present = 0;
+    int recfd, present = 0;
     uint8_t rec[ATTEMPT_RECORD_V2_SIZE];
     uint8_t state, stored_root[32];
     char hex[65];
@@ -413,23 +414,10 @@ int axi_local_attempt_v1_status(const char *store_dir,
         return AXI_LOCAL_ATTEMPT_V1_REFUSED;
     }
     memset(out, 0, sizeof(*out));
-    if (!store_dir || !*store_dir || !grant_root || root_zero(grant_root)) {
-        return AXI_LOCAL_ATTEMPT_V1_REFUSED;
-    }
-    if (axi_local_attempt_v1_store_check(store_dir) !=
-        AXI_LOCAL_ATTEMPT_V1_OK) {
-        return AXI_LOCAL_ATTEMPT_V1_REFUSED;
-    }
-    sdfd = axi_local_store_open(store_dir);
-    if (sdfd < 0) {
+    if (sdfd < 0 || !grant_root || root_zero(grant_root)) {
         return AXI_LOCAL_ATTEMPT_V1_REFUSED;
     }
     recfd = axi_local_store_open_directory_at(sdfd, "records");
-    {
-        int saved = errno;
-        close(sdfd);
-        errno = saved;
-    }
     if (recfd < 0) {
         if (errno == ENOENT) {
             fill_out(out, AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED, 0, grant_root);
@@ -476,6 +464,20 @@ int axi_local_attempt_v1_status(const char *store_dir,
     return AXI_LOCAL_ATTEMPT_V1_OK;
 }
 
+int axi_local_attempt_v1_status(const char *store_dir,
+                                const uint8_t grant_root[32],
+                                axi_local_attempt_v1_outcome *out)
+{
+    int sdfd, rc;
+    if (!out) return AXI_LOCAL_ATTEMPT_V1_REFUSED;
+    memset(out, 0, sizeof *out);
+    sdfd = axi_local_store_open(store_dir);
+    if (sdfd < 0) return AXI_LOCAL_ATTEMPT_V1_REFUSED;
+    rc = status_at(sdfd, grant_root, out);
+    if (close(sdfd) != 0 && rc == 0) rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
+    return rc;
+}
+
 static int commit_impl(const char *store_dir,
                        const uint8_t *grant_signed, size_t grant_len,
                        const uint8_t trusted_pk[32],
@@ -485,6 +487,7 @@ static int commit_impl(const char *store_dir,
                        const uint8_t *payload, size_t payload_len,
                        uint64_t supplied_time, int timed,
                        uint64_t deadline_mono_ns,
+                       const axi_local_authority_v1_prepared *prepared,
                        axi_local_attempt_v1_outcome *out)
 {
     axi_ag1_v1 grant;
@@ -505,7 +508,7 @@ static int commit_impl(const char *store_dir,
         return AXI_LOCAL_ATTEMPT_V1_REFUSED;
     }
     memset(out, 0, sizeof(*out));
-    if (!store_dir || !*store_dir ||
+    if ((!prepared && (!store_dir || !*store_dir)) ||
         !grant_signed || grant_len != AXI_AG1_V1_SIGNED_SIZE || !trusted_pk ||
         root_zero(trusted_pk) || !action_bytes || action_len == 0 ||
         action_len > AXI_LOCAL_ACTION_V1_MAX_BYTES || !pins || !observed ||
@@ -513,7 +516,7 @@ static int commit_impl(const char *store_dir,
         payload_len > AXI_LOCAL_ACTION_V1_MAX_BYTES) {
         return AXI_LOCAL_ATTEMPT_V1_REFUSED;
     }
-    if (axi_local_attempt_v1_store_check(store_dir) !=
+    if (!prepared && axi_local_attempt_v1_store_check(store_dir) !=
         AXI_LOCAL_ATTEMPT_V1_OK) {
         return AXI_LOCAL_ATTEMPT_V1_REFUSED;
     }
@@ -589,7 +592,8 @@ static int commit_impl(const char *store_dir,
 
     /* 6. Open the store once; every later access is *at() relative to a
      * dirfd, so caller pathnames are never re-resolved. */
-    sdfd = axi_local_store_open(store_dir);
+    sdfd = prepared ? fcntl(prepared->owner.dirfd, F_DUPFD_CLOEXEC, 0)
+                      : axi_local_store_open(store_dir);
     if (sdfd < 0) {
         fill_out(out, AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED, 0, grant_root);
         rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
@@ -604,35 +608,66 @@ static int commit_impl(const char *store_dir,
         rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
         goto done;
     }
-    lockfd = axi_local_store_open_file_at(sdfd, "owner.lock", O_WRONLY | O_CREAT);
-    if (lockfd < 0) {
-        fill_out(out, AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED, 0, grant_root);
-        rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
-        goto done;
-    }
-    if (timed) {
-        if (acquire_timed(lockfd, deadline_mono_ns) != 0) {
-            int src;
-            /* Timeout: no write, no effect. Report the current lock-free
-             * status so the caller learns the durable state, if any. */
-            close(lockfd);
-            lockfd = -1;
-            close(sdfd);
-            sdfd = -1;
-            src = axi_local_attempt_v1_status(store_dir, grant_root, out);
-            rc = (src == AXI_LOCAL_ATTEMPT_V1_OK)
-                ? AXI_LOCAL_ATTEMPT_V1_TIMEOUT : src;
+    if (prepared) {
+        rc = axi_local_authority_lock(&prepared->owner, LOCK_EX,
+                                        deadline_mono_ns, &lockfd);
+        if (rc != 0) {
+            int status_rc = status_at(sdfd, grant_root, out);
+            if (status_rc != 0) rc = status_rc;
             goto done;
         }
-    } else if (flock(lockfd, LOCK_EX) != 0) {
+    } else {
+        lockfd = axi_local_store_open_file_at(sdfd, "owner.lock", O_WRONLY | O_CREAT);
+        if (lockfd < 0) {
+            fill_out(out, AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED, 0, grant_root);
+            rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
+            goto done;
+        }
+        if (timed) {
+            if (acquire_timed(lockfd, deadline_mono_ns) != 0) {
+                int src;
+                /* Timeout: no write, no effect. Report the current lock-free
+                 * status so the caller learns the durable state, if any. */
+                close(lockfd);
+                lockfd = -1;
+                close(sdfd);
+                sdfd = -1;
+                src = axi_local_attempt_v1_status(store_dir, grant_root, out);
+                rc = (src == AXI_LOCAL_ATTEMPT_V1_OK)
+                    ? AXI_LOCAL_ATTEMPT_V1_TIMEOUT : src;
+                goto done;
+            }
+        } else if (flock(lockfd, LOCK_EX) != 0) {
+            fill_out(out, AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED, 0, grant_root);
+            rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
+            goto done;
+        }
+    }
+    if (!prepared && !axi_local_store_legacy_allowed(sdfd)) {
         fill_out(out, AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED, 0, grant_root);
         rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
         goto done;
     }
-    if (!axi_local_store_legacy_allowed(sdfd)) {
-        fill_out(out, AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED, 0, grant_root);
-        rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
-        goto done;
+    if (prepared) {
+        axi_local_authority_v1_facts current;
+        /* Read-only replay first: a stale prior-content assertion must never
+         * hide an already spent grant behind a false NOT_ATTEMPTED result. */
+        rc = status_at(sdfd, grant_root, out);
+        if (rc != 0) goto done;
+        if (out->state != AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED) {
+            rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
+            goto done;
+        }
+        rc = axi_local_authority_observe_locked(&prepared->owner, &current);
+        if (rc != 0) goto done;
+        if (!axi_local_authority_action_matches(&action, &current)
+                || current.epoch_generation != prepared->facts.epoch_generation
+                || memcmp(&current.pins, &prepared->facts.pins, sizeof current.pins)) {
+            rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
+            goto done;
+        }
+        /* No records directory, spend or config byte exists on these
+         * refusals. Hold the same lock through the complete effect. */
     }
     /* Epoch enforcement under the lock: a superseded epoch accepts no
      * new grant or mutation (old state stays recovery/status-only).
@@ -923,7 +958,7 @@ int axi_local_attempt_v1_commit(const char *store_dir,
 {
     return commit_impl(store_dir, grant_signed, grant_len, trusted_pk,
                        action_bytes, action_len, pins, observed, payload,
-                       payload_len, supplied_time, 0, 0, out);
+                       payload_len, supplied_time, 0, 0, NULL, out);
 }
 
 int axi_local_attempt_v1_commit_deadline(
@@ -936,7 +971,7 @@ int axi_local_attempt_v1_commit_deadline(
 {
     return commit_impl(store_dir, grant_signed, grant_len, trusted_pk,
                        action_bytes, action_len, pins, observed, payload,
-                       payload_len, supplied_time, 1, deadline_mono_ns, out);
+                       payload_len, supplied_time, 1, deadline_mono_ns, NULL, out);
 }
 
 static int name_is_record(const char *name)
@@ -1124,4 +1159,22 @@ int axi_local_attempt_v1_scan_timed(const char *store_dir,
                                      void *ctx, uint64_t deadline_mono_ns)
 {
     return scan_impl(store_dir, visit, ctx, 1, deadline_mono_ns);
+}
+
+/* Private handoff: immutable prepared facts, no new grant/spent primitive. */
+int axi_local_attempt_authority_commit(const axi_local_authority_v1_prepared *prepared,
+                                         const uint8_t *grant, size_t grant_len,
+                                         uint64_t deadline,
+                                         axi_local_attempt_v1_outcome *out)
+{
+    uint8_t snapshot[AXI_AG1_V1_SIGNED_SIZE];
+    if (!out) return AXI_LOCAL_ATTEMPT_V1_REFUSED;
+    memset(out, 0, sizeof *out);
+    if (!prepared || !grant || grant_len != sizeof snapshot) return AXI_LOCAL_ATTEMPT_V1_REFUSED;
+    memcpy(snapshot, grant, sizeof snapshot);
+    return commit_impl(NULL, snapshot, sizeof snapshot, prepared->owner.issuer_pk,
+                        prepared->action_bytes, prepared->action_len,
+                        &prepared->facts.pins, &prepared->observed,
+                        prepared->payload, prepared->payload_len,
+                        prepared->observed.now_ns, 1, deadline, prepared, out);
 }

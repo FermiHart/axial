@@ -99,4 +99,17 @@ int axi_local_authority_v1_prepare(const axi_local_authority_v1 *owner,
                                     axi_local_admission_v1_result *admission);
 void axi_local_authority_v1_prepared_close(axi_local_authority_v1_prepared *prepared);
 
+/* Verify an ordinary signed AG1 against the immutable prepared request and
+ * provisioned issuer, then observe resource/prior content/epoch again under
+ * the exclusive commit lock, before any spend/config write. No target path
+ * argument exists: the effect is relative to the prepared held dirfd.
+ * Reuses the existing attempt ledger and outcome codes. No receipt is minted
+ * by this API; status/refusal/unknown are never relabeled as a policy deny.
+ * The request remains valid storage until prepared_close(), including replay.
+ */
+int axi_local_authority_v1_commit(const axi_local_authority_v1_prepared *prepared,
+                                   const uint8_t *grant_signed, size_t grant_len,
+                                   uint64_t deadline_mono_ns,
+                                   axi_local_attempt_v1_outcome *out);
+
 #endif

@@ -339,6 +339,89 @@ static void w44(void)
     rm_fixture(f.dir);
 }
 
+static axi_local_authority_v1_prepared *ready(fixture *f, axi_local_authority_v1 *owner)
+{
+    axi_local_authority_v1_prepared *prepared = NULL;
+    axi_local_admission_v1_result adm;
+    uint8_t payload[7] = {'p','a','y','l','o','a','d'};
+    measured_action(f, owner);
+    CHECK(axi_local_authority_v1_prepare(owner, f->action_bytes, f->action_len,
+            payload, sizeof payload, 0, &prepared, &adm) == 0 && adm.admitted);
+    memset(payload, 0xa5, sizeof payload); /* caller bytes no longer agree */
+    mint(f, &adm);
+    return prepared;
+}
+
+static void check_config(const char *dir, const void *bytes, size_t len)
+{
+    char path[512]; uint8_t got[4097]; int fd;
+    path_of(path, dir, "config"); fd = open(path, O_RDONLY);
+    CHECK(fd >= 0);
+    CHECK(read(fd, got, sizeof got) == (ssize_t)len && !memcmp(got, bytes, len));
+    CHECK(close(fd) == 0);
+}
+
+static void w45(void)
+{
+    unsigned scenario;
+    for (scenario = 0; scenario < 6; scenario++) {
+        fixture a, b;
+        axi_local_authority_v1 *owner = NULL, *other = NULL;
+        axi_local_authority_v1_prepared *prepared, *prepared_b;
+        axi_local_attempt_v1_outcome out;
+        char config[512], replacement[512], moved[512];
+        new_fixture(&a); new_fixture(&b); provision(&a); provision(&b);
+        CHECK(axi_local_authority_v1_enable(a.dir, a.pk) == 0);
+        CHECK(axi_local_authority_v1_enable(b.dir, b.pk) == 0);
+        CHECK(axi_local_authority_v1_open(a.dir, &owner) == 0);
+        CHECK(axi_local_authority_v1_open(b.dir, &other) == 0);
+        path_of(config, a.dir, "config"); path_of(replacement, a.dir, "replacement");
+        if (scenario == 1 || scenario == 2) put_file(config, "before", 6);
+        prepared = ready(&a, owner); prepared_b = ready(&b, other);
+        /* A signed request for A cannot be consumed through B. */
+        CHECK(axi_local_authority_v1_commit(prepared_b, a.grant, sizeof a.grant, 0, &out)
+                == AXI_LOCAL_AUTHORITY_V1_REFUSED);
+        CHECK(!out.effect_performed && !exists(b.dir, "records") && !exists(b.dir, "config"));
+        if (scenario == 0) put_file(config, "unseen", 6);
+        if (scenario == 1) put_file(config, "edited", 6);
+        if (scenario == 2) {
+            put_file(replacement, "before", 6);
+            CHECK(rename(replacement, config) == 0);
+        }
+        if (scenario == 3) provision(&a); /* even identical pins advance epoch */
+        if (scenario < 4) {
+            CHECK(axi_local_authority_v1_commit(prepared, a.grant, sizeof a.grant, 0, &out)
+                    == AXI_LOCAL_AUTHORITY_V1_REFUSED);
+            CHECK(out.state == AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED && !out.effect_performed);
+            CHECK(!exists(a.dir, "records"));
+            if (scenario < 3) check_config(a.dir, scenario == 0 ? "unseen" : scenario == 1 ? "edited" : "before", 6);
+            else CHECK(!exists(a.dir, "config"));
+        } else {
+            if (scenario == 5) {
+                CHECK(snprintf(moved, sizeof moved, "%s.moved", a.dir) > 0);
+                CHECK(rename(a.dir, moved) == 0 && mkdir(a.dir, 0700) == 0);
+            }
+            /* Caller mutations and owner close cannot change copied input. */
+            memset(a.action_bytes, 0, sizeof a.action_bytes);
+            axi_local_authority_v1_close(owner); owner = NULL;
+            CHECK(axi_local_authority_v1_commit(prepared, a.grant, sizeof a.grant, 0, &out) == 0);
+            CHECK(out.state == AXI_LOCAL_ATTEMPT_V1_COMMITTED && out.effect_performed == 1);
+            check_config(scenario == 5 ? moved : a.dir, "payload", 7);
+            CHECK(axi_local_authority_v1_commit(prepared, a.grant, sizeof a.grant, 0, &out)
+                    == AXI_LOCAL_AUTHORITY_V1_REFUSED);
+            CHECK(out.state == AXI_LOCAL_ATTEMPT_V1_COMMITTED && !out.effect_performed);
+            if (scenario == 5) {
+                CHECK(!exists(a.dir, "config") && !exists(a.dir, "records"));
+                rm_fixture(moved);
+            }
+        }
+        axi_local_authority_v1_prepared_close(prepared);
+        axi_local_authority_v1_prepared_close(prepared_b);
+        axi_local_authority_v1_close(owner); axi_local_authority_v1_close(other);
+        rm_fixture(a.dir); rm_fixture(b.dir);
+    }
+}
+
 int main(int argc, char **argv)
 {
     if (geteuid() == 0) {
@@ -355,7 +438,8 @@ int main(int argc, char **argv)
     if (argc == 1 || !strcmp(argv[1], "W42")) w42();
     if (argc == 1 || !strcmp(argv[1], "W43")) w43();
     if (argc == 1 || !strcmp(argv[1], "W44")) w44();
-    if (argc == 2 && strcmp(argv[1], "W41") && strcmp(argv[1], "W42") && strcmp(argv[1], "W43") && strcmp(argv[1], "W44")) return 2;
+    if (argc == 1 || !strcmp(argv[1], "W45")) w45();
+    if (argc == 2 && strcmp(argv[1], "W41") && strcmp(argv[1], "W42") && strcmp(argv[1], "W43") && strcmp(argv[1], "W44") && strcmp(argv[1], "W45")) return 2;
     printf("audit80 security: %u checks PASS (ruid=%lu euid=%lu)\n", checks,
            (unsigned long)getuid(), (unsigned long)geteuid());
     return 0;
