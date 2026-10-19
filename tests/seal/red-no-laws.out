@@ -1,0 +1,1 @@
+AXI-S001 tests/seal/red-no-laws.axs: no `law_*` cells | fix: a seal attests laws; state at least one, or use `axi asm` for unsealed bytecode

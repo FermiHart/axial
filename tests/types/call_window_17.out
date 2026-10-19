@@ -1,0 +1,1 @@
+AXI-T028 tests/types/call_window_17.axi:1:166 cell declares more than 16 parameters | fix: the v0 call window is 16 slots; group the rest in a record when records land

@@ -1,0 +1,3 @@
+AXI-C001 tests/canon/comments.axi:5:9 line is not canonical | fix:   ret 10_000
+AXI-C001 tests/canon/comments.axi:6:1 line is not canonical | fix:   # trailing note
+AXI-C002 tests/canon/comments.axi:7:1 missing canonical line | fix: }

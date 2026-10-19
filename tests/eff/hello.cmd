@@ -1,0 +1,1 @@
+main --cap io.Write

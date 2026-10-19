@@ -1,0 +1,6 @@
+AXI-B007 tests/bc/bad-shape.axs:2: const out of order or malformed | fix: declare k0,k1,... in order: kN u64|i64|f64|str|err <payload>
+AXI-B003 tests/bc/bad-shape.axs:3: const index out of range | fix: declare the const above the code
+AXI-B008 tests/bc/bad-shape.axs:4: wrong operand count | fix: match the shape in axi_bc.h
+AXI-B004 tests/bc/bad-shape.axs:5: expected relative offset | fix: spell jumps +N or -N (words)
+AXI-B002 tests/bc/bad-shape.axs:6: numeric field is malformed or overflows | fix: use one complete canonical number with no sign or suffix
+AXI-B005 tests/bc/bad-shape.axs:6: cell not closed at EOF | fix: close it with `end`

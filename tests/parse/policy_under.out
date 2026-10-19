@@ -1,0 +1,44 @@
+(unit
+  (.eff fs.Read @1:1)
+  (.eff fs.Write @2:1)
+  (policy decide @4:1
+    (sig
+      (param input
+        (type json @4:27)
+      )
+      (list @4:36
+        (type bool @4:36)
+      )
+    )
+    (cap @5:7
+      (id fs.Read @5:7)
+      (id fs.Write @5:16)
+    )
+    (fuel 500000 @6:1)
+    (block @6:1
+      (let target @7:3
+        (index @7:26
+          (field args @7:22
+            (id input @7:16)
+          )
+          (int 0 @7:27)
+        )
+      )
+      (if @8:3
+        (call @8:13
+          (id fs.path_under @8:13)
+          (id target @8:6)
+          (str "/home/agent/workspace" @8:19)
+        )
+        (block @8:43
+          (ret @8:45
+            (true @8:49)
+          )
+        )
+      )
+      (ret @9:3
+        (false @9:7)
+      )
+    )
+  )
+)

@@ -1,0 +1,17 @@
+axi-iface 1
+cell add
+param a i64
+param b i64
+ret i64
+fuel 1000
+pure
+end
+cell fetch
+param key u64
+param out cap io.Write
+ret u64
+err Io
+cap io.Write
+fuel 10_000
+end
+iface-hash 77b71d107fd3c1721a1b750ea42b2523ae1d79fd6004aa7c6c107ee8fb9d0edb

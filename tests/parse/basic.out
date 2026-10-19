@@ -1,0 +1,72 @@
+(unit
+  (cell fib @2:1
+    (sig
+      (param n
+        (type u64 @2:18)
+      )
+      (list @2:26
+        (type u64 @2:26)
+      )
+    )
+    (fuel 1000000 @3:3)
+    (pure @4:3)
+    (block @5:1
+      (if @6:3
+        (bin < @6:8
+          (id n @6:6)
+          (int 2 @6:10)
+        )
+        (block @6:12
+          (ret @6:14
+            (id n @6:18)
+          )
+        )
+      )
+      (ret @7:3
+        (bin + @7:18
+          (call @7:10
+            (id fib @7:7)
+            (bin - @7:13
+              (id n @7:11)
+              (int 1 @7:15)
+            )
+          )
+          (call @7:23
+            (id fib @7:20)
+            (bin - @7:26
+              (id n @7:24)
+              (int 2 @7:28)
+            )
+          )
+        )
+      )
+    )
+  )
+  (cell greet @10:1
+    (sig
+      (param out
+        (type cap io.Write @10:26)
+      )
+      (list @10:39
+        (ok-t @10:39)
+        (err-t Io @10:44)
+      )
+    )
+    (fuel 10000 @11:3)
+    (block @12:1
+      (stmt
+        (try @13:24
+          (call @13:12
+            (field write @13:7
+              (id out @13:3)
+            )
+            (str "beyond> " @13:13)
+          )
+        )
+      )
+      (ret @14:3
+        (ok @14:7)
+      )
+    )
+  )
+)

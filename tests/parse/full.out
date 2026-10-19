@@ -1,0 +1,81 @@
+(unit
+  (cell pick @2:1
+    (sig
+      (param xs
+        (type bytes @2:20)
+      )
+      (param i
+        (type u64 @2:30)
+      )
+      (param w
+        (type cap io.Write @2:42)
+      )
+      (list @2:55
+        (type u64 @2:55)
+        (err-t Range @2:61)
+        (err-t Io @2:73)
+      )
+    )
+    (fuel 5000 @3:3)
+    (block @4:1
+      (let ys @5:3
+        (list @5:12
+          (int 1 @5:13)
+          (int 2 @5:16)
+          (int 3 @5:19)
+        )
+      )
+      (let z @6:3
+        (bin + @6:14
+          (un - @6:11
+            (id i @6:12)
+          )
+          (un ! @6:16
+            (true @6:17)
+          )
+        )
+      )
+      (if @7:3
+        (bin < @7:8
+          (id i @7:6)
+          (int 3 @7:10)
+        )
+        (block @7:12
+          (stmt
+            (try @8:22
+              (call @8:12
+                (field write @8:7
+                  (id w @8:5)
+                )
+                (str "small " @8:13)
+              )
+            )
+          )
+          (ret @9:5
+            (index @9:11
+              (id ys @9:9)
+              (id i @9:12)
+            )
+          )
+        )
+        (else
+          (block @10:10
+            (ret @11:5
+              (try @11:27
+                (call @11:13
+                  (id pick @11:9)
+                  (id xs @11:14)
+                  (bin % @11:20
+                    (id i @11:18)
+                    (int 3 @11:22)
+                  )
+                  (id w @11:25)
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  )
+)

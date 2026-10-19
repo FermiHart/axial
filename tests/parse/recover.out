@@ -1,0 +1,32 @@
+AXI-P002 tests/parse/recover.axi:2:1 only .eff declarations, cells and policies live at top level (G7) | fix: wrap code in a cell; nothing executes outside one
+AXI-P008 tests/parse/recover.axi:4:1 cell has no fuel budget (G5: fuel is syntax) | fix: add a `fuel N` line after the signature
+AXI-P007 tests/parse/recover.axi:11:3 duplicate fuel meta | fix: keep exactly one
+AXI-P006 tests/parse/recover.axi:14:3 expected an expression | fix: a value, name, call, or ( ... ) goes here
+(unit
+  (cell nofuel @4:1
+    (sig
+      (list @4:23
+        (type u64 @4:23)
+      )
+    )
+    (block @5:1
+      (ret @6:3
+        (int 1 @6:7)
+      )
+    )
+  )
+  (cell dupfuel @9:1
+    (sig
+      (list @9:24
+        (type u64 @9:24)
+      )
+    )
+    (fuel 10 @10:3)
+    (fuel 20 @11:3)
+    (block @12:1
+      (let x @13:3
+        (id  @14:3)
+      )
+    )
+  )
+)

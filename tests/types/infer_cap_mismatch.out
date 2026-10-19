@@ -1,0 +1,2 @@
+AXI-T026 tests/types/infer_cap_mismatch.axi:5:7 capability 'fs.Read' declared but never used | fix: unused authority is attack surface: drop `cap fs.Read` or use it
+AXI-T022 tests/types/infer_cap_mismatch.axi:8:10 capability 'io.Write' used but not declared | fix: add `cap io.Write` or remove the call

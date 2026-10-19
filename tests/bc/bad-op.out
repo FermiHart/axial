@@ -1,0 +1,1 @@
+AXI-B001 tests/bc/bad-op.axs:2: unknown opcode | fix: the opcode table in axi_bc.h is the whole truth

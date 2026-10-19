@@ -1,0 +1,8 @@
+AXI-T005 tests/types/unions.axi:2:28 rettype union carries more than one payload type in v0 | fix: keep one payload; model alternatives as err members
+AXI-T006 tests/types/unions.axi:2:39 duplicate member in rettype union | fix: keep one `ok`
+AXI-T018 tests/types/unions.axi:11:11 err.Nope is not in this cell's error set | fix: add `| err.Nope` to the rettype
+AXI-T013 tests/types/unions.axi:17:14 this call returns a union (opt/result); it must be handled here | fix: suffix the call with `?` to unwrap and re-raise
+AXI-T014 tests/types/unions.axi:18:12 `?` on a value that is not a union | fix: only opt/result values unwrap; drop the `?`
+AXI-T015 tests/types/unions.axi:19:16 `?` re-raises an error the caller does not declare | fix: add `| err.Io` to this cell's rettype
+AXI-T016 tests/types/unions.axi:20:7 returning bool where the rettype says u64 | fix: no coercion: rewrite the value to the declared type
+AXI-T017 tests/types/unions.axi:26:3 control can fall off the end of the body | fix: the last statement of a cell is `ret` (v0 rule)

@@ -1,0 +1,24 @@
+(unit
+  (.eff fs.Read @1:1)
+  (.eff fs.Write @2:1)
+  (policy decide @4:1
+    (sig
+      (param input
+        (type json @4:27)
+      )
+      (list @4:36
+        (type bool @4:36)
+      )
+    )
+    (cap @5:7
+      (id fs.Read @5:7)
+      (id fs.Write @5:16)
+    )
+    (fuel 500000 @6:3)
+    (block @7:1
+      (ret @8:3
+        (true @8:7)
+      )
+    )
+  )
+)

@@ -1,0 +1,7 @@
+AXI-T027 tests/types/caps.axi:5:13 cap method argument is u64, wants str | fix: v0 effect frames carry one str payload
+AXI-T022 tests/types/caps.axi:12:10 cap identity mismatch: argument 2 is cap net.Send | fix: parameter out wants cap io.Write; authority is named, never converted (G4)
+AXI-T027 tests/types/caps.axi:13:11 cap net.Send has no method `send` | fix: the closed method table is in docs/CAP-METHODS.tsv; effects with compound frames have no method in v0
+AXI-T025 tests/types/caps.axi:13:12 effect argument is cap | fix: effects take scalars in v0; authority and unions do not flow through caps
+AXI-T025 tests/types/caps.axi:14:15 cap methods are not values | fix: call it: path.method(...); effects fire, they are not held
+AXI-T025 tests/types/caps.axi:15:14 caps have methods, not elements | fix: call it: path.method(...)
+AXI-T026 tests/types/caps.axi:19:27 cap out is never used | fix: unused authority is attack surface: drop the parameter or use the cap (G4)

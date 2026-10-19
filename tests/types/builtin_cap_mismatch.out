@@ -1,0 +1,2 @@
+AXI-T026 tests/types/builtin_cap_mismatch.axi:4:7 capability 'fs.Read' declared but never used | fix: unused authority is attack surface: drop `cap fs.Read` or use it
+AXI-T003 tests/types/builtin_cap_mismatch.axi:7:7 unknown name | fix: declare it with `let` or as a parameter

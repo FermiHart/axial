@@ -1,0 +1,2 @@
+AXI-T029 tests/types/union_payload_cap.axi:3:25 union payload cap has no runtime representation in v0 | fix: v0 unions carry u64, i64, f64, bool, str, json (as str) or decision (as bool)
+AXI-T026 tests/types/union_payload_cap.axi:4:7 capability 'fs.Read' declared but never used | fix: unused authority is attack surface: drop `cap fs.Read` or use it

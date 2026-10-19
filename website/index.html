@@ -1,0 +1,157 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Axial — code that answers for what it does</title>
+<meta name="description" content="Axial is a small capability-native language for the age of agents. Every cell declares what it can touch, what it can cost, and what it proved. Agents write. Humans review and seal. The system enforces.">
+<meta name="theme-color" content="#05070A">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2305070A'/%3E%3Cpath d='M8 2v12M2 8h12' stroke='%235EE1FF'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="css/site.css">
+</head>
+<body>
+
+<div id="aurora" aria-hidden="true"></div>
+
+<nav id="topnav" aria-label="primary">
+  <a class="wordmark" href="#top">AXIAL<span class="wm-dot">●</span></a>
+  <div class="nav-links">
+    <a href="#cell">The Cell</a>
+    <a href="#three">Three Ideas</a>
+    <a href="#artifact">One File</a>
+    <a href="#start">Start</a>
+    <a class="nav-cta" href="#verify">Verify</a>
+  </div>
+</nav>
+
+<header id="top" class="hero wrap">
+  <p class="kicker">A LANGUAGE FOR THE AGE OF AGENTS</p>
+  <h1>Code that answers<br>for what <span class="grad">it does.</span></h1>
+  <p class="hero-statement">Agents write more code every day than humans do. Axial makes every line of it answer for itself.</p>
+  <p class="lede">What if the code carried its own proof? Checked before it runs. Sealed into the artifact. Verified every time it loads. What if reviewing agent-written code took one screen instead of one weekend?</p>
+  <div class="cta-row">
+    <a class="btn btn-primary" href="#start">Run it in 60 seconds</a>
+    <a class="btn btn-ghost" href="#verify">Don't trust us — verify</a>
+  </div>
+  <p class="trio">Agents write. Humans review and seal. The system enforces.</p>
+
+  <div class="metrics" aria-label="Axial in numbers">
+    <div class="metric"><b>1</b><span>screen to review any cell</span></div>
+    <div class="metric"><b>1</b><span>file to deploy anywhere</span></div>
+    <div class="metric"><b>4</b><span>symbols in the C API</span></div>
+    <div class="metric"><b>0</b><span>dependencies. C99 only</span></div>
+    <div class="metric"><b>0</b><span>ambient authority, ever</span></div>
+    <div class="metric t-pass"><b>67/67</b><span>gate checks green</span></div>
+  </div>
+  <p class="metrics-note">Green is never decoration. A machine put it there — run <code>make gate</code> and watch.</p>
+</header>
+
+<main>
+<section id="cell" class="wrap">
+  <p class="kicker">SAY HELLO TO THE CELL</p>
+  <h2>Four lines. The whole truth.<br>Nothing <span class="grad">but the truth.</span></h2>
+  <div class="code-grid">
+    <pre class="code"><code>cell greet : fn(out: cap io.Write) -&gt; u64
+  fuel 10_000
+{
+  out.write("beyond&gt; ")?
+  ret 0
+}</code></pre>
+    <div class="code-notes">
+      <p><b>Line 1 is the blast radius.</b> The name, the function, the one capability it may touch, the one thing it may return. There is nowhere to hide — the grammar has no syntax for hiding.</p>
+      <p><b>Line 2 is the budget.</b> Ten thousand fuel. Not a suggestion. When it runs out, the run ends as a sealed verdict — never a 3&nbsp;AM page.</p>
+      <p><b>The body cannot outgrow the header.</b> Two independent walls — the checker and the runtime — enforce the same promise. If it's not in the signature, it cannot happen.</p>
+    </div>
+  </div>
+  <p class="lede">No hidden imports. No ambient filesystem. No network that snuck in. No bill you didn't approve. <b>That's not a guideline. That's the language.</b></p>
+</section>
+
+<section id="three" class="wrap">
+  <p class="kicker">THREE IDEAS. THAT'S IT.</p>
+  <h2>Simple enough to hold<br>in your <span class="grad">head.</span></h2>
+  <div class="law-grid">
+    <article><span>01 / AUTHORITY</span><h3>The signature is the blast radius.</h3><p>Types, error sets, fuel budget, every capability — declared up front, in the open. Review concentrates on the contract, because the body can't exceed it.</p></article>
+    <article><span>02 / BUDGET</span><h3>Every run has a price.</h3><p>Every instruction costs a deterministic number of fuel. A runaway computation doesn't hang your machine — it ends. Boring. Predictable. Beautiful.</p></article>
+    <article><span>03 / PROOF</span><h3>No green proof, no artifact.</h3><p><code>axi seal</code> runs every proof on the real VM. One red law, one trap, zero proofs — nothing is emitted. The gate doesn't negotiate.</p></article>
+  </div>
+</section>
+
+<section id="artifact" class="wrap">
+  <p class="kicker">AND ONE MORE THING…</p>
+  <h2>The artifact is <span class="grad">one file.</span></h2>
+  <p class="lede">Bytecode. Capability manifest. Proof record. Signature. Together, in a single <code>.axb</code>. Deploy means copying it — to a server, a shell, a sovereign OS. It runs, or it refuses <b>with a reason a machine can repair</b>. A flipped byte is a refusal, never silent drift.</p>
+  <pre class="check"><code>AXI-R008 main:0: fuel exhausted: spent 100 of 100, next op needs 1
+  | fix: raise that outer budget or make the cell cheaper</code></pre>
+  <p class="lede">Every error. One cause. One location. One mechanical fix. Agents don't guess anymore — they apply. And every effect lands in a <b>hash-chained ledger</b>, one ordered receipt per action. <i>"What did this run do?"</i> finally has a cryptographic answer.</p>
+  <div class="chain" aria-label="The Axial pipeline">
+    <span><b>write</b><small>canonical grammar</small></span><i>→</i>
+    <span><b>check</b><small>types + caps</small></span><i>→</i>
+    <span><b>seal</b><small>proofs must be green</small></span><i>→</i>
+    <span><b>sign</b><small>attribute authorship</small></span><i>→</i>
+    <span><b>run</b><small>fueled + logged</small></span><i>→</i>
+    <span><b>replay</b><small>bit-identical</small></span>
+  </div>
+</section>
+
+<section id="start" class="wrap">
+  <p class="kicker">SEE IT. THEN BELIEVE IT.</p>
+  <h2>Sixty seconds.<br>No excuses.</h2>
+  <p class="lede">No dependencies beyond a C compiler. No network. No account.</p>
+  <pre class="check"><code>make dev                          # builds ./build/axi — C99 only
+./build/axi check examples/hello.axi
+./build/axi iface examples/policy.axi   # read the whole contract
+
+make demo &amp;&amp; sh scripts/jash_policy_demo.sh
+# rm inside workspace   -&gt; ALLOW (fuel=51)
+# rm outside workspace  -&gt; DENY  (fuel=51)
+# export secret name    -&gt; DENY
+# unknown builtin       -&gt; ALLOW
+
+make gate-fast                     # 67 checks. Green is "works".</code></pre>
+  <p class="metrics-note">The entire C embedding API is four symbols — <code>abi_version</code>, <code>context_create</code>, <code>context_destroy</code>, <code>eval</code>. That's not minimalism as fashion. That's minimalism as attack surface.</p>
+</section>
+
+<section id="verify" class="wrap">
+  <p class="kicker">DUE DILIGENCE</p>
+  <h2>Don't trust this page.</h2>
+  <p class="lede">Seriously. Don't. Trust is the old model — trust the package, trust the registry, trust the install script. Axial was built for people who stopped trusting. So verify instead. Clone it. Build it. Run its gate. On your machine, your verdict.</p>
+  <pre class="check"><code>git clone &lt;repo&gt; &amp;&amp; cd axial
+make dev &amp;&amp; make gate          # 67/67 or it didn't happen</code></pre>
+  <div class="status-table" aria-label="Scope honesty">
+    <div class="status-row status-head"><span>Layer</span><span>Boundary</span><span>State</span></div>
+    <div class="status-row"><b>Language</b><span>Grammar, types, bytecode, VM, fuel, effects, ledger, replay, sealing, C API</span><span class="state state-witnessed">GATED</span></div>
+    <div class="status-row"><b>Supply chain</b><span>write → check → seal → sign → verify → run, single-file deploy</span><span class="state state-witnessed">GATED</span></div>
+    <div class="status-row"><b>Boot-rooted attestation</b><span>End-to-end provenance from this tree alone</span><span class="state state-building">DIRECTION</span></div>
+    <div class="status-row"><b>Universal mediation</b><span>A policy plane over every host mutation</span><span class="state state-building">DIRECTION</span></div>
+  </div>
+  <p class="metrics-note">We'd rather promise little and prove all of it. Details: <code>docs/BETA-LANGUAGE.md</code>. License: Sovereign Public License 1.0.</p>
+</section>
+</main>
+
+<footer class="wrap">
+  <p class="foot-mark">AXIAL<span class="wm-dot">●</span></p>
+  <p>Agents write. Humans review and seal. The system enforces.</p>
+  <div class="foot-links">
+    <a href="#cell">the cell</a> ·
+    <a href="#three">three ideas</a> ·
+    <a href="#artifact">one file</a> ·
+    <a href="#start">start</a> ·
+    <a href="#verify">verify</a>
+  </div>
+  <span>Sovereign Public License 1.0 · <code>LicenseRef-SPL-1.0</code></span>
+</footer>
+
+<script>
+(function () {
+  var nav = document.getElementById('topnav');
+  function onScroll() {
+    if (window.scrollY > 24) { nav.classList.add('scrolled'); }
+    else { nav.classList.remove('scrolled'); }
+  }
+  window.addEventListener('scroll', onScroll, { passive: true });
+  onScroll();
+})();
+</script>
+
+</body>
+</html>

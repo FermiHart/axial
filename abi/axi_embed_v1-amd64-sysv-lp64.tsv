@@ -1,0 +1,77 @@
+schema	AXI-C-ABI-v1
+api	axi_embed_v1
+abi_version	1
+profile	amd64-sysv-lp64
+pointer_bits	64
+endianness	little
+calling_convention	AMD64-SysV
+object_format	ELF
+linkage	static-archive
+header_sha256	d51b9faa33c8bf757ca2f607282c3c97c1666b6173c29b566f6ecb9cce17e213
+symbol	axi_embed_v1_abi_version
+symbol	axi_embed_v1_context_create
+symbol	axi_embed_v1_context_destroy
+symbol	axi_embed_v1_eval
+record	axi_embed_v1_bytes	16	8
+record	axi_embed_v1_buffer	16	8
+record	axi_embed_v1_value	72	8
+record	axi_embed_v1_diag	368	8
+record	axi_embed_v1_diag_buffer	56	8
+record	axi_embed_v1_context_options	80	8
+record	axi_embed_v1_eval_request	112	8
+record	axi_embed_v1_outcome	144	8
+offset	axi_embed_v1_bytes	data	0
+offset	axi_embed_v1_bytes	len	8
+offset	axi_embed_v1_buffer	data	0
+offset	axi_embed_v1_buffer	capacity	8
+offset	axi_embed_v1_value	kind	0
+offset	axi_embed_v1_value	payload_kind	4
+offset	axi_embed_v1_value	tag	8
+offset	axi_embed_v1_value	flags	12
+offset	axi_embed_v1_value	bits	16
+offset	axi_embed_v1_value	payload	24
+offset	axi_embed_v1_value	atom	40
+offset	axi_embed_v1_value	reserved	56
+offset	axi_embed_v1_diag	schema_version	0
+offset	axi_embed_v1_diag	code	4
+offset	axi_embed_v1_diag	phase	16
+offset	axi_embed_v1_diag	reserved0	20
+offset	axi_embed_v1_diag	offset	24
+offset	axi_embed_v1_diag	message	32
+offset	axi_embed_v1_diag	repair	192
+offset	axi_embed_v1_diag	reserved	352
+offset	axi_embed_v1_diag_buffer	abi_version	0
+offset	axi_embed_v1_diag_buffer	struct_size	4
+offset	axi_embed_v1_diag_buffer	entries	8
+offset	axi_embed_v1_diag_buffer	capacity	16
+offset	axi_embed_v1_diag_buffer	count	24
+offset	axi_embed_v1_diag_buffer	dropped	32
+offset	axi_embed_v1_diag_buffer	reserved	40
+offset	axi_embed_v1_context_options	abi_version	0
+offset	axi_embed_v1_context_options	struct_size	4
+offset	axi_embed_v1_context_options	admission_profile	8
+offset	axi_embed_v1_context_options	flags	12
+offset	axi_embed_v1_context_options	module	16
+offset	axi_embed_v1_context_options	trusted_producer_pk	32
+offset	axi_embed_v1_context_options	reserved	64
+offset	axi_embed_v1_eval_request	abi_version	0
+offset	axi_embed_v1_eval_request	struct_size	4
+offset	axi_embed_v1_eval_request	cell	8
+offset	axi_embed_v1_eval_request	expected_iface_hash	24
+offset	axi_embed_v1_eval_request	args	56
+offset	axi_embed_v1_eval_request	argc	64
+offset	axi_embed_v1_eval_request	fuel_limit	72
+offset	axi_embed_v1_eval_request	workspace	80
+offset	axi_embed_v1_eval_request	reserved	96
+offset	axi_embed_v1_outcome	abi_version	0
+offset	axi_embed_v1_outcome	struct_size	4
+offset	axi_embed_v1_outcome	kind	8
+offset	axi_embed_v1_outcome	flags	12
+offset	axi_embed_v1_outcome	value	16
+offset	axi_embed_v1_outcome	fuel_requested	88
+offset	axi_embed_v1_outcome	fuel_effective	96
+offset	axi_embed_v1_outcome	fuel_used	104
+offset	axi_embed_v1_outcome	workspace_used	112
+offset	axi_embed_v1_outcome	workspace_required	120
+offset	axi_embed_v1_outcome	reserved	128
+abi_id	eb029ac687bd44dedfb2e30b37f33837571daee2126aeea5b88f40e1efc87711

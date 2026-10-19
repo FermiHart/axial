@@ -1,0 +1,4 @@
+AXI-T001 tests/types/names.axi:8:1 duplicate cell name | fix: one name, one cell, one hash (W14): rename it
+AXI-T002 tests/types/names.axi:17:3 name already declared in this cell | fix: rename it; shadowing hides intent from the repair loop
+AXI-T003 tests/types/names.axi:18:11 unknown name | fix: declare it with `let` or as a parameter
+AXI-T003 tests/types/names.axi:19:11 cells are not values in v0 | fix: call it: name(...)

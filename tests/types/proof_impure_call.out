@@ -1,0 +1,1 @@
+AXI-S003 tests/types/proof_impure_call.axi:13:8 a law calls a non-pure cell | fix: laws are deterministic facts: mark the callee pure, or prove the pure logic and leave effects to the body

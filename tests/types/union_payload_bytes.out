@@ -1,0 +1,1 @@
+AXI-T029 tests/types/union_payload_bytes.axi:1:21 union payload bytes has no runtime representation in v0 | fix: v0 unions carry u64, i64, f64, bool, str, json (as str) or decision (as bool)

@@ -1,0 +1,1 @@
+AXI-C006 tests/canon/trivia_overflow.axi:1:1 input exceeds the canonical trivia cap (512 comments) | fix: the canon never drops a comment; split the file

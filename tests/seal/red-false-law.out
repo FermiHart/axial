@@ -1,0 +1,1 @@
+AXI-S002 tests/seal/red-false-law.axs: law `law_add2_works` is not green (did not judge true) | fix: a law runs to bool true on budget; the cell does not seal until it does

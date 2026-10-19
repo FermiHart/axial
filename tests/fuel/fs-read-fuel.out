@@ -1,0 +1,1 @@
+AXI-R008 test_fs_read_fuel:1: fuel exhausted: spent 1 of 50, next op needs 100 | fix: exhaustion is a verdict, not an error: --fuel 101 is the smallest budget that reaches this op, or make the cell cheaper

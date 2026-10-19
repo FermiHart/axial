@@ -1,0 +1,1 @@
+AXI-R008 main:0: fuel exhausted: spent 100 of 100, next op needs 1 | fix: an operator or caller ceiling is tighter; raise that outer budget or make the cell cheaper

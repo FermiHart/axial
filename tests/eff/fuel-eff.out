@@ -1,0 +1,1 @@
+AXI-R008 test_fuel_eff:1: fuel exhausted: spent 1 of 7, next op needs 100 | fix: an operator or caller ceiling is tighter; raise that outer budget or make the cell cheaper

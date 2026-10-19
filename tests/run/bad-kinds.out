@@ -1,0 +1,1 @@
+AXI-R004 main:2: arith needs two numbers of one kind | fix: no coercion at runtime either: convert in source

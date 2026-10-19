@@ -1,0 +1,1 @@
+AXI-T016 tests/types/policy_else_nonbool.axi:7:9 returning u64 where the rettype says bool | fix: no coercion: rewrite the value to the declared type

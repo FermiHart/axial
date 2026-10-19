@@ -1,0 +1,5 @@
+AXI-T008 tests/types/coercion.axi:5:13 mixed operand types: u64 and f64 | fix: no coercion, ever: make both u64 or both f64 explicitly
+AXI-T009 tests/types/coercion.axi:6:13 % is integer-only | fix: u64/i64 remainder; for f64 build it from / and *
+AXI-T009 tests/types/coercion.axi:7:11 unary - on u64: u64 has no sign | fix: use i64 or f64 (sign confusion is a lineage bug: INV-002)
+AXI-T009 tests/types/coercion.axi:8:11 ! wants a bool | fix: compare explicitly; truthiness does not exist here
+AXI-T007 tests/types/coercion.axi:9:6 if condition must be a bool | fix: compare explicitly; truthiness does not exist here

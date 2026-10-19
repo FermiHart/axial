@@ -1,0 +1,4 @@
+AXI-T010 tests/types/calls.axi:11:11 call to unknown cell | fix: declare the cell in this unit (imports arrive with W14/W15)
+AXI-T011 tests/types/calls.axi:12:14 wrong arity: expected 2, got 1 | fix: match the cell signature exactly
+AXI-T012 tests/types/calls.axi:13:18 argument 2 has type f64 | fix: parameter b expects u64; no coercion, rewrite the value
+AXI-T021 tests/types/calls.axi:14:11 locals are not callable in v0 (cells are not values) | fix: call a declared cell by its name

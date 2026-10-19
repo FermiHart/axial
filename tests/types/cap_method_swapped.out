@@ -1,0 +1,2 @@
+AXI-T026 tests/types/cap_method_swapped.axi:4:7 capability 'fs.Write' declared but never used | fix: unused authority is attack surface: drop `cap fs.Write` or use it
+AXI-T027 tests/types/cap_method_swapped.axi:7:9 cap fs.Write has no method `read` | fix: the closed method table is in docs/CAP-METHODS.tsv; effects with compound frames have no method in v0

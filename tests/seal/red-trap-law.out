@@ -1,0 +1,2 @@
+AXI-R003 law_boom:2: division by zero | fix: guard the divisor; `?` unions carry the miss (W13)
+AXI-S002 tests/seal/red-trap-law.axs: law `law_boom` is not green (trapped) | fix: a law runs to bool true on budget; the cell does not seal until it does

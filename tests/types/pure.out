@@ -1,0 +1,6 @@
+AXI-T019 tests/types/pure.axi:8:16 pure cell declares a cap parameter | fix: pure means no effects: drop `pure` or drop the cap (G4)
+AXI-T019 tests/types/pure.axi:12:8 pure cell calls a non-pure cell | fix: purity is transitive: mark the callee pure or drop yours
+AXI-T019 tests/types/pure.axi:13:3 pure cell touches a cap | fix: drop `pure` or drop the cap effect (G4)
+AXI-T019 tests/types/pure.axi:13:12 pure cell touches a cap | fix: drop `pure` or drop the cap effect (G4)
+AXI-T027 tests/types/pure.axi:13:13 cap method argument is u64, wants str | fix: v0 effect frames carry one str payload
+AXI-T020 tests/types/pure.axi:14:11 list literals have no type in v0 | fix: v0 has no collections; stage them behind a cap

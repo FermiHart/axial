@@ -1,0 +1,8 @@
+axi-iface 1
+cell fetch
+param id u64
+ret u64
+err Io
+fuel 10_000
+end
+iface-hash c3193b5ada48827a6f881d51446b1bd06d81bc6867d537208de3b35b7bac99ba

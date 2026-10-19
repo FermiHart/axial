@@ -1,0 +1,1 @@
+AXI-C006 tests/canon/line_cap.axi:1:1 file exceeds the diagnostic line cap | fix: split the file; the checker never compares a prefix

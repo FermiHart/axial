@@ -1,0 +1,1 @@
+AXI-R007 greet:1: effect declared but not granted | fix: authorise it explicitly: axi run … --cap <Name.Verb>

@@ -1,0 +1,3 @@
+AXI-C001 tests/canon/messy.axi:5:3 line is not canonical | fix:   let x = a + b
+AXI-C001 tests/canon/messy.axi:6:7 line is not canonical | fix:   ret x
+AXI-C003 tests/canon/messy.axi:7:1 file must end in a single newline | fix: add a final newline

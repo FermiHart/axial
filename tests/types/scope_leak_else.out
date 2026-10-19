@@ -1,0 +1,1 @@
+AXI-T003 tests/types/scope_leak_else.axi:6:33 unknown name | fix: declare it with `let` or as a parameter
