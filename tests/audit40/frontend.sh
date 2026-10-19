@@ -23,14 +23,16 @@ fi
 "$HOSTCC" $CFLAGS $SAN_FLAGS -DAXI_ALLOC_FAILPOINT -DAXI_TEST_ALLOCATION_TRACKING \
     -ffunction-sections -fdata-sections -Isrc -Iinclude -Ivendor \
     tests/audit40/frontend_parser.c src/axi_parse.c src/axi_lex.c src/axi_diag.c \
-    src/axi_alloc.c src/axi_cap_table.c -Wl,--gc-sections \
+    src/axi_alloc.c src/axi_compile_budget.c src/axi_mem_account.c \
+    src/axi_cap_table.c -Wl,--gc-sections \
     -Wl,--wrap=calloc -Wl,--wrap=free -o "$TEST_BUILD/parser"
 python3 tests/audit40/frontend_parser.py "$TEST_BUILD/parser"
 "$HOSTCC" $CFLAGS $SAN_FLAGS -fshort-enums \
     -DAXI_ALLOC_FAILPOINT -DAXI_TEST_ALLOCATION_TRACKING \
     -ffunction-sections -fdata-sections -Isrc -Iinclude -Ivendor \
     tests/audit40/frontend_parser.c src/axi_parse.c src/axi_lex.c src/axi_diag.c \
-    src/axi_alloc.c src/axi_cap_table.c -Wl,--gc-sections \
+    src/axi_alloc.c src/axi_compile_budget.c src/axi_mem_account.c \
+    src/axi_cap_table.c -Wl,--gc-sections \
     -Wl,--wrap=calloc -Wl,--wrap=free -o "$TEST_BUILD/parser-short-enums"
 python3 tests/audit40/frontend_parser.py "$TEST_BUILD/parser-short-enums"
 python3 tests/audit40/frontend_codegen.py "$AXI" all

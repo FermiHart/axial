@@ -10,6 +10,7 @@
 #define AXI_AST_H
 
 #include "axi.h"
+#include "axi_compile_budget.h"
 
 typedef enum {
     N_UNIT, N_CELL, N_POLICY, N_SIG, N_PARAM, N_TYPE, N_ERRT, N_OKT,
@@ -49,6 +50,7 @@ struct axi_node {
     uint8_t      contract_checked; /* AXI-INV-122: unit passed type/cap closure */
     /* Borrowed shape established by check_try; not an owned AST child. */
     const axi_node *result_type;
+    axi_compile_budget *budget; /* Private owner; NULL is the legacy API. */
 };
 
 /* Parse a whole unit. Syntax errors return a partial tree and AXI-P0xx
@@ -56,6 +58,10 @@ struct axi_node {
  * partial node and returns NULL with AXI-D999; the process is not terminated. */
 axi_node *axi_parse_unit(const char *src, size_t len, const char *path,
                          axi_diags *diags);
+/* The caller keeps budget and source alive through axi_ast_free. The source
+ * is borrowed; charge/copy it in the same budget when bounding an invocation. */
+axi_node *axi_parse_unit_budget(const char *src, size_t len, const char *path,
+                                axi_diags *diags, axi_compile_budget *budget);
 
 /* Release a complete or partial tree. The source must remain alive until this
  * returns because node lexemes are borrowed slices. */

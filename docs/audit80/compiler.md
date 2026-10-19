@@ -30,3 +30,18 @@ Validação W57: `tests/audit80/compiler_budget.c` cobre concorrência por cota
 entre buffers e reservas do backend, fronteira exata, overflow, manutenção do
 conteúdo em realloc recusado, independência de dois contextos e causa de OOM
 injetada. Contagens efetivas e a matriz integrada serão consolidadas em W62.
+
+## W58 — AST pertencente à invocação
+
+`axi_parse_unit_budget` associa cada nó à cota explícita, incluindo o link
+privado de cleanup e o cabeçalho de alocação. O parser reserva seu workspace
+fixo e libera todos os nós parciais quando a cota termina. O proprietário
+permanece no nó; `axi_ast_free` libera pela mesma conta. A API antiga mantém
+seu caminho `NULL` compatível com `free`. O chamador deve manter a fonte viva;
+a CLI usa uma cópia contabilizada no mesmo orçamento.
+
+Validação: teste de parser na fronteira exata e com um byte a menos, origem
+contabilizada junto da AST, recuperação de sintaxe e cleanup da invocação.
+O fixture passou 17 checks; o pico desta revisão intermediária é 3.297 bytes
+com 18 alocações vivas. Alterações posteriores de metadados de AST podem
+mudar esse pico; os testes derivam a fronteira da construção real.
