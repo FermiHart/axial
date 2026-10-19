@@ -1,0 +1,36 @@
+{
+  "baseline": "2d6752255ffcc92e0b103c97609daf205a5a39de",
+  "checker_source_root": "bc0f4b1ef1f478745769a67a5f69037791d80f2a41279677e94ae96c09e5a03c",
+  "host": "Linux 6.18.55 x86_64",
+  "compiler": "cc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0",
+  "profiles": [
+    {
+      "profile": "normal",
+      "command": "make -j4 gate",
+      "exit_status": 0,
+      "executable_sha256": "866454bd01c5a25b6c7a3738e3b184036f2d43c1f0777d99c605e2b670118d6e",
+      "log": "normal.log"
+    },
+    {
+      "profile": "sanitizers",
+      "command": "ASAN_OPTIONS=detect_leaks=0 UBSAN_OPTIONS=halt_on_error=1 make -j4 BUILD=build-sanitize CFLAGS='-std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie' LDFLAGS='-fsanitize=address,undefined -fno-sanitize-recover=all -no-pie' gate",
+      "exit_status": 0,
+      "executable_sha256": "69cbaaeae3dd79bc2e0c0a3c5d7973c35ae0291bb467bc3302202a02f9ebdbe9",
+      "log": "sanitizers.log"
+    },
+    {
+      "profile": "release",
+      "command": "make -j4 BUILD=build-release CFLAGS='-std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L' gate",
+      "exit_status": 0,
+      "executable_sha256": "f15de0aef2ca5998254dca322e5c3ac20ad8e944794206dcc0350ae42d798b42",
+      "log": "release.log"
+    }
+  ],
+  "notes": [
+    "Complete captured stdout/stderr; only the workspace path is normalized to <WORKSPACE>.",
+    "Commands all completed with exit status 0 in this session. Local IPC tests used an IPC-capable execution host.",
+    "LeakSanitizer disabled; AddressSanitizer and UBSan active in sanitizer profile. Parser ownership also checked independently.",
+    "Assertion counts include fixture construction and are not counts of independent test cases.",
+    "Hosted CI results are separate from these local runs."
+  ]
+}

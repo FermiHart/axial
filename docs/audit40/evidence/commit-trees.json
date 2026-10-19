@@ -1,0 +1,240 @@
+{
+  "baseline": "2d6752255ffcc92e0b103c97609daf205a5a39de",
+  "note": "Local review commits and published commits have identical Git tree IDs. The final W40 commit contains this mapping and the integration evidence.",
+  "commits": [
+    {
+      "local": "09a0515040c7776772c522a5db79b8b7f167bbad",
+      "remote": "b07035571d12cb59a9dce3e1bd1968af8065595a",
+      "tree": "81cb3265c12942a48a314252077abc41166e1e42",
+      "message": "W31: track build dependencies and reuse product objects"
+    },
+    {
+      "local": "d837a3caf27c49c9c6944dfa000324d12516857a",
+      "remote": "2310400554a7c361eee2ec7817e7f5e3ef549c31",
+      "tree": "ccd4fc8f1016718b68c936646629d93d829a53e4",
+      "message": "W32: make public gates and demos portable without xxd"
+    },
+    {
+      "local": "2378891b873774350566fb4d8c73b2dd8b20c264",
+      "remote": "8b8af51ba95d92a39a2f0e318b8bef546a35706e",
+      "tree": "d2ccf0aef4b5b7dfff318a69ca07b17d7b46940e",
+      "message": "W33: gate signed CLI effects seals fuel and replay"
+    },
+    {
+      "local": "c9b451f5f33e3a1414f805b6dea4ee6dcb9af297",
+      "remote": "f0686eb2d286be274bccd992d1f3f478dcd241e8",
+      "tree": "e596e40c552de6f50fbda6bce6dc6b0df8eae37b",
+      "message": "W34: bound CLI snapshots and reject blocking special files"
+    },
+    {
+      "local": "6b39a9b70ab8267e2a81b4e8c073c34ebbcbb4d7",
+      "remote": "9126ec2078415dd72fa174da0668b9575681c646",
+      "tree": "417acf21a49875c35d94054d247ca653f46ebd26",
+      "message": "W35: retain checked source snapshot for interface projection"
+    },
+    {
+      "local": "c50482178aef1d8376aa49b3b8b1a95fb7cc8d20",
+      "remote": "63326e940525f3375cf12df05a31ed7f6ac53ca1",
+      "tree": "f5c448425357e6c60053ac0840ae45eb4e441025",
+      "message": "W36: reject unknown CLI options and failed output publication"
+    },
+    {
+      "local": "848f1703dbeb6168738aa8ca1f99c6d2c1b3270d",
+      "remote": "ccea8f68db66db450bebbc2ef6efed68eb04da87",
+      "tree": "db2c0303ad9998acecb02090006774d5b9796ed7",
+      "message": "W37: index immutable embed cells and simplify boolean verdicts"
+    },
+    {
+      "local": "797966bcefa7deab7d02fad1afca1df02e0ffb48",
+      "remote": "c604590c247b00dd4f9278d60edb26d2f9a19b8f",
+      "tree": "cd48451a2c08c48796f3708ae89493dda05f8eba",
+      "message": "W38: avoid repeated seal verification and account proof execution"
+    },
+    {
+      "local": "1ace177886ce9432f54a8aea4934dcf48294d8a2",
+      "remote": "b41d192fa023bb59346d41280d2cee82070f1fe7",
+      "tree": "559bd19505ed58c666fd12e89981333dea78f99f",
+      "message": "W39: bind checker identity to reviewed sources and guard the public ABI"
+    },
+    {
+      "local": "d5f5c233e7ef2ae21eb6527ad4bff61985700c30",
+      "remote": "1a5baa0284c62a04ecbd3589f2e7b9d186555190",
+      "tree": "77025b0da1425f443e88f99a0e10ddae0412fa08",
+      "message": "audit40 W21: reject truncated trust snapshot prefixes safely"
+    },
+    {
+      "local": "9d6598762ec3440d4034a047b7e3b6155febb533",
+      "remote": "14113100a1ff91d5ebc48b8bdf891028c4cbdfeb",
+      "tree": "93de7697166ea1c186669a828660650ebd1e0073",
+      "message": "audit40 W22: bind trust transitions to identity and nonwrapping sequence"
+    },
+    {
+      "local": "58a20e7772a1ddbacf82071359bf373843cc859b",
+      "remote": "4406410d8ccf3a086da3e94ebcc9302a5766adf6",
+      "tree": "57f861e67d7d01895d63ffee4e02fc076a872c3f",
+      "message": "audit40 W23: validate lease state before quota reservation"
+    },
+    {
+      "local": "8af44fc913f0fa3dac18f304132e98fe5cc78d45",
+      "remote": "e3427c5908a74f43115513fa9394b8798d22b68f",
+      "tree": "c09f69f7b02adca2e3fd6064c5b21bd3e0dcec45",
+      "message": "audit40 W24: publish decoded evidence only after complete validation"
+    },
+    {
+      "local": "38a74f60fa365667dcb65d9c093c3f445354891d",
+      "remote": "2a54da10b04edcc3ef171d926ab26c0b09275508",
+      "tree": "6e3cb156d92b1cd1df7696de67054f74ebdd05f5",
+      "message": "audit40 W25: bind durable attempt record keys and version lengths"
+    },
+    {
+      "local": "9ee1e1bd7f8bea61f610cf4742727a0a04a30cdf",
+      "remote": "5dc7e8b20f4b270e114f454540dcb3a5c9290e0f",
+      "tree": "34b4bf4c6e4f2d16f4a7710cb451c3149363379b",
+      "message": "audit40 W26: pin private store descriptors and reject unsafe file types"
+    },
+    {
+      "local": "69236a15d8832a35a62fa5cdbda25ea8ef994829",
+      "remote": "9b059a9444d9edbc58d1c2ce8fdce02d65a8d074",
+      "tree": "5c1697116e022d4068a13f548d75c68f25c349e5",
+      "message": "audit40 W27: preserve honest outcomes across store I/O failures"
+    },
+    {
+      "local": "7bb21da38a16e3542128708ef30862912c5efbf9",
+      "remote": "65035686e9831a8a298b9f64fb04703eb3ecca6b",
+      "tree": "99c090a846ce5d8a618fa7ba666de59e44d782a9",
+      "message": "audit40 W28: reuse canonical commitments and delegation chain roots"
+    },
+    {
+      "local": "c96118a3d597543e9c41e9e033c8a7f1820b9b9e",
+      "remote": "32a47211894d92cd21dc95046ef6cf92439c4492",
+      "tree": "f05bd21b764980eb99e96809a39e2310f96e986a",
+      "message": "audit40 W29: bound RF1 duplicate detection with compact heapsort index"
+    },
+    {
+      "local": "73b9562b4775adee17459ef313397ad542dd531e",
+      "remote": "24b8af3ead9998ad0c01d22a4a5ae4ef915e8ef8",
+      "tree": "1c46b81a448bccfc9f272b467e752e8d1dd303dc",
+      "message": "audit40 W30: reject inconsistent coverage channel state"
+    },
+    {
+      "local": "876c55e3944b8c58498dfd3c489d7de5a1336b46",
+      "remote": "dd92546c397b7b3970c3220729aa4253cdf6b61a",
+      "tree": "96c383c8e20c5a17473c166f3672c0b716a80e10",
+      "message": "W01: bound malformed-source diagnostic work and counters"
+    },
+    {
+      "local": "de8f37d619568c12a6781674ee6509f6dfcce1eb",
+      "remote": "c7a3e433b0422741ac95f7a3707c26a8b7af5851",
+      "tree": "da3af27e8fa57335caf5ee5d52e5f0c159899d40",
+      "message": "W02: relocate generated branches without stale text offsets"
+    },
+    {
+      "local": "d686879740ad7f64c39cfa1633f587262ccd8a96",
+      "remote": "17dc52336c9569308138aa8dd80b55b65ad62865",
+      "tree": "9d78e8534505ce697898a76349d8448235fd34ef",
+      "message": "W03: reserve contiguous call windows and release argument temporaries"
+    },
+    {
+      "local": "639e7d2e91fe911494ef8856a7a73efa2c15033d",
+      "remote": "57d086df5cdde6d29f7e1d4a231c4c587c3187d7",
+      "tree": "9abd82dc7e8ff3194ceec177fb71117e65488023",
+      "message": "W04: preserve unit return semantics and retire branch return temporaries"
+    },
+    {
+      "local": "bf813022ae02fc5372b901337619905aedff7cc2",
+      "remote": "d50d303514971587f5f448e225e8563f376cb77c",
+      "tree": "82fcd008f5375c915c3ece0fc6cc0c71e5356f04",
+      "message": "W05: traverse codegen AST once with bounded sibling stack use"
+    },
+    {
+      "local": "b735114050cd15ab39fd7d539d67907293454731",
+      "remote": "6cb1c993bd3c7c5419caa35553b45b5403b1399a",
+      "tree": "83ea88834d816d965bdc748b153713ae68ff015f",
+      "message": "W06: reject overflowing signed literals and lower them directly"
+    },
+    {
+      "local": "c7115fb5edfbc82571fd99842862be37e6efd175",
+      "remote": "4d20bc2caf7809d66d13a75c42b580bccdc0249e",
+      "tree": "b11a802427dc9df7a49ff953c7248287429aa793",
+      "message": "W07: resolve capability call graph once before fixed-point propagation"
+    },
+    {
+      "local": "47dc45772d9bae48dab64fac96bf8299dd2bacf7",
+      "remote": "fd893a3ad0317230cab1f95e4c9ddc39f79873c4",
+      "tree": "8c5e37765fa4b6acaa8d2c10a9c025a45ab90397",
+      "message": "W08: batch unchanged UTF-8 runs in JSON escaping"
+    },
+    {
+      "local": "227f9ef42b7ec01b8e4c953513235c853a5940bb",
+      "remote": "a72fbbd349de0448b68c969ee7d8fd146905fe5b",
+      "tree": "6be2f02f6c4710de05368a70062c648dcba778ce",
+      "message": "W09: canonicalize floats into parseable value-preserving decimals"
+    },
+    {
+      "local": "f4ebefdd57abbab53ecc18d97d45697382d8f560",
+      "remote": "4da2a1a01c7ce52a459547da830ec4545fd3da4b",
+      "tree": "134ec6c5d0602d1ed9630f5e37da4c517a67afbf",
+      "message": "W10: return parser allocation refusals with complete invocation cleanup"
+    },
+    {
+      "local": "f2072bd2b0938540fa6af894158022e73a78f884",
+      "remote": "41fc83137483c25932077e272f12c32c04c97497",
+      "tree": "989fba2e8f391aa11c5f9e2108c8431bc6fad70d",
+      "message": "W11 fix VM arithmetic with aliased destination registers"
+    },
+    {
+      "local": "f0466e526c3ef3dcfe1580b4dd6e58b71c98a73d",
+      "remote": "b079f845569b45c1451c59ba916205f02c3fbeab",
+      "tree": "f6858988f8a68a2cb67567b3afc44e18a40467e2",
+      "message": "W12 preserve union tags and payloads with register aliasing"
+    },
+    {
+      "local": "8f0c57cda2a556c11d4f901d73c2578b422502f9",
+      "remote": "4890393dabfa5cf81664b1d0c29d69446816b707",
+      "tree": "fe805c1f55f4cef53df3e83f22db2e2680528079",
+      "message": "W13 compare complete typed VM union and error values"
+    },
+    {
+      "local": "9b40bc8cad3cb959ccaeca75108580c4c220da0e",
+      "remote": "6d65aa0ae555eb484e2c580b91458dbdf699c51a",
+      "tree": "5b23d658e417aa50258bdb86e7a4241f28953ad5",
+      "message": "W14 bound replay hashing and validate evidence before publication"
+    },
+    {
+      "local": "d95cf2d654412e49187b9663cd8d7266084bb2c2",
+      "remote": "22f4bc42fb51fc9a2f7330d1416ecda2bd72d823",
+      "tree": "f0af45e14ab91479aff418d57ef86b022679a80f",
+      "message": "W15 validate effect receipts and complete grant sets fail closed"
+    },
+    {
+      "local": "8f9ceeadc30340093ad28f296800db3ec5fa956d",
+      "remote": "eac8630b631ee58a3d64dd70289e555ece0c3c45",
+      "tree": "d2488fb15e3ee86f59fdfc31bd6696a01512140b",
+      "message": "W16 preflight replay trust and make worker failures observable"
+    },
+    {
+      "local": "d99d56c87f17e70a922d919ce7abfe69aa53bfd4",
+      "remote": "de296f3416a25b7fab3f72b32dd2562851b42b9e",
+      "tree": "649d45b51935974ac821518a49231b3ecc0fb9cd",
+      "message": "W17 preserve resource ownership and prevent handle generation reuse"
+    },
+    {
+      "local": "ba0d2efcba5c5b04c3d3f59a0946c1da3a728b90",
+      "remote": "b086cce58c5530dc8eba9f062c40c24608b9a822",
+      "tree": "a28428f4de7d3b8a0b7b272a5893f6ac19bf9c64",
+      "message": "W18 bound assembly to its hashed span and amortize builder growth"
+    },
+    {
+      "local": "cccfa056bb8179b793eed2cf1026c3b4a511e8fb",
+      "remote": "1f7737628deab5b4c91e3181f8cd081bf138d80b",
+      "tree": "d33befc3c3566114c9d17a9a8d3b013eb62d53e3",
+      "message": "W19 fuse accounted pointer lookup with complete integrity validation"
+    },
+    {
+      "local": "3b85087b4c3d8a338a62e83b95a77897555d0bc9",
+      "remote": "11610bec3029b445717248f260a20b42bda8a93a",
+      "tree": "70a78be6c797bec5fadc01834f71407d61c90472",
+      "message": "W20 use compact generated VM dispatch metadata without changing fuel"
+    }
+  ]
+}

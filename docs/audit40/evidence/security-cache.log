@@ -1,0 +1,8 @@
+CC='cc' AXI_AUDIT_CFLAGS='-std=c99 -Wall -Wextra -Werror -O1 -D_POSIX_C_SOURCE=200809L' AXI_AUDIT_BUILD='<WORKSPACE>/axial/build/audit40-security' sh tests/audit40/security_faults.sh
+audit40 security: 17 checks passed
+audit40 W27 fault injection: 109 checks passed
+CC='cc' AXI_AUDIT_CFLAGS='-std=c99 -Wall -Wextra -Werror -O1 -D_POSIX_C_SOURCE=200809L' AXI_AUDIT_BUILD='<WORKSPACE>/axial/build/audit40-security' sh tests/audit40/security_costs.sh
+audit40 security: 17 checks passed
+selective_disclosure_4096: hashes=2 bytes=4222
+delegation_depth_32: hashes=32 bytes=17696
+rf1_2048_records: comparisons=41069 bytes=28678

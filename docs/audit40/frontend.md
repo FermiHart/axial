@@ -188,12 +188,16 @@ an embedding process and abandoning its invocation. Returning NULL alone
 would leak nodes allocated before attachment to the partial syntax tree.
 
 **Change.** Track allocations in a private invocation list. On OOM, reclaim
-all nodes and return NULL with `AXI-D999`; keep partial trees for ordinary
+all nodes and return NULL, attempting an `AXI-D999` diagnostic; keep partial trees for ordinary
 syntax errors. A subsequent parse in the same process is independent. The
 internal `axi_parse_unit` NULL contract is now documented; CLI callers must
 handle it. The public embed v1 ABI is unchanged. The private ownership link
 costs one pointer per parser node; this is an explicit memory tradeoff for
 complete cleanup on every allocation failure, not a memory-reduction claim.
+
+The existing 64-entry diagnostic limit still applies: if it is already full,
+the OOM diagnostic increments the dropped count. NULL remains the definitive
+allocation refusal and never publishes a partially allocated tree.
 
 As part of boundary review, capability-table indexing now rejects negative
 enum representations through an unsigned range check. Token-name bounds use

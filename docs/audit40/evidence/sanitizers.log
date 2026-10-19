@@ -1,0 +1,231 @@
+python3 tools/axi-checker-identity.py --check
+mkdir -p build-sanitize
+CC='cc' AXI_AUDIT_CFLAGS='-std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie' AXI_AUDIT_BUILD='<WORKSPACE>/axial/build-sanitize/audit40-security' sh tests/audit40/security_faults.sh
+checker identity: bc0f4b1ef1f478745769a67a5f69037791d80f2a41279677e94ae96c09e5a03c (118 source files); public v1 ABI pins PASS
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_admission_v1.o src/axi_admission_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_aer1_verify.o src/axi_aer1_verify.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_aer1.o src/axi_aer1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_aer2_v1.o src/axi_aer2_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_ag1_core_v1.o src/axi_ag1_core_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_ag1_v1.o src/axi_ag1_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_alloc.o src/axi_alloc.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_arena.o src/axi_arena.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_bc.o src/axi_bc.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_builtin.o src/axi_builtin.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_ca43_47_core.o src/axi_ca43_47_core.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_canon.o src/axi_canon.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_cap_infer.o src/axi_cap_infer.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_cap_table.o src/axi_cap_table.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_codegen.o src/axi_codegen.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_contract.o src/axi_contract.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_coverage_v1.o src/axi_coverage_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_delegation_v1.o src/axi_delegation_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_diag.o src/axi_diag.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_dossier.o src/axi_dossier.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_effect.o src/axi_effect.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_embed.o src/axi_embed.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_embed_v1.o src/axi_embed_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_extdec_v1.o src/axi_extdec_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_gateway_v1.o src/axi_gateway_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_handle_table.o src/axi_handle_table.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_hash.o src/axi_hash.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_iface.o src/axi_iface.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_jm1_v1.o src/axi_jm1_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_json.o src/axi_json.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_lex.o src/axi_lex.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_local_action_v1.o src/axi_local_action_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_local_admission_v1.o src/axi_local_admission_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_local_attempt_v1.o src/axi_local_attempt_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_local_consumer_v1.o src/axi_local_consumer_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_local_diag_v1.o src/axi_local_diag_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_local_epoch_v1.o src/axi_local_epoch_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_mem_account.o src/axi_mem_account.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_osif.o src/axi_osif.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_parse.o src/axi_parse.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_platform_posix.o src/axi_platform_posix.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_policy_lint.o src/axi_policy_lint.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_replay.o src/axi_replay.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_replay_v4.o src/axi_replay_v4.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_resource_envelope.o src/axi_resource_envelope.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_rf1_pin_v1.o src/axi_rf1_pin_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_rollout_v1.o src/axi_rollout_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_selective_disclosure_v1.o src/axi_selective_disclosure_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_sign.o src/axi_sign.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_time_lease_v1.o src/axi_time_lease_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_trace.o src/axi_trace.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_trust_canon_v1.o src/axi_trust_canon_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_trust_v1.o src/axi_trust_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_types.o src/axi_types.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_u64.o src/axi_u64.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_vm.o src/axi_vm.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/vendor/ed25519.o vendor/ed25519.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/src/axi_main.o src/axi_main.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/tests/audit40/abi.o tests/audit40/abi.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/tests/audit40/driver.o tests/audit40/driver.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/tests/audit40/embed.o tests/audit40/embed.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/tests/audit40/runtime.o tests/audit40/runtime.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/tests/audit40/runtime_handles.o tests/audit40/runtime_handles.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/tests/audit40/seal.o tests/audit40/seal.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-sanitize/tests/audit40/security.o tests/audit40/security.c
+cc -fsanitize=address,undefined -fno-sanitize-recover=all -no-pie -o build-sanitize/audit40/runtime_handles build-sanitize/tests/audit40/runtime_handles.o -lm
+cc -fsanitize=address,undefined -fno-sanitize-recover=all -no-pie -o build-sanitize/axi build-sanitize/src/axi_admission_v1.o build-sanitize/src/axi_aer1.o build-sanitize/src/axi_aer1_verify.o build-sanitize/src/axi_aer2_v1.o build-sanitize/src/axi_ag1_core_v1.o build-sanitize/src/axi_ag1_v1.o build-sanitize/src/axi_alloc.o build-sanitize/src/axi_arena.o build-sanitize/src/axi_bc.o build-sanitize/src/axi_builtin.o build-sanitize/src/axi_ca43_47_core.o build-sanitize/src/axi_canon.o build-sanitize/src/axi_cap_infer.o build-sanitize/src/axi_cap_table.o build-sanitize/src/axi_codegen.o build-sanitize/src/axi_contract.o build-sanitize/src/axi_coverage_v1.o build-sanitize/src/axi_delegation_v1.o build-sanitize/src/axi_diag.o build-sanitize/src/axi_dossier.o build-sanitize/src/axi_effect.o build-sanitize/src/axi_embed.o build-sanitize/src/axi_embed_v1.o build-sanitize/src/axi_extdec_v1.o build-sanitize/src/axi_gateway_v1.o build-sanitize/src/axi_handle_table.o build-sanitize/src/axi_hash.o build-sanitize/src/axi_iface.o build-sanitize/src/axi_jm1_v1.o build-sanitize/src/axi_json.o build-sanitize/src/axi_lex.o build-sanitize/src/axi_local_action_v1.o build-sanitize/src/axi_local_admission_v1.o build-sanitize/src/axi_local_attempt_v1.o build-sanitize/src/axi_local_consumer_v1.o build-sanitize/src/axi_local_diag_v1.o build-sanitize/src/axi_local_epoch_v1.o build-sanitize/src/axi_mem_account.o build-sanitize/src/axi_osif.o build-sanitize/src/axi_parse.o build-sanitize/src/axi_platform_posix.o build-sanitize/src/axi_policy_lint.o build-sanitize/src/axi_replay.o build-sanitize/src/axi_replay_v4.o build-sanitize/src/axi_resource_envelope.o build-sanitize/src/axi_rf1_pin_v1.o build-sanitize/src/axi_rollout_v1.o build-sanitize/src/axi_selective_disclosure_v1.o build-sanitize/src/axi_sign.o build-sanitize/src/axi_time_lease_v1.o build-sanitize/src/axi_trace.o build-sanitize/src/axi_trust_canon_v1.o build-sanitize/src/axi_trust_v1.o build-sanitize/src/axi_types.o build-sanitize/src/axi_u64.o build-sanitize/src/axi_vm.o build-sanitize/vendor/ed25519.o build-sanitize/src/axi_main.o -lm
+cc -fsanitize=address,undefined -fno-sanitize-recover=all -no-pie -o build-sanitize/audit40/abi build-sanitize/tests/audit40/abi.o build-sanitize/src/axi_admission_v1.o build-sanitize/src/axi_aer1.o build-sanitize/src/axi_aer1_verify.o build-sanitize/src/axi_aer2_v1.o build-sanitize/src/axi_ag1_core_v1.o build-sanitize/src/axi_ag1_v1.o build-sanitize/src/axi_alloc.o build-sanitize/src/axi_arena.o build-sanitize/src/axi_bc.o build-sanitize/src/axi_builtin.o build-sanitize/src/axi_ca43_47_core.o build-sanitize/src/axi_canon.o build-sanitize/src/axi_cap_infer.o build-sanitize/src/axi_cap_table.o build-sanitize/src/axi_codegen.o build-sanitize/src/axi_contract.o build-sanitize/src/axi_coverage_v1.o build-sanitize/src/axi_delegation_v1.o build-sanitize/src/axi_diag.o build-sanitize/src/axi_dossier.o build-sanitize/src/axi_effect.o build-sanitize/src/axi_embed.o build-sanitize/src/axi_embed_v1.o build-sanitize/src/axi_extdec_v1.o build-sanitize/src/axi_gateway_v1.o build-sanitize/src/axi_handle_table.o build-sanitize/src/axi_hash.o build-sanitize/src/axi_iface.o build-sanitize/src/axi_jm1_v1.o build-sanitize/src/axi_json.o build-sanitize/src/axi_lex.o build-sanitize/src/axi_local_action_v1.o build-sanitize/src/axi_local_admission_v1.o build-sanitize/src/axi_local_attempt_v1.o build-sanitize/src/axi_local_consumer_v1.o build-sanitize/src/axi_local_diag_v1.o build-sanitize/src/axi_local_epoch_v1.o build-sanitize/src/axi_mem_account.o build-sanitize/src/axi_osif.o build-sanitize/src/axi_parse.o build-sanitize/src/axi_platform_posix.o build-sanitize/src/axi_policy_lint.o build-sanitize/src/axi_replay.o build-sanitize/src/axi_replay_v4.o build-sanitize/src/axi_resource_envelope.o build-sanitize/src/axi_rf1_pin_v1.o build-sanitize/src/axi_rollout_v1.o build-sanitize/src/axi_selective_disclosure_v1.o build-sanitize/src/axi_sign.o build-sanitize/src/axi_time_lease_v1.o build-sanitize/src/axi_trace.o build-sanitize/src/axi_trust_canon_v1.o build-sanitize/src/axi_trust_v1.o build-sanitize/src/axi_types.o build-sanitize/src/axi_u64.o build-sanitize/src/axi_vm.o build-sanitize/vendor/ed25519.o -lm
+cc -fsanitize=address,undefined -fno-sanitize-recover=all -no-pie -o build-sanitize/audit40/driver build-sanitize/tests/audit40/driver.o build-sanitize/src/axi_admission_v1.o build-sanitize/src/axi_aer1.o build-sanitize/src/axi_aer1_verify.o build-sanitize/src/axi_aer2_v1.o build-sanitize/src/axi_ag1_core_v1.o build-sanitize/src/axi_ag1_v1.o build-sanitize/src/axi_alloc.o build-sanitize/src/axi_arena.o build-sanitize/src/axi_bc.o build-sanitize/src/axi_builtin.o build-sanitize/src/axi_ca43_47_core.o build-sanitize/src/axi_canon.o build-sanitize/src/axi_cap_infer.o build-sanitize/src/axi_cap_table.o build-sanitize/src/axi_codegen.o build-sanitize/src/axi_contract.o build-sanitize/src/axi_coverage_v1.o build-sanitize/src/axi_delegation_v1.o build-sanitize/src/axi_diag.o build-sanitize/src/axi_dossier.o build-sanitize/src/axi_effect.o build-sanitize/src/axi_embed.o build-sanitize/src/axi_embed_v1.o build-sanitize/src/axi_extdec_v1.o build-sanitize/src/axi_gateway_v1.o build-sanitize/src/axi_handle_table.o build-sanitize/src/axi_hash.o build-sanitize/src/axi_iface.o build-sanitize/src/axi_jm1_v1.o build-sanitize/src/axi_json.o build-sanitize/src/axi_lex.o build-sanitize/src/axi_local_action_v1.o build-sanitize/src/axi_local_admission_v1.o build-sanitize/src/axi_local_attempt_v1.o build-sanitize/src/axi_local_consumer_v1.o build-sanitize/src/axi_local_diag_v1.o build-sanitize/src/axi_local_epoch_v1.o build-sanitize/src/axi_mem_account.o build-sanitize/src/axi_osif.o build-sanitize/src/axi_parse.o build-sanitize/src/axi_platform_posix.o build-sanitize/src/axi_policy_lint.o build-sanitize/src/axi_replay.o build-sanitize/src/axi_replay_v4.o build-sanitize/src/axi_resource_envelope.o build-sanitize/src/axi_rf1_pin_v1.o build-sanitize/src/axi_rollout_v1.o build-sanitize/src/axi_selective_disclosure_v1.o build-sanitize/src/axi_sign.o build-sanitize/src/axi_time_lease_v1.o build-sanitize/src/axi_trace.o build-sanitize/src/axi_trust_canon_v1.o build-sanitize/src/axi_trust_v1.o build-sanitize/src/axi_types.o build-sanitize/src/axi_u64.o build-sanitize/src/axi_vm.o build-sanitize/vendor/ed25519.o -lm
+cc -fsanitize=address,undefined -fno-sanitize-recover=all -no-pie -o build-sanitize/audit40/embed build-sanitize/tests/audit40/embed.o build-sanitize/src/axi_admission_v1.o build-sanitize/src/axi_aer1.o build-sanitize/src/axi_aer1_verify.o build-sanitize/src/axi_aer2_v1.o build-sanitize/src/axi_ag1_core_v1.o build-sanitize/src/axi_ag1_v1.o build-sanitize/src/axi_alloc.o build-sanitize/src/axi_arena.o build-sanitize/src/axi_bc.o build-sanitize/src/axi_builtin.o build-sanitize/src/axi_ca43_47_core.o build-sanitize/src/axi_canon.o build-sanitize/src/axi_cap_infer.o build-sanitize/src/axi_cap_table.o build-sanitize/src/axi_codegen.o build-sanitize/src/axi_contract.o build-sanitize/src/axi_coverage_v1.o build-sanitize/src/axi_delegation_v1.o build-sanitize/src/axi_diag.o build-sanitize/src/axi_dossier.o build-sanitize/src/axi_effect.o build-sanitize/src/axi_embed.o build-sanitize/src/axi_embed_v1.o build-sanitize/src/axi_extdec_v1.o build-sanitize/src/axi_gateway_v1.o build-sanitize/src/axi_handle_table.o build-sanitize/src/axi_hash.o build-sanitize/src/axi_iface.o build-sanitize/src/axi_jm1_v1.o build-sanitize/src/axi_json.o build-sanitize/src/axi_lex.o build-sanitize/src/axi_local_action_v1.o build-sanitize/src/axi_local_admission_v1.o build-sanitize/src/axi_local_attempt_v1.o build-sanitize/src/axi_local_consumer_v1.o build-sanitize/src/axi_local_diag_v1.o build-sanitize/src/axi_local_epoch_v1.o build-sanitize/src/axi_mem_account.o build-sanitize/src/axi_osif.o build-sanitize/src/axi_parse.o build-sanitize/src/axi_platform_posix.o build-sanitize/src/axi_policy_lint.o build-sanitize/src/axi_replay.o build-sanitize/src/axi_replay_v4.o build-sanitize/src/axi_resource_envelope.o build-sanitize/src/axi_rf1_pin_v1.o build-sanitize/src/axi_rollout_v1.o build-sanitize/src/axi_selective_disclosure_v1.o build-sanitize/src/axi_sign.o build-sanitize/src/axi_time_lease_v1.o build-sanitize/src/axi_trace.o build-sanitize/src/axi_trust_canon_v1.o build-sanitize/src/axi_trust_v1.o build-sanitize/src/axi_types.o build-sanitize/src/axi_u64.o build-sanitize/src/axi_vm.o build-sanitize/vendor/ed25519.o -lm
+cc -fsanitize=address,undefined -fno-sanitize-recover=all -no-pie -o build-sanitize/audit40/runtime build-sanitize/tests/audit40/runtime.o build-sanitize/src/axi_admission_v1.o build-sanitize/src/axi_aer1.o build-sanitize/src/axi_aer1_verify.o build-sanitize/src/axi_aer2_v1.o build-sanitize/src/axi_ag1_core_v1.o build-sanitize/src/axi_ag1_v1.o build-sanitize/src/axi_alloc.o build-sanitize/src/axi_arena.o build-sanitize/src/axi_bc.o build-sanitize/src/axi_builtin.o build-sanitize/src/axi_ca43_47_core.o build-sanitize/src/axi_canon.o build-sanitize/src/axi_cap_infer.o build-sanitize/src/axi_cap_table.o build-sanitize/src/axi_codegen.o build-sanitize/src/axi_contract.o build-sanitize/src/axi_coverage_v1.o build-sanitize/src/axi_delegation_v1.o build-sanitize/src/axi_diag.o build-sanitize/src/axi_dossier.o build-sanitize/src/axi_effect.o build-sanitize/src/axi_embed.o build-sanitize/src/axi_embed_v1.o build-sanitize/src/axi_extdec_v1.o build-sanitize/src/axi_gateway_v1.o build-sanitize/src/axi_handle_table.o build-sanitize/src/axi_hash.o build-sanitize/src/axi_iface.o build-sanitize/src/axi_jm1_v1.o build-sanitize/src/axi_json.o build-sanitize/src/axi_lex.o build-sanitize/src/axi_local_action_v1.o build-sanitize/src/axi_local_admission_v1.o build-sanitize/src/axi_local_attempt_v1.o build-sanitize/src/axi_local_consumer_v1.o build-sanitize/src/axi_local_diag_v1.o build-sanitize/src/axi_local_epoch_v1.o build-sanitize/src/axi_mem_account.o build-sanitize/src/axi_osif.o build-sanitize/src/axi_parse.o build-sanitize/src/axi_platform_posix.o build-sanitize/src/axi_policy_lint.o build-sanitize/src/axi_replay.o build-sanitize/src/axi_replay_v4.o build-sanitize/src/axi_resource_envelope.o build-sanitize/src/axi_rf1_pin_v1.o build-sanitize/src/axi_rollout_v1.o build-sanitize/src/axi_selective_disclosure_v1.o build-sanitize/src/axi_sign.o build-sanitize/src/axi_time_lease_v1.o build-sanitize/src/axi_trace.o build-sanitize/src/axi_trust_canon_v1.o build-sanitize/src/axi_trust_v1.o build-sanitize/src/axi_types.o build-sanitize/src/axi_u64.o build-sanitize/src/axi_vm.o build-sanitize/vendor/ed25519.o -lm
+cc -fsanitize=address,undefined -fno-sanitize-recover=all -no-pie -o build-sanitize/audit40/seal build-sanitize/tests/audit40/seal.o build-sanitize/src/axi_admission_v1.o build-sanitize/src/axi_aer1.o build-sanitize/src/axi_aer1_verify.o build-sanitize/src/axi_aer2_v1.o build-sanitize/src/axi_ag1_core_v1.o build-sanitize/src/axi_ag1_v1.o build-sanitize/src/axi_alloc.o build-sanitize/src/axi_arena.o build-sanitize/src/axi_bc.o build-sanitize/src/axi_builtin.o build-sanitize/src/axi_ca43_47_core.o build-sanitize/src/axi_canon.o build-sanitize/src/axi_cap_infer.o build-sanitize/src/axi_cap_table.o build-sanitize/src/axi_codegen.o build-sanitize/src/axi_contract.o build-sanitize/src/axi_coverage_v1.o build-sanitize/src/axi_delegation_v1.o build-sanitize/src/axi_diag.o build-sanitize/src/axi_dossier.o build-sanitize/src/axi_effect.o build-sanitize/src/axi_embed.o build-sanitize/src/axi_embed_v1.o build-sanitize/src/axi_extdec_v1.o build-sanitize/src/axi_gateway_v1.o build-sanitize/src/axi_handle_table.o build-sanitize/src/axi_hash.o build-sanitize/src/axi_iface.o build-sanitize/src/axi_jm1_v1.o build-sanitize/src/axi_json.o build-sanitize/src/axi_lex.o build-sanitize/src/axi_local_action_v1.o build-sanitize/src/axi_local_admission_v1.o build-sanitize/src/axi_local_attempt_v1.o build-sanitize/src/axi_local_consumer_v1.o build-sanitize/src/axi_local_diag_v1.o build-sanitize/src/axi_local_epoch_v1.o build-sanitize/src/axi_mem_account.o build-sanitize/src/axi_osif.o build-sanitize/src/axi_parse.o build-sanitize/src/axi_platform_posix.o build-sanitize/src/axi_policy_lint.o build-sanitize/src/axi_replay.o build-sanitize/src/axi_replay_v4.o build-sanitize/src/axi_resource_envelope.o build-sanitize/src/axi_rf1_pin_v1.o build-sanitize/src/axi_rollout_v1.o build-sanitize/src/axi_selective_disclosure_v1.o build-sanitize/src/axi_sign.o build-sanitize/src/axi_time_lease_v1.o build-sanitize/src/axi_trace.o build-sanitize/src/axi_trust_canon_v1.o build-sanitize/src/axi_trust_v1.o build-sanitize/src/axi_types.o build-sanitize/src/axi_u64.o build-sanitize/src/axi_vm.o build-sanitize/vendor/ed25519.o -lm
+cc -fsanitize=address,undefined -fno-sanitize-recover=all -no-pie -o build-sanitize/audit40/security build-sanitize/tests/audit40/security.o build-sanitize/src/axi_admission_v1.o build-sanitize/src/axi_aer1.o build-sanitize/src/axi_aer1_verify.o build-sanitize/src/axi_aer2_v1.o build-sanitize/src/axi_ag1_core_v1.o build-sanitize/src/axi_ag1_v1.o build-sanitize/src/axi_alloc.o build-sanitize/src/axi_arena.o build-sanitize/src/axi_bc.o build-sanitize/src/axi_builtin.o build-sanitize/src/axi_ca43_47_core.o build-sanitize/src/axi_canon.o build-sanitize/src/axi_cap_infer.o build-sanitize/src/axi_cap_table.o build-sanitize/src/axi_codegen.o build-sanitize/src/axi_contract.o build-sanitize/src/axi_coverage_v1.o build-sanitize/src/axi_delegation_v1.o build-sanitize/src/axi_diag.o build-sanitize/src/axi_dossier.o build-sanitize/src/axi_effect.o build-sanitize/src/axi_embed.o build-sanitize/src/axi_embed_v1.o build-sanitize/src/axi_extdec_v1.o build-sanitize/src/axi_gateway_v1.o build-sanitize/src/axi_handle_table.o build-sanitize/src/axi_hash.o build-sanitize/src/axi_iface.o build-sanitize/src/axi_jm1_v1.o build-sanitize/src/axi_json.o build-sanitize/src/axi_lex.o build-sanitize/src/axi_local_action_v1.o build-sanitize/src/axi_local_admission_v1.o build-sanitize/src/axi_local_attempt_v1.o build-sanitize/src/axi_local_consumer_v1.o build-sanitize/src/axi_local_diag_v1.o build-sanitize/src/axi_local_epoch_v1.o build-sanitize/src/axi_mem_account.o build-sanitize/src/axi_osif.o build-sanitize/src/axi_parse.o build-sanitize/src/axi_platform_posix.o build-sanitize/src/axi_policy_lint.o build-sanitize/src/axi_replay.o build-sanitize/src/axi_replay_v4.o build-sanitize/src/axi_resource_envelope.o build-sanitize/src/axi_rf1_pin_v1.o build-sanitize/src/axi_rollout_v1.o build-sanitize/src/axi_selective_disclosure_v1.o build-sanitize/src/axi_sign.o build-sanitize/src/axi_time_lease_v1.o build-sanitize/src/axi_trace.o build-sanitize/src/axi_trust_canon_v1.o build-sanitize/src/axi_trust_v1.o build-sanitize/src/axi_types.o build-sanitize/src/axi_u64.o build-sanitize/src/axi_vm.o build-sanitize/vendor/ed25519.o -lm
+AXI=<WORKSPACE>/axial/build-sanitize/axi sh tools/check.sh
+AXI=<WORKSPACE>/axial/build-sanitize/axi sh tests/audit40/cli.sh
+HOSTCC='cc' CFLAGS='-std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie' AXI_TEST_BUILD='build-sanitize/audit40-frontend' sh tests/audit40/frontend.sh <WORKSPACE>/axial/build-sanitize/axi
+PASS lex/basic.axi
+PASS lex/diag.axi
+PASS lex/ops.axi
+PASS parse/basic.axi
+PASS cli/signed-compile
+PASS parse/full.axi
+PASS parse/policy_explicit_cap.axi
+PASS parse/policy_minimal.axi
+PASS cli/compiled-result
+PASS cli/wrong-producer
+PASS parse/policy_under.axi
+PASS cli/missing-signing-key
+PASS cli/no-unsigned-output
+PASS cli/dis/missing-trust
+PASS parse/recover.axi
+PASS cli/inspect/missing-trust
+PASS cli/verify/missing-trust
+PASS canon/comments.axi
+PASS cli/check-seal/missing-trust
+PASS cli/run/missing-trust
+PASS canon/good.axi
+PASS cli/lex/unknown-option
+PASS cli/parse/unknown-option
+PASS cli/check/unknown-option
+PASS canon/line_cap.axi
+PASS cli/form/unknown-option
+PASS canon/messy.axi
+PASS cli/types/unknown-option
+PASS cli/iface/unknown-option
+PASS canon/policy_canon.axi
+PASS cli/canon/unknown-option
+PASS cli/version/extra-argument
+PASS cli/selftest/extra-argument
+PASS canon/trivia_overflow.axi
+PASS cli/caps/extra-argument
+PASS cli/iface-diff/extra-argument
+PASS types/builtin_cap_mismatch.axi
+PASS cli/output-failure
+PASS types/builtin_fs_exists.axi
+PASS types/builtin_json_policy.axi
+PASS types/call_window_17.axi
+PASS cli/tampered-module
+PASS types/calls.axi
+PASS types/cap_method_swapped.axi
+PASS types/cap_method_unknown.axi
+PASS cli/green-seal
+PASS types/caps.axi
+PASS types/coercion.axi
+PASS cli/check-seal
+PASS types/green.axi
+PASS types/infer_cap_method.axi
+PASS types/infer_cap_mismatch.axi
+PASS cli/checked-result
+PASS types/infer_cycle.axi
+PASS types/infer_policy_bound.axi
+PASS types/infer_policy_violation.axi
+PASS types/infer_transitive.axi
+PASS cli/unchecked-certificate
+PASS types/names.axi
+PASS cli/red-false-law
+PASS cli/red-false-law/no-artifact
+PASS types/policy_else_nonbool.axi
+PASS cli/red-no-laws
+PASS cli/red-no-laws/no-artifact
+PASS types/proof_impure_call.axi
+PASS cli/red-trap-law
+PASS cli/red-trap-law/no-artifact
+PASS types/proof_pure_call.axi
+PASS types/pure.axi
+PASS cli/assemble-fuel
+PASS types/scope_leak_else.axi
+PASS types/scope_leak_post_if.axi
+PASS types/union_payload_bytes.axi
+PASS cli/exact-fuel
+PASS types/union_payload_cap.axi
+PASS types/unions.axi
+PASS cli/exhausted-fuel
+PASS iface/ax-err.axi
+PASS cli/overflowing-fuel
+PASS iface/ax-fuel.axi
+PASS iface/ax-pname.axi
+invalid_bytes=65536 cpu_seconds=0.002045
+frontend W01: PASS
+PASS cli/assemble-fs-read
+PASS iface/ax-pure.axi
+PASS iface/ax-ret.axi
+PASS iface/v1.axi
+PASS cli/confined-read
+PASS iface/v2-breaking.axi
+PASS iface/v2-compatible.axi
+PASS cli/read/no-grant
+PASS iface/v2-identical.axi
+PASS hash/vectors
+PASS cli/assemble-fs-write
+PASS bc/bad-op.axs
+PASS bc/bad-shape.axs
+PASS cli/write/no-grant
+PASS cli/no-ungranted-mutation
+PASS cli/confined-write
+PASS cli/written-content
+PASS cli/assemble-record
+PASS bc/good.axs
+PASS cli/signed-record
+PASS bc/uchk.axs
+PASS cli/signed-replay
+PASS cli/replay/wrong-recorder
+PASS run/bad-divzero
+PASS cli/replay/tampered
+PASS cli/recorder/preflight-distinct-key
+audit CLI: 51 PASS, 0 FAIL
+PASS run/bad-eff
+build-sanitize/audit40/runtime --workers
+audit40 workers: 6 checks, 0 failures
+audit ABI: 72 compile-time layout checks + endian/version PASS
+audit driver: 23 checks PASS
+PASS run/bad-falloff
+json_escape_bytes=65536 sink_calls=1 cpu_seconds=0.000108
+frontend W08: PASS
+PASS run/bad-kinds
+PASS run/call
+PASS run/fib
+audit embed: 776 checks PASS
+PASS run/fuel-out
+AXI-B007 bad-quoted:2: const out of order or malformed | fix: declare k0,k1,... in order: kN u64|i64|f64|str|err <payload>
+AXI-B024 too-many-cells:769: module has more than 256 cells | fix: the encoded call index is one byte
+audit40 runtime: 1033 checks, 0 failures
+audit40 handle generation exhaustion: PASS
+audit seal: 77 checks PASS
+PASS run/fuel-report
+PASS run/mem-out
+PASS run/mem-report
+PASS run/uchk-err
+PASS run/uchk-ok
+axial check: 67 PASS, 0 FAIL
+audit40 security: 14775 checks passed
+frontend W10: PASS (99 allocation refusals, 3 inputs, host recovery)
+frontend W10: PASS (99 allocation refusals, 3 inputs, host recovery)
+frontend W02: PASS (branch relocation widths and nested paths)
+frontend W03: PASS (live bindings, nesting, zero/16 args, reuse)
+frontend W04: PASS (ok/zero/false distinction and early returns)
+frontend W05: PASS (40,000 statements under a 2 MiB stack)
+frontend W06: PASS (signed range and compact literal lowering)
+frontend W07: PASS (256-cell forward/reverse, diamond, cycles, purity)
+frontend W09: PASS (75 decimal fixpoints preserve float values)
+audit40 security: 17 checks passed
+audit40 W27 fault injection: 109 checks passed
+CC='cc' AXI_AUDIT_CFLAGS='-std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie' AXI_AUDIT_BUILD='<WORKSPACE>/axial/build-sanitize/audit40-security' sh tests/audit40/security_costs.sh
+audit40 security: 17 checks passed
+selective_disclosure_4096: hashes=2 bytes=4222
+delegation_depth_32: hashes=32 bytes=17696
+rf1_2048_records: comparisons=41069 bytes=28678

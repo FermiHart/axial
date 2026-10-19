@@ -1,0 +1,71 @@
+AXI=<WORKSPACE>/axial-baseline/build/axi sh tools/check.sh
+tools/check.sh: 29: xxd: not found
+PASS lex/basic.axi
+PASS lex/diag.axi
+PASS lex/ops.axi
+PASS parse/basic.axi
+PASS parse/full.axi
+PASS parse/policy_explicit_cap.axi
+PASS parse/policy_minimal.axi
+PASS parse/policy_under.axi
+PASS parse/recover.axi
+PASS canon/comments.axi
+PASS canon/good.axi
+PASS canon/line_cap.axi
+PASS canon/messy.axi
+PASS canon/policy_canon.axi
+PASS canon/trivia_overflow.axi
+PASS types/builtin_cap_mismatch.axi
+PASS types/builtin_fs_exists.axi
+PASS types/builtin_json_policy.axi
+PASS types/call_window_17.axi
+PASS types/calls.axi
+PASS types/cap_method_swapped.axi
+PASS types/cap_method_unknown.axi
+PASS types/caps.axi
+PASS types/coercion.axi
+PASS types/green.axi
+PASS types/infer_cap_method.axi
+PASS types/infer_cap_mismatch.axi
+PASS types/infer_cycle.axi
+PASS types/infer_policy_bound.axi
+PASS types/infer_policy_violation.axi
+PASS types/infer_transitive.axi
+PASS types/names.axi
+PASS types/policy_else_nonbool.axi
+PASS types/proof_impure_call.axi
+PASS types/proof_pure_call.axi
+PASS types/pure.axi
+PASS types/scope_leak_else.axi
+PASS types/scope_leak_post_if.axi
+PASS types/union_payload_bytes.axi
+PASS types/union_payload_cap.axi
+PASS types/unions.axi
+PASS iface/ax-err.axi
+PASS iface/ax-fuel.axi
+PASS iface/ax-pname.axi
+PASS iface/ax-pure.axi
+PASS iface/ax-ret.axi
+PASS iface/v1.axi
+PASS iface/v2-breaking.axi
+PASS iface/v2-compatible.axi
+PASS iface/v2-identical.axi
+PASS hash/vectors
+PASS bc/bad-op.axs
+PASS bc/bad-shape.axs
+FAIL bc/good.axs: round-trip mismatch
+FAIL bc/uchk.axs: round-trip mismatch
+FAIL run/bad-divzero: rc=1 want=1
+FAIL run/bad-eff: rc=1 want=1
+FAIL run/bad-falloff: rc=1 want=1
+FAIL run/bad-kinds: rc=1 want=1
+FAIL run/call: rc=1 want=0
+FAIL run/fib: rc=1 want=0
+FAIL run/fuel-out: rc=1 want=1
+FAIL run/fuel-report: rc=1 want=0
+PASS run/mem-out
+FAIL run/mem-report: rc=1 want=0
+FAIL run/uchk-err: rc=1 want=0
+FAIL run/uchk-ok: rc=1 want=0
+axial check: 54 PASS, 13 FAIL
+make: *** [Makefile:49: gate] Error 1

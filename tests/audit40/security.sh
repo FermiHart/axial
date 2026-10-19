@@ -7,7 +7,17 @@ audit_build=${AXI_AUDIT_BUILD:-$audit_root/build/audit40-security}
 audit_cc=${CC:-cc}
 audit_flags=${AXI_AUDIT_CFLAGS:--std=c99 -Wall -Wextra -Werror -O2 -g -D_POSIX_C_SOURCE=200809L}
 mkdir -p "$audit_build"
-audit_config="$audit_cc $audit_flags $audit_source"
+# Header-only edits must also invalidate these standalone test objects.
+# POSIX cksum is only a build-cache key; checker identity uses SHA-256.
+audit_config=$(
+    printf '%s\n' "$audit_cc $audit_flags $audit_source"
+    for audit_header in "$audit_source"/src/*.h "$audit_source"/src/*.inc \
+        "$audit_source"/src/*.def "$audit_source"/include/axial/*.h \
+        "$audit_source"/vendor/*.h; do
+        [ -f "$audit_header" ] || continue
+        cksum "$audit_header"
+    done
+)
 if [ ! -f "$audit_build/config" ] || [ "$(cat "$audit_build/config")" != "$audit_config" ]; then
     rm -f "$audit_build"/*.o "$audit_build/security"
     printf '%s\n' "$audit_config" > "$audit_build/config"

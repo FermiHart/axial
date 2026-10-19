@@ -1,0 +1,20 @@
+[
+  {
+    "name": "baseline-build",
+    "command": [
+      "make",
+      "dev"
+    ],
+    "elapsed_seconds": 7.333657273999961,
+    "exit_code": 0
+  },
+  {
+    "name": "baseline-gate",
+    "command": [
+      "make",
+      "gate"
+    ],
+    "elapsed_seconds": 0.37484452500007137,
+    "exit_code": 2
+  }
+]

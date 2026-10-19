@@ -1,0 +1,230 @@
+python3 tools/axi-checker-identity.py --check
+CC='cc' AXI_AUDIT_CFLAGS='-std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L' AXI_AUDIT_BUILD='<WORKSPACE>/axial/build-release/audit40-security' sh tests/audit40/security_faults.sh
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_aer1.o src/axi_aer1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_admission_v1.o src/axi_admission_v1.c
+checker identity: bc0f4b1ef1f478745769a67a5f69037791d80f2a41279677e94ae96c09e5a03c (118 source files); public v1 ABI pins PASS
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_aer1_verify.o src/axi_aer1_verify.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_aer2_v1.o src/axi_aer2_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_ag1_core_v1.o src/axi_ag1_core_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_ag1_v1.o src/axi_ag1_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_alloc.o src/axi_alloc.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_arena.o src/axi_arena.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_bc.o src/axi_bc.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_builtin.o src/axi_builtin.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_ca43_47_core.o src/axi_ca43_47_core.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_canon.o src/axi_canon.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_cap_infer.o src/axi_cap_infer.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_cap_table.o src/axi_cap_table.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_codegen.o src/axi_codegen.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_contract.o src/axi_contract.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_coverage_v1.o src/axi_coverage_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_delegation_v1.o src/axi_delegation_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_diag.o src/axi_diag.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_dossier.o src/axi_dossier.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_effect.o src/axi_effect.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_embed.o src/axi_embed.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_embed_v1.o src/axi_embed_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_extdec_v1.o src/axi_extdec_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_gateway_v1.o src/axi_gateway_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_handle_table.o src/axi_handle_table.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_hash.o src/axi_hash.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_iface.o src/axi_iface.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_jm1_v1.o src/axi_jm1_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_json.o src/axi_json.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_lex.o src/axi_lex.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_local_action_v1.o src/axi_local_action_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_local_admission_v1.o src/axi_local_admission_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_local_attempt_v1.o src/axi_local_attempt_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_local_consumer_v1.o src/axi_local_consumer_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_local_diag_v1.o src/axi_local_diag_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_local_epoch_v1.o src/axi_local_epoch_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_mem_account.o src/axi_mem_account.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_osif.o src/axi_osif.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_parse.o src/axi_parse.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_platform_posix.o src/axi_platform_posix.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_policy_lint.o src/axi_policy_lint.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_replay.o src/axi_replay.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_replay_v4.o src/axi_replay_v4.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_resource_envelope.o src/axi_resource_envelope.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_rf1_pin_v1.o src/axi_rf1_pin_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_rollout_v1.o src/axi_rollout_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_selective_disclosure_v1.o src/axi_selective_disclosure_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_sign.o src/axi_sign.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_time_lease_v1.o src/axi_time_lease_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_trace.o src/axi_trace.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_trust_canon_v1.o src/axi_trust_canon_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_trust_v1.o src/axi_trust_v1.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_types.o src/axi_types.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_u64.o src/axi_u64.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_vm.o src/axi_vm.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/vendor/ed25519.o vendor/ed25519.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/src/axi_main.o src/axi_main.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/tests/audit40/abi.o tests/audit40/abi.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/tests/audit40/driver.o tests/audit40/driver.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/tests/audit40/embed.o tests/audit40/embed.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/tests/audit40/runtime.o tests/audit40/runtime.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/tests/audit40/runtime_handles.o tests/audit40/runtime_handles.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/tests/audit40/seal.o tests/audit40/seal.c
+cc  -std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build-release/tests/audit40/security.o tests/audit40/security.c
+cc  -o build-release/axi build-release/src/axi_admission_v1.o build-release/src/axi_aer1.o build-release/src/axi_aer1_verify.o build-release/src/axi_aer2_v1.o build-release/src/axi_ag1_core_v1.o build-release/src/axi_ag1_v1.o build-release/src/axi_alloc.o build-release/src/axi_arena.o build-release/src/axi_bc.o build-release/src/axi_builtin.o build-release/src/axi_ca43_47_core.o build-release/src/axi_canon.o build-release/src/axi_cap_infer.o build-release/src/axi_cap_table.o build-release/src/axi_codegen.o build-release/src/axi_contract.o build-release/src/axi_coverage_v1.o build-release/src/axi_delegation_v1.o build-release/src/axi_diag.o build-release/src/axi_dossier.o build-release/src/axi_effect.o build-release/src/axi_embed.o build-release/src/axi_embed_v1.o build-release/src/axi_extdec_v1.o build-release/src/axi_gateway_v1.o build-release/src/axi_handle_table.o build-release/src/axi_hash.o build-release/src/axi_iface.o build-release/src/axi_jm1_v1.o build-release/src/axi_json.o build-release/src/axi_lex.o build-release/src/axi_local_action_v1.o build-release/src/axi_local_admission_v1.o build-release/src/axi_local_attempt_v1.o build-release/src/axi_local_consumer_v1.o build-release/src/axi_local_diag_v1.o build-release/src/axi_local_epoch_v1.o build-release/src/axi_mem_account.o build-release/src/axi_osif.o build-release/src/axi_parse.o build-release/src/axi_platform_posix.o build-release/src/axi_policy_lint.o build-release/src/axi_replay.o build-release/src/axi_replay_v4.o build-release/src/axi_resource_envelope.o build-release/src/axi_rf1_pin_v1.o build-release/src/axi_rollout_v1.o build-release/src/axi_selective_disclosure_v1.o build-release/src/axi_sign.o build-release/src/axi_time_lease_v1.o build-release/src/axi_trace.o build-release/src/axi_trust_canon_v1.o build-release/src/axi_trust_v1.o build-release/src/axi_types.o build-release/src/axi_u64.o build-release/src/axi_vm.o build-release/vendor/ed25519.o build-release/src/axi_main.o -lm
+cc  -o build-release/audit40/abi build-release/tests/audit40/abi.o build-release/src/axi_admission_v1.o build-release/src/axi_aer1.o build-release/src/axi_aer1_verify.o build-release/src/axi_aer2_v1.o build-release/src/axi_ag1_core_v1.o build-release/src/axi_ag1_v1.o build-release/src/axi_alloc.o build-release/src/axi_arena.o build-release/src/axi_bc.o build-release/src/axi_builtin.o build-release/src/axi_ca43_47_core.o build-release/src/axi_canon.o build-release/src/axi_cap_infer.o build-release/src/axi_cap_table.o build-release/src/axi_codegen.o build-release/src/axi_contract.o build-release/src/axi_coverage_v1.o build-release/src/axi_delegation_v1.o build-release/src/axi_diag.o build-release/src/axi_dossier.o build-release/src/axi_effect.o build-release/src/axi_embed.o build-release/src/axi_embed_v1.o build-release/src/axi_extdec_v1.o build-release/src/axi_gateway_v1.o build-release/src/axi_handle_table.o build-release/src/axi_hash.o build-release/src/axi_iface.o build-release/src/axi_jm1_v1.o build-release/src/axi_json.o build-release/src/axi_lex.o build-release/src/axi_local_action_v1.o build-release/src/axi_local_admission_v1.o build-release/src/axi_local_attempt_v1.o build-release/src/axi_local_consumer_v1.o build-release/src/axi_local_diag_v1.o build-release/src/axi_local_epoch_v1.o build-release/src/axi_mem_account.o build-release/src/axi_osif.o build-release/src/axi_parse.o build-release/src/axi_platform_posix.o build-release/src/axi_policy_lint.o build-release/src/axi_replay.o build-release/src/axi_replay_v4.o build-release/src/axi_resource_envelope.o build-release/src/axi_rf1_pin_v1.o build-release/src/axi_rollout_v1.o build-release/src/axi_selective_disclosure_v1.o build-release/src/axi_sign.o build-release/src/axi_time_lease_v1.o build-release/src/axi_trace.o build-release/src/axi_trust_canon_v1.o build-release/src/axi_trust_v1.o build-release/src/axi_types.o build-release/src/axi_u64.o build-release/src/axi_vm.o build-release/vendor/ed25519.o -lm
+cc  -o build-release/audit40/driver build-release/tests/audit40/driver.o build-release/src/axi_admission_v1.o build-release/src/axi_aer1.o build-release/src/axi_aer1_verify.o build-release/src/axi_aer2_v1.o build-release/src/axi_ag1_core_v1.o build-release/src/axi_ag1_v1.o build-release/src/axi_alloc.o build-release/src/axi_arena.o build-release/src/axi_bc.o build-release/src/axi_builtin.o build-release/src/axi_ca43_47_core.o build-release/src/axi_canon.o build-release/src/axi_cap_infer.o build-release/src/axi_cap_table.o build-release/src/axi_codegen.o build-release/src/axi_contract.o build-release/src/axi_coverage_v1.o build-release/src/axi_delegation_v1.o build-release/src/axi_diag.o build-release/src/axi_dossier.o build-release/src/axi_effect.o build-release/src/axi_embed.o build-release/src/axi_embed_v1.o build-release/src/axi_extdec_v1.o build-release/src/axi_gateway_v1.o build-release/src/axi_handle_table.o build-release/src/axi_hash.o build-release/src/axi_iface.o build-release/src/axi_jm1_v1.o build-release/src/axi_json.o build-release/src/axi_lex.o build-release/src/axi_local_action_v1.o build-release/src/axi_local_admission_v1.o build-release/src/axi_local_attempt_v1.o build-release/src/axi_local_consumer_v1.o build-release/src/axi_local_diag_v1.o build-release/src/axi_local_epoch_v1.o build-release/src/axi_mem_account.o build-release/src/axi_osif.o build-release/src/axi_parse.o build-release/src/axi_platform_posix.o build-release/src/axi_policy_lint.o build-release/src/axi_replay.o build-release/src/axi_replay_v4.o build-release/src/axi_resource_envelope.o build-release/src/axi_rf1_pin_v1.o build-release/src/axi_rollout_v1.o build-release/src/axi_selective_disclosure_v1.o build-release/src/axi_sign.o build-release/src/axi_time_lease_v1.o build-release/src/axi_trace.o build-release/src/axi_trust_canon_v1.o build-release/src/axi_trust_v1.o build-release/src/axi_types.o build-release/src/axi_u64.o build-release/src/axi_vm.o build-release/vendor/ed25519.o -lm
+cc  -o build-release/audit40/embed build-release/tests/audit40/embed.o build-release/src/axi_admission_v1.o build-release/src/axi_aer1.o build-release/src/axi_aer1_verify.o build-release/src/axi_aer2_v1.o build-release/src/axi_ag1_core_v1.o build-release/src/axi_ag1_v1.o build-release/src/axi_alloc.o build-release/src/axi_arena.o build-release/src/axi_bc.o build-release/src/axi_builtin.o build-release/src/axi_ca43_47_core.o build-release/src/axi_canon.o build-release/src/axi_cap_infer.o build-release/src/axi_cap_table.o build-release/src/axi_codegen.o build-release/src/axi_contract.o build-release/src/axi_coverage_v1.o build-release/src/axi_delegation_v1.o build-release/src/axi_diag.o build-release/src/axi_dossier.o build-release/src/axi_effect.o build-release/src/axi_embed.o build-release/src/axi_embed_v1.o build-release/src/axi_extdec_v1.o build-release/src/axi_gateway_v1.o build-release/src/axi_handle_table.o build-release/src/axi_hash.o build-release/src/axi_iface.o build-release/src/axi_jm1_v1.o build-release/src/axi_json.o build-release/src/axi_lex.o build-release/src/axi_local_action_v1.o build-release/src/axi_local_admission_v1.o build-release/src/axi_local_attempt_v1.o build-release/src/axi_local_consumer_v1.o build-release/src/axi_local_diag_v1.o build-release/src/axi_local_epoch_v1.o build-release/src/axi_mem_account.o build-release/src/axi_osif.o build-release/src/axi_parse.o build-release/src/axi_platform_posix.o build-release/src/axi_policy_lint.o build-release/src/axi_replay.o build-release/src/axi_replay_v4.o build-release/src/axi_resource_envelope.o build-release/src/axi_rf1_pin_v1.o build-release/src/axi_rollout_v1.o build-release/src/axi_selective_disclosure_v1.o build-release/src/axi_sign.o build-release/src/axi_time_lease_v1.o build-release/src/axi_trace.o build-release/src/axi_trust_canon_v1.o build-release/src/axi_trust_v1.o build-release/src/axi_types.o build-release/src/axi_u64.o build-release/src/axi_vm.o build-release/vendor/ed25519.o -lm
+cc  -o build-release/audit40/runtime build-release/tests/audit40/runtime.o build-release/src/axi_admission_v1.o build-release/src/axi_aer1.o build-release/src/axi_aer1_verify.o build-release/src/axi_aer2_v1.o build-release/src/axi_ag1_core_v1.o build-release/src/axi_ag1_v1.o build-release/src/axi_alloc.o build-release/src/axi_arena.o build-release/src/axi_bc.o build-release/src/axi_builtin.o build-release/src/axi_ca43_47_core.o build-release/src/axi_canon.o build-release/src/axi_cap_infer.o build-release/src/axi_cap_table.o build-release/src/axi_codegen.o build-release/src/axi_contract.o build-release/src/axi_coverage_v1.o build-release/src/axi_delegation_v1.o build-release/src/axi_diag.o build-release/src/axi_dossier.o build-release/src/axi_effect.o build-release/src/axi_embed.o build-release/src/axi_embed_v1.o build-release/src/axi_extdec_v1.o build-release/src/axi_gateway_v1.o build-release/src/axi_handle_table.o build-release/src/axi_hash.o build-release/src/axi_iface.o build-release/src/axi_jm1_v1.o build-release/src/axi_json.o build-release/src/axi_lex.o build-release/src/axi_local_action_v1.o build-release/src/axi_local_admission_v1.o build-release/src/axi_local_attempt_v1.o build-release/src/axi_local_consumer_v1.o build-release/src/axi_local_diag_v1.o build-release/src/axi_local_epoch_v1.o build-release/src/axi_mem_account.o build-release/src/axi_osif.o build-release/src/axi_parse.o build-release/src/axi_platform_posix.o build-release/src/axi_policy_lint.o build-release/src/axi_replay.o build-release/src/axi_replay_v4.o build-release/src/axi_resource_envelope.o build-release/src/axi_rf1_pin_v1.o build-release/src/axi_rollout_v1.o build-release/src/axi_selective_disclosure_v1.o build-release/src/axi_sign.o build-release/src/axi_time_lease_v1.o build-release/src/axi_trace.o build-release/src/axi_trust_canon_v1.o build-release/src/axi_trust_v1.o build-release/src/axi_types.o build-release/src/axi_u64.o build-release/src/axi_vm.o build-release/vendor/ed25519.o -lm
+cc  -o build-release/audit40/runtime_handles build-release/tests/audit40/runtime_handles.o -lm
+cc  -o build-release/audit40/seal build-release/tests/audit40/seal.o build-release/src/axi_admission_v1.o build-release/src/axi_aer1.o build-release/src/axi_aer1_verify.o build-release/src/axi_aer2_v1.o build-release/src/axi_ag1_core_v1.o build-release/src/axi_ag1_v1.o build-release/src/axi_alloc.o build-release/src/axi_arena.o build-release/src/axi_bc.o build-release/src/axi_builtin.o build-release/src/axi_ca43_47_core.o build-release/src/axi_canon.o build-release/src/axi_cap_infer.o build-release/src/axi_cap_table.o build-release/src/axi_codegen.o build-release/src/axi_contract.o build-release/src/axi_coverage_v1.o build-release/src/axi_delegation_v1.o build-release/src/axi_diag.o build-release/src/axi_dossier.o build-release/src/axi_effect.o build-release/src/axi_embed.o build-release/src/axi_embed_v1.o build-release/src/axi_extdec_v1.o build-release/src/axi_gateway_v1.o build-release/src/axi_handle_table.o build-release/src/axi_hash.o build-release/src/axi_iface.o build-release/src/axi_jm1_v1.o build-release/src/axi_json.o build-release/src/axi_lex.o build-release/src/axi_local_action_v1.o build-release/src/axi_local_admission_v1.o build-release/src/axi_local_attempt_v1.o build-release/src/axi_local_consumer_v1.o build-release/src/axi_local_diag_v1.o build-release/src/axi_local_epoch_v1.o build-release/src/axi_mem_account.o build-release/src/axi_osif.o build-release/src/axi_parse.o build-release/src/axi_platform_posix.o build-release/src/axi_policy_lint.o build-release/src/axi_replay.o build-release/src/axi_replay_v4.o build-release/src/axi_resource_envelope.o build-release/src/axi_rf1_pin_v1.o build-release/src/axi_rollout_v1.o build-release/src/axi_selective_disclosure_v1.o build-release/src/axi_sign.o build-release/src/axi_time_lease_v1.o build-release/src/axi_trace.o build-release/src/axi_trust_canon_v1.o build-release/src/axi_trust_v1.o build-release/src/axi_types.o build-release/src/axi_u64.o build-release/src/axi_vm.o build-release/vendor/ed25519.o -lm
+build-release/audit40/runtime --workers
+audit40 workers: 6 checks, 0 failures
+AXI=<WORKSPACE>/axial/build-release/axi sh tools/check.sh
+PASS lex/basic.axi
+PASS lex/diag.axi
+AXI=<WORKSPACE>/axial/build-release/axi sh tests/audit40/cli.sh
+PASS lex/ops.axi
+PASS parse/basic.axi
+PASS parse/full.axi
+PASS cli/signed-compile
+PASS parse/policy_explicit_cap.axi
+PASS cli/compiled-result
+PASS cli/wrong-producer
+PASS cli/missing-signing-key
+PASS cli/no-unsigned-output
+PASS cli/dis/missing-trust
+PASS parse/policy_minimal.axi
+PASS parse/policy_under.axi
+PASS cli/inspect/missing-trust
+PASS cli/verify/missing-trust
+PASS cli/check-seal/missing-trust
+PASS parse/recover.axi
+PASS cli/run/missing-trust
+PASS canon/comments.axi
+PASS cli/lex/unknown-option
+PASS cli/parse/unknown-option
+PASS cli/check/unknown-option
+PASS cli/form/unknown-option
+PASS canon/good.axi
+PASS cli/types/unknown-option
+PASS cli/iface/unknown-option
+PASS cli/canon/unknown-option
+PASS cli/version/extra-argument
+PASS cli/selftest/extra-argument
+PASS cli/caps/extra-argument
+PASS canon/line_cap.axi
+PASS cli/iface-diff/extra-argument
+PASS cli/output-failure
+PASS canon/messy.axi
+HOSTCC='cc' CFLAGS='-std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L' AXI_TEST_BUILD='build-release/audit40-frontend' sh tests/audit40/frontend.sh <WORKSPACE>/axial/build-release/axi
+PASS cli/tampered-module
+PASS cli/green-seal
+PASS canon/policy_canon.axi
+PASS cli/check-seal
+PASS canon/trivia_overflow.axi
+PASS types/builtin_cap_mismatch.axi
+PASS cli/checked-result
+PASS types/builtin_fs_exists.axi
+PASS cli/unchecked-certificate
+PASS types/builtin_json_policy.axi
+PASS cli/red-false-law
+PASS cli/red-false-law/no-artifact
+PASS cli/red-no-laws
+PASS cli/red-no-laws/no-artifact
+PASS types/call_window_17.axi
+PASS cli/red-trap-law
+PASS cli/red-trap-law/no-artifact
+PASS types/calls.axi
+PASS cli/assemble-fuel
+PASS types/cap_method_swapped.axi
+PASS types/cap_method_unknown.axi
+PASS cli/exact-fuel
+PASS types/caps.axi
+PASS cli/exhausted-fuel
+PASS cli/overflowing-fuel
+PASS types/coercion.axi
+PASS types/green.axi
+PASS types/infer_cap_method.axi
+PASS cli/assemble-fs-read
+PASS types/infer_cap_mismatch.axi
+PASS cli/confined-read
+PASS cli/read/no-grant
+PASS types/infer_cycle.axi
+PASS cli/assemble-fs-write
+PASS types/infer_policy_bound.axi
+PASS cli/write/no-grant
+PASS cli/no-ungranted-mutation
+PASS types/infer_policy_violation.axi
+PASS types/infer_transitive.axi
+PASS cli/confined-write
+PASS cli/written-content
+PASS types/names.axi
+PASS types/policy_else_nonbool.axi
+PASS cli/assemble-record
+PASS types/proof_impure_call.axi
+PASS types/proof_pure_call.axi
+PASS cli/signed-record
+PASS types/pure.axi
+PASS types/scope_leak_else.axi
+PASS cli/signed-replay
+PASS types/scope_leak_post_if.axi
+PASS cli/replay/wrong-recorder
+PASS types/union_payload_bytes.axi
+PASS types/union_payload_cap.axi
+PASS cli/replay/tampered
+PASS types/unions.axi
+PASS cli/recorder/preflight-distinct-key
+audit CLI: 51 PASS, 0 FAIL
+PASS iface/ax-err.axi
+cc  -o build-release/audit40/security build-release/tests/audit40/security.o build-release/src/axi_admission_v1.o build-release/src/axi_aer1.o build-release/src/axi_aer1_verify.o build-release/src/axi_aer2_v1.o build-release/src/axi_ag1_core_v1.o build-release/src/axi_ag1_v1.o build-release/src/axi_alloc.o build-release/src/axi_arena.o build-release/src/axi_bc.o build-release/src/axi_builtin.o build-release/src/axi_ca43_47_core.o build-release/src/axi_canon.o build-release/src/axi_cap_infer.o build-release/src/axi_cap_table.o build-release/src/axi_codegen.o build-release/src/axi_contract.o build-release/src/axi_coverage_v1.o build-release/src/axi_delegation_v1.o build-release/src/axi_diag.o build-release/src/axi_dossier.o build-release/src/axi_effect.o build-release/src/axi_embed.o build-release/src/axi_embed_v1.o build-release/src/axi_extdec_v1.o build-release/src/axi_gateway_v1.o build-release/src/axi_handle_table.o build-release/src/axi_hash.o build-release/src/axi_iface.o build-release/src/axi_jm1_v1.o build-release/src/axi_json.o build-release/src/axi_lex.o build-release/src/axi_local_action_v1.o build-release/src/axi_local_admission_v1.o build-release/src/axi_local_attempt_v1.o build-release/src/axi_local_consumer_v1.o build-release/src/axi_local_diag_v1.o build-release/src/axi_local_epoch_v1.o build-release/src/axi_mem_account.o build-release/src/axi_osif.o build-release/src/axi_parse.o build-release/src/axi_platform_posix.o build-release/src/axi_policy_lint.o build-release/src/axi_replay.o build-release/src/axi_replay_v4.o build-release/src/axi_resource_envelope.o build-release/src/axi_rf1_pin_v1.o build-release/src/axi_rollout_v1.o build-release/src/axi_selective_disclosure_v1.o build-release/src/axi_sign.o build-release/src/axi_time_lease_v1.o build-release/src/axi_trace.o build-release/src/axi_trust_canon_v1.o build-release/src/axi_trust_v1.o build-release/src/axi_types.o build-release/src/axi_u64.o build-release/src/axi_vm.o build-release/vendor/ed25519.o -lm
+PASS iface/ax-fuel.axi
+PASS iface/ax-pname.axi
+PASS iface/ax-pure.axi
+PASS iface/ax-ret.axi
+PASS iface/v1.axi
+PASS iface/v2-breaking.axi
+audit ABI: 72 compile-time layout checks + endian/version PASS
+PASS iface/v2-compatible.axi
+audit driver: 23 checks PASS
+PASS iface/v2-identical.axi
+PASS hash/vectors
+PASS bc/bad-op.axs
+audit embed: 776 checks PASS
+AXI-B007 bad-quoted:2: const out of order or malformed | fix: declare k0,k1,... in order: kN u64|i64|f64|str|err <payload>
+AXI-B024 too-many-cells:769: module has more than 256 cells | fix: the encoded call index is one byte
+audit40 runtime: 1033 checks, 0 failures
+audit40 handle generation exhaustion: PASS
+PASS bc/bad-shape.axs
+audit seal: 77 checks PASS
+PASS bc/good.axs
+PASS bc/uchk.axs
+PASS run/bad-divzero
+audit40 security: 14775 checks passed
+PASS run/bad-eff
+PASS run/bad-falloff
+invalid_bytes=65536 cpu_seconds=0.000531
+frontend W01: PASS
+PASS run/bad-kinds
+PASS run/call
+PASS run/fib
+PASS run/fuel-out
+PASS run/fuel-report
+PASS run/mem-out
+PASS run/mem-report
+PASS run/uchk-err
+PASS run/uchk-ok
+axial check: 67 PASS, 0 FAIL
+json_escape_bytes=65536 sink_calls=1 cpu_seconds=0.000042
+frontend W08: PASS
+frontend W10: PASS (99 allocation refusals, 3 inputs, host recovery)
+frontend W10: PASS (99 allocation refusals, 3 inputs, host recovery)
+frontend W02: PASS (branch relocation widths and nested paths)
+frontend W03: PASS (live bindings, nesting, zero/16 args, reuse)
+frontend W04: PASS (ok/zero/false distinction and early returns)
+frontend W05: PASS (40,000 statements under a 2 MiB stack)
+frontend W06: PASS (signed range and compact literal lowering)
+frontend W07: PASS (256-cell forward/reverse, diamond, cycles, purity)
+frontend W09: PASS (75 decimal fixpoints preserve float values)
+audit40 security: 17 checks passed
+audit40 W27 fault injection: 109 checks passed
+CC='cc' AXI_AUDIT_CFLAGS='-std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L' AXI_AUDIT_BUILD='<WORKSPACE>/axial/build-release/audit40-security' sh tests/audit40/security_costs.sh
+audit40 security: 17 checks passed
+selective_disclosure_4096: hashes=2 bytes=4222
+delegation_depth_32: hashes=32 bytes=17696
+rf1_2048_records: comparisons=41069 bytes=28678

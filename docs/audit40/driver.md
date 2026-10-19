@@ -114,7 +114,7 @@ creation must be assessed separately from repeated large-module lookup.
 Checked-seal verification previously reverified the whole module separately
 for every law, even after the subject-root encoder had already verified that
 same immutable model. Law execution now uses the existing private preverified
-pure VM door, after exact proof-signature and transitive-capability checks.
+pure VM door, after exact proof-identity and transitive-capability checks.
 The accounted variant uses the accounted VM path instead of allocating its
 execution state outside the caller's account. Seal construction validates
 law shape before execution. Signing seed cleanup uses the existing volatile
@@ -146,8 +146,43 @@ refused; even `--write` cannot silently accept a changed public ABI.
 
 Compatibility: the checker identity intentionally changes. Existing CHECKED
 certificates must be re-executed and explicitly resealed by the new checker;
-they are not relabeled or automatically upgraded. The AXB encoding, ordinary
-signature framing and public v1 ABI remain unchanged. A source commitment
+they are not relabeled or automatically upgraded. Any artifact carrying an
+old CHECKED seal is refused even under SIGNATURE_VALID admission, because
+the decoder verifies a present seal before applying the requested profile.
+Unsealed ordinary signed artifacts are identity-independent. The AXB
+encoding, signature framing and public v1 ABI remain unchanged. A source commitment
 does not attest the compiled binary, prove implementation correctness or
 establish native/guest enforcement. Building still needs C99/POSIX tools;
 the identity and extended audit gates additionally need Python 3.
+
+## W40 — Integrated gates, matched measurements and delivery
+
+The full gate now executes every workstream, including the specially linked
+parser/handle tests, injected store failures, deterministic work counters and
+positive Unix IPC. Standalone security test caches also invalidate on header
+changes. Benchmark binaries are opt-in and never impose noisy speed gates.
+`make release` builds a separate portable `-O2` executable; normal, optimized
+and ASan/UBSan full gates all pass. The public default stays `-O1`, matching
+the baseline used for the algorithm comparison.
+
+The GitHub workflow runs these three profiles on pull requests and applicable
+pushes, with read-only repository permission, no persisted checkout credential
+and a commit-pinned checkout action. Its hosted result is separate from the
+recorded local runs. No main-branch merge is part of this campaign.
+
+`tools/audit40-bench.py` builds the identical C probes against the pristine and
+candidate trees with the same compiler/flags. It pins the measurement process
+to one available CPU, uses one warmup and seven alternating before/after pairs,
+checks return codes and semantic results, and saves every sample. Its CLI
+cases require byte-identical observed outputs. Hardware frequency and other
+host tenants are not controlled; small timing deltas with overlapping ranges
+are inconclusive. C microbenchmarks and end-to-end CLI timings are labeled
+separately. See [raw measurements](benchmark.json), the [Portuguese report](REPORT.md)
+and [verification metadata](evidence/verification.json).
+
+Cross-review examined the preverified proof boundary, immutable embed index,
+CLI ownership, compiler OOM handling, capability propagation, numeric
+canonicalization and hash-work reductions. No new blocker was found. The
+[migration probe](evidence/migration.log) confirms that old checked artifacts
+are refused, including ordinary execution of an artifact carrying such a seal,
+and that explicit resealing succeeds.
