@@ -21,6 +21,15 @@
 
 typedef struct axi_local_authority_v1 axi_local_authority_v1;
 
+typedef struct {
+    uint64_t resource_device, resource_inode;
+    axi_local_previous_v1 previous;
+    uint8_t has_previous;
+    uint32_t uid, executor_uid;
+    uint8_t boot[16];
+    uint64_t now_ns;
+} axi_local_authority_v1_facts;
+
 #define AXI_LOCAL_AUTHORITY_V1_OK AXI_LOCAL_ATTEMPT_V1_OK
 #define AXI_LOCAL_AUTHORITY_V1_REFUSED AXI_LOCAL_ATTEMPT_V1_REFUSED
 #define AXI_LOCAL_AUTHORITY_V1_CORRUPT AXI_LOCAL_ATTEMPT_V1_CORRUPT
@@ -35,7 +44,13 @@ int axi_local_authority_v1_enable(const char *store_dir,
 
 /* Owns an O_CLOEXEC dirfd and immutable issuer pin. No pathname is retained.
  * Successful open publishes *out; refusal leaves it NULL. The context must
- * remain alive for a call and must not be closed concurrently with a call. */
+ * remain alive for a call and must not be closed concurrently with a call.
+ * This host profile requires Linux CLOCK_BOOTTIME and the kernel boot UUID
+ * from /proc/sys/kernel/random/boot_id. No alternate clock/domain fallback.
+ * uid=getuid(), executor_uid=geteuid(), both nonzero and distinct as required
+ * by the unchanged action codec. They identify the current process, not a
+ * remote requester. Credential changes/fork require reopening the context.
+ * Host /proc mount and namespace configuration are part of the host TCB. */
 int axi_local_authority_v1_open(const char *store_dir,
                                  axi_local_authority_v1 **out);
 void axi_local_authority_v1_close(axi_local_authority_v1 *owner);
@@ -54,5 +69,12 @@ int axi_local_authority_v1_resource(const axi_local_authority_v1 *owner,
 int axi_local_authority_v1_previous(const axi_local_authority_v1 *owner,
                                      axi_local_previous_v1 *previous,
                                      uint8_t *present, uint64_t deadline_mono_ns);
+
+/* Observe kernel process identity, boot UUID, CLOCK_BOOTTIME and resource /
+ * prior bytes under owner.lock. Complete output only on success. This is a
+ * fact snapshot for building an action; commit will observe again. */
+int axi_local_authority_v1_observe(const axi_local_authority_v1 *owner,
+                                    axi_local_authority_v1_facts *out,
+                                    uint64_t deadline_mono_ns);
 
 #endif

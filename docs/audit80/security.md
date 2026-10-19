@@ -26,6 +26,7 @@ credential changes in disposable subprocesses where authorized.
 | --- | --- | --- | --- |
 | W41 | Opt-in issuer configuration bound to held directory; lifecycle and resource observation; legacy mutation guard under owner lock. | 55 checks: activation/idempotence/wrong key, missing/foreign config, retained fd after rename, legacy mutation refusal. | Owner setup is trusted; activation may remain after an I/O refusal to prevent downgrade. |
 | W42 | Under-lock prior-config observation: exact bounded read, SHA-256, checked nanosecond mtime, stable metadata and descriptor/name binding. | 56 checks: absent/empty/4096-byte state, digest/metadata, 4097-byte refusal, hardlink/symlink/FIFO/directory refusal and unchanged output on refusal. | Concurrent writers must participate in the owner lock; same-UID noncooperative writers remain in the TCB. |
+| W43 | Observe actual real/effective UID, kernel boot UUID and Linux CLOCK_BOOTTIME; contexts refuse transfer across fork/credential changes. | 22 parent checks plus child assertions: actual identity, stable boot, increasing time, inherited-context refusal, same-UID refusal. Host-disabled source compiles under C99/-Werror. | Requires two nonzero distinct UIDs and Linux boot-time provider. No authenticated remote/guest principal or alternative clock fallback. |
 
 ## Executed evidence
 
@@ -39,7 +40,12 @@ dropping supplementary groups and root credentials.
 ```
 W41: audit80 security: 55 checks PASS (ruid=1000 euid=1001)
 W42: audit80 security: 56 checks PASS (ruid=1000 euid=1001)
+W43: audit80 security: 22 checks PASS (ruid=1000 euid=1001)
 ```
+
+`AXI_LOCAL_AUTHORITY_NO_HOST` can disable this optional host profile at build
+time; it does not disable the portable core. Open/observation then refuse with
+UNSUPPORTED. No clock callback or supplied boot/UID assertion can re-enable it.
 
 When only the authorized execution surface permits credential changes, build
 with `AXI_AUDIT_BUILD_ONLY=1 sh tests/audit80/security.sh`, then execute that

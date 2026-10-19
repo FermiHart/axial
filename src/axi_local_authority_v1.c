@@ -102,10 +102,14 @@ done:
 int axi_local_authority_v1_open(const char *store_dir, axi_local_authority_v1 **out)
 {
     uint8_t raw[AXI_LOCAL_AUTHORITY_CONTROL_SIZE];
+    axi_local_authority_v1_facts facts;
     axi_local_authority_v1 *owner = NULL;
     int dirfd = -1, lockfd = -1, rc = AXI_LOCAL_AUTHORITY_V1_REFUSED;
     if (!out) return rc;
     *out = NULL;
+    rc = axi_local_authority_host_sample(&facts);
+    if (rc != 0) return rc;
+    rc = AXI_LOCAL_AUTHORITY_V1_REFUSED;
     dirfd = axi_local_store_open(store_dir);
     if (dirfd < 0) goto done;
     lockfd = axi_local_store_open_file_at(dirfd, "owner.lock", O_RDONLY);
@@ -116,6 +120,8 @@ int axi_local_authority_v1_open(const char *store_dir, axi_local_authority_v1 **
     owner->dirfd = dirfd;
     owner->device = get64(raw + 40); owner->inode = get64(raw + 48);
     memcpy(owner->issuer_pk, raw + 8, 32);
+    owner->uid = facts.uid; owner->executor_uid = facts.executor_uid;
+    owner->pid = getpid(); memcpy(owner->boot, facts.boot, 16);
     *out = owner;
     dirfd = -1;
     rc = AXI_LOCAL_AUTHORITY_V1_OK;
@@ -148,7 +154,9 @@ int axi_local_authority_v1_resource(const axi_local_authority_v1 *owner,
 int axi_local_authority_validate_locked(const axi_local_authority_v1 *owner)
 {
     uint8_t raw[AXI_LOCAL_AUTHORITY_CONTROL_SIZE];
-    if (!owner || control_read(owner->dirfd, raw) != 0
+    if (!owner || owner->pid != getpid() || owner->uid != (uintmax_t)getuid()
+            || owner->executor_uid != (uintmax_t)geteuid()
+            || control_read(owner->dirfd, raw) != 0
             || control_valid(owner->dirfd, raw) != 0
             || memcmp(owner->issuer_pk, raw + 8, 32) != 0
             || get64(raw + 40) != owner->device
@@ -255,6 +263,94 @@ int axi_local_authority_v1_previous(const axi_local_authority_v1 *owner,
     rc = axi_local_authority_lock(owner, LOCK_SH, deadline_mono_ns, &lockfd);
     if (rc != 0) return rc;
     rc = axi_local_authority_previous_locked(owner, previous, present);
+    (void)flock(lockfd, LOCK_UN); (void)close(lockfd);
+    return rc;
+}
+
+#if defined(__linux__) && defined(CLOCK_BOOTTIME) && !defined(AXI_LOCAL_AUTHORITY_NO_HOST)
+static int boot_uuid(uint8_t out[16])
+{
+    char text[38];
+    size_t n = 0, off = 0, i;
+    int fd;
+    uint8_t staged[16];
+    fd = open("/proc/sys/kernel/random/boot_id", O_RDONLY | O_NOFOLLOW | O_CLOEXEC | O_NONBLOCK);
+    if (fd < 0) return -1;
+    while (n < sizeof text) {
+        ssize_t got = read(fd, text + n, sizeof text - n);
+        if (got < 0 && errno == EINTR) continue;
+        if (got < 0) { (void)close(fd); return -1; }
+        if (!got) break;
+        n += (size_t)got;
+    }
+    if (close(fd) != 0 || n != 37 || text[36] != '\n') return -1;
+    for (i = 0; i < 16; i++) {
+        unsigned j, v = 0;
+        if (i == 4 || i == 6 || i == 8 || i == 10) {
+            if (text[off++] != '-') return -1;
+        }
+        for (j = 0; j < 2; j++) {
+            unsigned char ch = (unsigned char)text[off++];
+            if (ch >= '0' && ch <= '9') v = v * 16 + ch - '0';
+            else if (ch >= 'a' && ch <= 'f') v = v * 16 + ch - 'a' + 10;
+            else return -1;
+        }
+        staged[i] = (uint8_t)v;
+    }
+    if (!nonzero(staged, sizeof staged)) return -1;
+    memcpy(out, staged, sizeof staged);
+    return 0;
+}
+#endif
+
+int axi_local_authority_host_sample(axi_local_authority_v1_facts *facts)
+{
+#if defined(__linux__) && defined(CLOCK_BOOTTIME) && !defined(AXI_LOCAL_AUTHORITY_NO_HOST)
+    axi_local_authority_v1_facts staged;
+    struct timespec ts;
+    uintmax_t uid = getuid(), executor = geteuid();
+    if (!facts || uid == 0 || uid >= UINT32_MAX || executor == 0
+            || executor >= UINT32_MAX || uid == executor) return AXI_LOCAL_AUTHORITY_V1_UNSUPPORTED;
+    memset(&staged, 0, sizeof staged);
+    if (boot_uuid(staged.boot) != 0 || clock_gettime(CLOCK_BOOTTIME, &ts) != 0
+            || ts.tv_sec < 0 || ts.tv_nsec < 0 || ts.tv_nsec >= 1000000000L
+            || (uintmax_t)ts.tv_sec > (UINT64_MAX - (uint64_t)ts.tv_nsec) / UINT64_C(1000000000))
+        return AXI_LOCAL_AUTHORITY_V1_UNSUPPORTED;
+    staged.now_ns = (uint64_t)ts.tv_sec * UINT64_C(1000000000) + (uint64_t)ts.tv_nsec;
+    if (!staged.now_ns) return AXI_LOCAL_AUTHORITY_V1_UNSUPPORTED;
+    staged.uid = (uint32_t)uid; staged.executor_uid = (uint32_t)executor;
+    *facts = staged;
+    return AXI_LOCAL_AUTHORITY_V1_OK;
+#else
+    (void)facts;
+    return AXI_LOCAL_AUTHORITY_V1_UNSUPPORTED;
+#endif
+}
+
+int axi_local_authority_observe_locked(const axi_local_authority_v1 *owner,
+                                         axi_local_authority_v1_facts *facts)
+{
+    axi_local_authority_v1_facts staged;
+    int rc = axi_local_authority_host_sample(&staged);
+    if (rc != 0) return rc;
+    if (owner->pid != getpid() || staged.uid != owner->uid
+            || staged.executor_uid != owner->executor_uid || memcmp(staged.boot, owner->boot, 16)
+            || axi_local_authority_v1_resource(owner, &staged.resource_device, &staged.resource_inode) != 0
+            || axi_local_authority_previous_locked(owner, &staged.previous, &staged.has_previous) != 0)
+        return AXI_LOCAL_AUTHORITY_V1_REFUSED;
+    *facts = staged;
+    return AXI_LOCAL_AUTHORITY_V1_OK;
+}
+
+int axi_local_authority_v1_observe(const axi_local_authority_v1 *owner,
+                                    axi_local_authority_v1_facts *out,
+                                    uint64_t deadline_mono_ns)
+{
+    int lockfd = -1, rc;
+    if (!owner || !out) return AXI_LOCAL_AUTHORITY_V1_REFUSED;
+    rc = axi_local_authority_lock(owner, LOCK_SH, deadline_mono_ns, &lockfd);
+    if (rc != 0) return rc;
+    rc = axi_local_authority_observe_locked(owner, out);
     (void)flock(lockfd, LOCK_UN); (void)close(lockfd);
     return rc;
 }

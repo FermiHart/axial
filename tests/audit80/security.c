@@ -14,6 +14,7 @@
 #include <string.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+#include <sys/wait.h>
 #include <unistd.h>
 
 static unsigned checks;
@@ -217,6 +218,41 @@ static void w42(void)
     axi_local_authority_v1_close(owner); rm_fixture(f.dir);
 }
 
+static void w43(void)
+{
+    fixture f;
+    axi_local_authority_v1 *owner = NULL;
+    axi_local_authority_v1_facts facts, again, saved;
+    pid_t child;
+    int status;
+    new_fixture(&f);
+    CHECK(axi_local_authority_v1_enable(f.dir, f.pk) == 0);
+    CHECK(axi_local_authority_v1_open(f.dir, &owner) == 0);
+    CHECK(axi_local_authority_v1_observe(owner, &facts, 0) == 0);
+    CHECK(facts.uid == getuid() && facts.executor_uid == geteuid() && facts.uid != facts.executor_uid);
+    CHECK(facts.resource_device == f.action.resource_device && facts.resource_inode == f.action.resource_inode);
+    CHECK(facts.now_ns > 0 && !facts.has_previous);
+    CHECK(axi_local_authority_v1_observe(owner, &again, 0) == 0);
+    CHECK(again.now_ns >= facts.now_ns && !memcmp(again.boot, facts.boot, 16));
+    child = fork(); CHECK(child >= 0);
+    if (child == 0) {
+        /* A context cannot silently cross a process/credential boundary. */
+        saved = facts;
+        CHECK(axi_local_authority_v1_observe(owner, &facts, 0) != 0);
+        CHECK(!memcmp(&facts, &saved, sizeof facts));
+        CHECK(setreuid(geteuid(), geteuid()) == 0);
+        {
+            axi_local_authority_v1 *other = NULL;
+            CHECK(axi_local_authority_v1_open(f.dir, &other) == AXI_LOCAL_AUTHORITY_V1_UNSUPPORTED);
+            CHECK(other == NULL);
+        }
+        _exit(0);
+    }
+    CHECK(waitpid(child, &status, 0) == child && WIFEXITED(status) && WEXITSTATUS(status) == 0);
+    CHECK(axi_local_authority_v1_observe(owner, &again, 0) == 0);
+    axi_local_authority_v1_close(owner); rm_fixture(f.dir);
+}
+
 int main(int argc, char **argv)
 {
     if (geteuid() == 0) {
@@ -231,7 +267,8 @@ int main(int argc, char **argv)
     if (argc > 2) return 2;
     if (argc == 1 || !strcmp(argv[1], "W41")) w41();
     if (argc == 1 || !strcmp(argv[1], "W42")) w42();
-    if (argc == 2 && strcmp(argv[1], "W41") && strcmp(argv[1], "W42")) return 2;
+    if (argc == 1 || !strcmp(argv[1], "W43")) w43();
+    if (argc == 2 && strcmp(argv[1], "W41") && strcmp(argv[1], "W42") && strcmp(argv[1], "W43")) return 2;
     printf("audit80 security: %u checks PASS (ruid=%lu euid=%lu)\n", checks,
            (unsigned long)getuid(), (unsigned long)geteuid());
     return 0;
