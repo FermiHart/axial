@@ -134,3 +134,53 @@ cell only_errors : fn() -> ok | err.One
         refused("leaked_result", prefix + "cell f : fn() -> u64 | err.X fuel 100 { ret r() }", "AXI-T013")
         refused("try_scalar", "cell f : fn() -> u64 fuel 100 { ret 1? }", "AXI-T014")
         print("frontend W53: PASS (named-error propagation, nested calls, short circuit and refusals)")
+
+    if GROUP in ("all", "options"):
+        artifact = compile_source("options", '''cell option : fn(n: u64) -> u64 | ok | err.Bad
+  fuel 1000
+  pure
+{ if n == 0 { ret ok } if n == 1 { ret err.Bad } ret n }
+cell middle : fn(n: u64) -> str | ok | err.Bad
+  fuel 1000
+  pure
+{ let ignored = option(n)? ret "value" }
+cell discard : fn(n: u64) -> ok | err.Bad
+  fuel 1000
+  pure
+{ option(n)? ret ok }
+cell bool_option : fn(none: bool) -> bool | ok
+  fuel 1000
+  pure
+{ if none { ret ok } ret false }
+cell condition : fn(none: bool) -> u64 | ok
+  fuel 1000
+  pure
+{ if bool_option(none)? { ret 1 } ret 2 }
+cell add : fn(a: u64, b: u64) -> u64
+  fuel 1000
+  pure
+{ ret a + b }
+cell call_args : fn(n: u64) -> u64 | ok | err.Bad
+  fuel 1000
+  pure
+{ let keep = 99 ret add(option(n)?, option(4)?) + keep }
+cell recursive : fn(n: u64) -> u64 | ok | err.Bad
+  fuel 1000
+  pure
+{ if n > 2 { ret recursive(n - 1)? + 1 } ret option(n)? }
+cell short : fn(n: u64) -> u64 | ok | err.Bad
+  fuel 1000
+  pure
+{ ret option(n)? + 1 / 0 }
+''')
+        for cell in ("middle", "discard", "call_args", "recursive", "short"):
+            value(artifact, cell, ["1"], error("Bad"))
+            value(artifact, cell, ["0"], "ok" if cell == "discard" else "union 1 ok")
+        value(artifact, "middle", ["3"], "union 0 str 5 76616c7565")
+        value(artifact, "call_args", ["3"], "union 0 u64 106")
+        value(artifact, "recursive", ["8"], "union 0 u64 8")
+        value(artifact, "condition", ["true"], "union 1 ok")
+        value(artifact, "condition", ["false"], "union 0 u64 2")
+        prefix = "cell choice : fn() -> u64 | ok fuel 100 { ret ok }\n"
+        refused("missing_none", prefix + "cell f : fn() -> u64 fuel 100 { ret choice()? }", "AXI-T015")
+        print("frontend W54: PASS (option remapping, nested arguments, recursion, false and early propagation)")

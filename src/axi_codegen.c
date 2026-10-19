@@ -537,7 +537,21 @@ static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent)
                 free_reg(c, atom); free_reg(c, predicate);
             }
         }
-        if (has_ok && has_payload) { c->err = 1; return 0; }
+        if (has_ok && has_payload) {
+            int tag = alloc_reg(c), predicate = alloc_reg(c);
+            int none = alloc_unit_reg(c), k = add_k_u64(c, 1);
+            ob_indent(o, indent); ob_printf(o, "utag r%d r%d\n", tag, r);
+            ob_indent(o, indent); ob_printf(o, "ldk r%d k%d\n", predicate, k);
+            ob_indent(o, indent); ob_printf(o, "eq r%d r%d r%d\n", predicate, tag, predicate);
+            /* The source payload is arm 0; ok is arm 1. Reconstruct the
+             * caller's own ok representation, which may be plain UNIT.
+             * UCHK would incorrectly preserve a callee-specific wrapper. */
+            ob_indent(o, indent); ob_printf(o, "jf r%d +%d\n", predicate,
+                n->tyann == AXI_RET_NONE ? 4 : 2);
+            emit_return(c, o, none, n->tyann, indent);
+            ob_indent(o, indent); ob_printf(o, "upay r%d r%d\n", r, r);
+            free_reg(c, tag); free_reg(c, predicate);
+        }
         if (!has_ok && !has_payload) {
             /* An error-only callee has no continuing path. Do not turn an
              * impossible result into a successful UNIT return. */

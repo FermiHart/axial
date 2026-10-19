@@ -41,3 +41,15 @@ existing signature and allocates no extra object.
 Validation: `frontend.py build/axi result` covers nested/reordered error sets,
 multiple call operands, error propagation before a later division trap,
 error-only calls and unhandled/undeclared/nonunion refusals.
+
+## W54 — option propagation and composition
+
+After named errors are handled, `?` inspects an option's canonical arm. A
+payload is unwrapped in its owned temporary; ok returns the caller's checked
+representation, including plain UNIT when the caller has no payload. This
+supports different caller/callee payload types without guessing by kind.
+No VM instruction or existing UCHK meaning changes.
+
+Validation: `frontend.py build/axi options` covers options mixed with errors,
+plain-ok callers, bool false in conditions, nested call arguments with live
+bindings, recursion, short-circuit before a trap and undeclared ok refusal.
