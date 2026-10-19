@@ -30,3 +30,20 @@ golden/command files rather than silently reducing coverage.
 Validation: 67/67 original goldens with both original and candidate
 executables; policy and supply-chain demos. The fixture is explicitly
 documented as a deterministic public test identity, not fresh private keys.
+
+## W33 — Exercise the real signed CLI boundary
+
+`make gate-cli` now covers signed compilation, signature tampering, absent
+trust, checked versus unchecked sealing, all red proof fixtures, exact fuel,
+overflow refusal, confined filesystem effects, missing grants, signed replay
+with distinct identities, tampered replay and pre-effect recorder admission.
+These checks were absent from the public 67-test gate. `make gate` includes
+both the original goldens and this suite.
+
+The added same-producer/recorder test exposed a real baseline late refusal:
+io.Write occurred before the invalid recording identity was refused. W20
+fixes that preflight. The restricted execution sandbox also denies even
+local Unix datagram sends; fs.Write's fsync worker therefore needs an
+IPC-capable host for the positive integration case. This environmental
+denial was reproduced with a separate socketpair probe; the test retains
+the positive assertion and a bounded deadline, with no skipped success case.

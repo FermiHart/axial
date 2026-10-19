@@ -18,7 +18,7 @@ DEMO_OBJ := $(CORE_OBJ) $(BUILD)/scripts/jash_policy_demo.o
 AXI_INC := -Isrc -Iinclude -Ivendor
 CONFIG := $(BUILD)/.build-config
 
-.PHONY: all dev demo gate-fast gate clean FORCE
+.PHONY: all dev demo gate-fast gate-cli gate clean FORCE
 all: dev
 dev: $(AXI)
 demo: $(DEMO)
@@ -46,7 +46,10 @@ $(BUILD):
 gate-fast: dev
 	AXI=$(abspath $(AXI)) sh tools/check.sh
 
-gate: gate-fast
+gate-cli: dev
+	AXI=$(abspath $(AXI)) sh tests/audit40/cli.sh
+
+gate: gate-fast gate-cli
 
 clean:
 	rm -rf $(BUILD)
