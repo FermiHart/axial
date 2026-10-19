@@ -11,7 +11,7 @@
  *    body braces in column 1; body indent 2; nested indent +2.
  *  - one space around binary ops; none before , : ? ( [ ; one after , : .
  *  - integers: `_` every 3 digits iff ≥ 5 digits; forbidden below (G1).
- *  - floats: shortest round-trip decimal; always with '.' or exponent.
+ *  - floats: unique shortest round-trip decimal; always '.', no exponent.
  *  - one stmt per line; single-stmt else-less `if` is inline (the blessed
  *    exemplar form); zero blank lines inside bodies; exactly one blank
  *    line between cells; comments live on their own line, at the indent
@@ -22,6 +22,7 @@
 #include "axi_ast.h"
 #include "axi_alloc.h"
 #include "axi_string.h"
+#include "axi_numeric.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -115,92 +116,18 @@ void axi_canon_int_json(uint64_t v, char *out, size_t cap)
     if (snprintf(out, cap, "%llu", (unsigned long long)v) < 0) out[0] = '\0';
 }
 
-/* Expand libc's compact candidate into the decimal-only source grammar.
- * Neither exponent syntax nor a process-locale decimal separator is added
- * to the language by its own formatter. */
-static int float_decimal(const char *candidate, char out[384])
-{
-    char digits[64];
-    size_t nd = 0, i = 0, w = 0;
-    int point = -1, exponent = 0, negative = 0;
-    while (candidate[i] && candidate[i] != 'e' && candidate[i] != 'E') {
-        if (candidate[i] == '.' && point < 0) point = (int)nd;
-        else if (candidate[i] >= '0' && candidate[i] <= '9' && nd < sizeof digits)
-            digits[nd++] = candidate[i];
-        else return 0;
-        i++;
-    }
-    if (!nd) return 0;
-    if (point < 0) point = (int)nd;
-    if (candidate[i]) {
-        i++;
-        if (candidate[i] == '-' || candidate[i] == '+') negative = candidate[i++] == '-';
-        if (!candidate[i]) return 0;
-        for (; candidate[i]; i++) {
-            if (candidate[i] < '0' || candidate[i] > '9' || exponent > 384) return 0;
-            exponent = exponent * 10 + candidate[i] - '0';
-        }
-    }
-    point += negative ? -exponent : exponent;
-    if (point < -350 || point > 350) return 0;
-    if (point <= 0) {
-        out[w++] = '0'; out[w++] = '.';
-        for (int z = 0; z < -point; z++) out[w++] = '0';
-        if (nd >= 384 - w) return 0;
-        memcpy(out + w, digits, nd); w += nd;
-    } else {
-        for (int d = 0; d < point; d++) out[w++] = (size_t)d < nd ? digits[d] : '0';
-        out[w++] = '.';
-        if ((size_t)point < nd) {
-            if (nd - (size_t)point >= 384 - w) return 0;
-            memcpy(out + w, digits + point, nd - (size_t)point);
-            w += nd - (size_t)point;
-        } else out[w++] = '0';
-    }
-    out[w] = '\0';
-    return 1;
-}
-
-static int float_roundtrips(const char *candidate, double f)
-{
-    axi_lexer lx;
-    axi_token token;
-    axi_diags ds;
-    size_t len = strlen(candidate);
-    axi_diags_init(&ds);
-    axi_lex_init(&lx, candidate, len, &ds);
-    axi_lex_next(&lx, &token);
-    return ds.n == 0 && token.kind == T_FLOAT && token.len == len
-        && memcmp(&token.fval, &f, sizeof f) == 0;
-}
-
 static void sb_float(sb *b, const axi_node *n)
 {
-    char compact[64], decimal[384];
-    size_t dot, begin, end;
-    for (int prec = 1; prec <= 17; prec++) {
-        snprintf(compact, sizeof compact, "%.*g", prec, n->fval);
-        if (float_decimal(compact, decimal) && float_roundtrips(decimal, n->fval)) {
-            sb_str(b, decimal);
-            return;
-        }
+    axi_numeric_workspace workspace;
+    uint64_t bits;
+    const char *text;
+    size_t len;
+    memcpy(&bits, &n->fval, sizeof bits);
+    if (axi_f64_to_decimal(bits, &workspace, &text, &len) != AXI_DECIMAL_OK) {
+        b->failed = 1;
+        return;
     }
-    /* The v0 lexer accumulates decimal fractions, so strtod equality alone
-     * is not a proof of source round-trip. Preserve its already-accepted bits
-     * when no compact candidate works: remove separators and redundant zeroes
-     * from the original decimal. Re-canonicalization is then a fixed point. */
-    if (!n->lex || !n->lexlen) { b->failed = 1; return; }
-    for (dot = 0; dot < n->lexlen && n->lex[dot] != '.'; dot++) {}
-    if (dot == n->lexlen) { b->failed = 1; return; }
-    begin = 0;
-    while (begin < dot && (n->lex[begin] == '0' || n->lex[begin] == '_')) begin++;
-    if (begin == dot) sb_ch(b, '0');
-    for (size_t i = begin; i < dot; i++) if (n->lex[i] != '_') sb_ch(b, n->lex[i]);
-    sb_ch(b, '.');
-    end = n->lexlen;
-    while (end > dot + 1 && (n->lex[end - 1] == '0' || n->lex[end - 1] == '_')) end--;
-    if (end == dot + 1) sb_ch(b, '0');
-    for (size_t i = dot + 1; i < end; i++) if (n->lex[i] != '_') sb_ch(b, n->lex[i]);
+    sb_put(b, text, len);
 }
 
 /* ---- trivia (comments) --------------------------------------------------- */

@@ -1,9 +1,10 @@
 # axial SPEC-GRAMMAR v0 — Bear Core
 
 SPDX-License-Identifier: LicenseRef-SPL-1.0
-Status: v0 grammar with text-string semantic profile v1 (Audit80).
+Status: v0 grammar with text-string v1 and decimal-f64 v1 (Audit80).
 Normative for the parser and the canonical form. Migration from the former
-two-escape implementation is explicit in `docs/audit80/frontend.md` W55–W56.
+two-escape implementation and former decimal accumulator is explicit in
+`docs/audit80/frontend.md` W55–W56 and W64–W66.
 Companion: src/axi_lex.c (lexer of record).
 
 > Publication note: markers like (W02)/(W04)/(AXI-T007) are traces of the
@@ -126,8 +127,14 @@ Notes:
    `if n < 2 { ret n }`. Any other shape opens a block.
 7. Parentheses only where precedence requires; redundant grouping
    is not canonical (`ret (x)` → `ret x`).
-8. Floats: shortest decimal that round-trips; always with `.` or
-   exponent (`2` as float spells `2.0`).
+8. Floats: among decimals that round to the literal's binary64 bits, use
+   the fewest significant digits, then the closest exact decimal value;
+   an exact distance tie uses an even scaled decimal coefficient. Remove
+   trailing coefficient zeroes and expand with `.` and no exponent or
+   separators (`2` as float spells `2.0`). This spelling depends only on
+   the literal bits. Unary minus remains explicit; `-0.0` retains its sign
+   in source and the constant pool. The frozen VM normalizes negative zero
+   to positive zero on load/import/arithmetic, so both execute as `+0`.
 9. Comments live on their own line, at the indent of the point they
    precede; a trailing comment is hoisted to its own following line.
    Zero comments are lost (trivia sink in the lexer; the drop counter
@@ -149,7 +156,7 @@ shape speaks only when the parse is green.
 
 | Range    | Owner            | Existing |
 |----------|------------------|----------|
-| AXI-L0xx | lexer            | L001 alphabet, L002 open string, L003 escape, L004 letter after number, L005 |
+| AXI-L0xx | lexer            | L001 alphabet, L002 open string, L003 escape, L004 letter after number, L005 u64 overflow, L006 f64 overflow |
 | AXI-C0xx | canonical shape  | C001 non-canonical line (fix = exact line), C002 extra/missing line, C003 final newline, C004 CR, C005 tab |
 | AXI-P0xx | parser           | P001–P011 (source: `src/axi_parse.c`; goldens: `tests/parse/`) |
 | AXI-T0xx | types/caps       | T001–T021 (source: `src/axi_types.c`; goldens: `tests/types/`) |
@@ -215,7 +222,8 @@ AXI-XNNN path:line:col message | fix: canonical correction
   `dis` emits exactly the canonical spelling (.axs fixture is fixpoint).
 - One X-macro table (`AXB_OPCODES`) feeds asm, dis and VM — fuel column
   reserved since birth; costs are filled in without moving the format.
-  f64 spells as hex bits: decimal printing is not deterministic.
+  f64 spells as hex bits on the AXS/binary surface; source decimal-f64 v1
+  separately defines deterministic decimal conversion and canonical text.
 - `AXI-B0xx` diagnostics, same msg+fix protocol as the repair loop.
 
 ## 9. VM (`src/axi_vm.c`)

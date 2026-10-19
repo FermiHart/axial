@@ -591,6 +591,22 @@ static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent)
         return rd;
     }
     case N_UN: {
+        if (n->op == T_MINUS && n->a && n->a->kind == N_FLOAT && n->tyann == 2) {
+            uint64_t bits;
+            int k, rd;
+            /* Literal negation is exact sign-bit inversion. Keep its raw
+             * representation in the pool without host arithmetic or a
+             * load/load/sub sequence. The frozen VM still canonicalizes
+             * negative zero to positive zero when it loads a constant. */
+            memcpy(&bits, &n->a->fval, sizeof bits);
+            bits ^= UINT64_C(0x8000000000000000);
+            k = add_k_num(c, 3, bits);
+            rd = alloc_reg(c);
+            if (c->err || c->oom) return 0;
+            ob_indent(o, indent);
+            ob_printf(o, "ldk r%d k%d\n", rd, k);
+            return rd;
+        }
         if (n->op == T_MINUS && n->a && n->a->kind == N_INT) {
             int k, rd;
             if (n->a->ival > (UINT64_C(1) << 63)) { c->err = 1; return 0; }

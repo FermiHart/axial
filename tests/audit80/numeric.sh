@@ -13,3 +13,6 @@ python3 tests/audit80/numeric.py "$TEST_BUILD/core"
   tests/audit80/numeric_driver.c src/axi_numeric.c src/axi_lex.c \
   src/axi_diag.c src/axi_alloc.c src/axi_compile_budget.c src/axi_mem_account.c -o "$TEST_BUILD/lexer"
 python3 tests/audit80/numeric.py "$TEST_BUILD/lexer" reader
+if [ "$#" -gt 0 ]; then
+  python3 tests/audit80/numeric_cli.py "$1"
+fi

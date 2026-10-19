@@ -205,3 +205,35 @@ all normal exponent boundaries and their immediate neighbors, subnormal
 powers, both zero signs, 2,000 deterministic random values, maximum finite
 and nonfinite refusals. Expected canonical strings, exact rational values,
 and re-reading the produced decimals are all checked separately.
+
+## W66 — bit-derived canonical source and literal sign lowering
+
+The canonical renderer now passes literal bits to the integer formatter.
+The former `%g` candidates, repeated lexing and original-lexeme fallback
+are removed. Decimal aliases that produce the same literal bits now have
+the same canonical spelling across the complete finite range, independent
+of libc formatting. Source grammar documents the precise shortest/closest/
+even selection rule and the intentional decimal-f64 v1 migration.
+
+Negating a literal f64 flips its sign bit and emits one constant load.
+The old load-positive/load-zero/subtract sequence consumed two unnecessary
+instructions and temporaries. A direct negative literal now uses 2 fuel
+(LDK + RET) instead of 4; existing opcode costs are unchanged. Nonliteral
+negation keeps the typechecked SUB implementation. No host floating-point
+operation participates in source literal lowering.
+
+**Signed-zero boundary:** the numeric reader/formatter and constant pool
+preserve IEEE literal representation, so negative underflow and `-0.0`
+have negative-zero bits in the pool. The existing VM deliberately normalizes
+negative zero to positive zero on import, load and arithmetic, and still
+does so. Consequently executed `-0.0` returns positive zero. This is an
+explicit distinction between source/constant representation and VM values;
+the numeric work does not silently change that frozen runtime contract.
+
+Validation: `numeric_cli.py build/axi` runs 46 signed-literal cases through
+canonicalization, strict checking, signed v7 compilation and the real VM.
+It compares aliases and canonical fixed points with independent expected
+strings, inspects raw constant bits, checks the 2-fuel negative-literal path,
+and reassembles disassembly. It also exercises nonliteral/double negation,
+existing runtime NaN/inf/zero rules, and overflow/junk/u64 refusals with
+preexisting-output preservation. `make gate-fast` passes all 67 goldens.

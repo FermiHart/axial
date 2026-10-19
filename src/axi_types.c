@@ -950,8 +950,8 @@ static ty check_expr(ck *c, const axi_node *n)
                   "negate numbers only");
             return mkty(TY_BAD);
         }
-        /* AXI-INV-101: the codegen expands -x as 0 - x and must not guess
-         * which zero; the checker annotates the exact kind it proved. */
+        /* AXI-INV-101: nonliteral -x uses typed 0 - x; literals can emit a
+         * signed constant directly. Codegen consumes the proved kind. */
         ((axi_node *)n)->tyann = v.k == TY_I64 ? 1 : 2;
         return v;
     }
