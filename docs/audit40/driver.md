@@ -76,3 +76,15 @@ Validation: all interface goldens, plus a reader-open counter and projection
 after the source pathname is unlinked. The path is opened once; canonical
 form and inferred capability annotations remain attached to the same AST.
 This also removes one complete parse/type-check cycle per projected file.
+
+## W36 — Strict command options and publication errors
+
+Source commands previously accepted misspelled/extra options while reporting
+success (for example `check file --jsno`). They now accept only their
+documented arity and optional `--json`. A single dispatch wrapper checks the
+final output flush, preventing `version > /dev/full` and similar publication
+failures from returning success.
+
+Validation: negative option cases across 11 command forms, original CLI
+goldens and the Linux /dev/full write-failure test. Normal command results
+and documented options retain their exit-status contracts.

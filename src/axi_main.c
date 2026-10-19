@@ -763,12 +763,12 @@ static int cmd_lint_safe(const char *path, int json)
     return rc;
 }
 
-int main(int argc, char **argv)
+static int dispatch(int argc, char **argv)
 {
     if ((argc == 3 || (argc == 4 && strcmp(argv[3], "--json") == 0))
             && strcmp(argv[1], "lint-safe") == 0)
         return cmd_lint_safe(argv[2], argc == 4);
-    if (argc >= 2 && strcmp(argv[1], "version") == 0) {
+    if (argc == 2 && strcmp(argv[1], "version") == 0) {
         printf("axial %s (axi) — Bear Core\n", AXI_VERSION);
         return 0;
     }
@@ -785,26 +785,31 @@ int main(int argc, char **argv)
             printf("%s\n", hex);
         return 0;
     }
-    if (argc >= 3 && strcmp(argv[1], "lex") == 0) {
+    if ((argc == 3 || (argc == 4 && strcmp(argv[3], "--json") == 0))
+            && strcmp(argv[1], "lex") == 0) {
         int json = (argc >= 4 && strcmp(argv[3], "--json") == 0);
         return cmd_lex(argv[2], json);
     }
-    if (argc >= 3 && strcmp(argv[1], "parse") == 0) {
+    if ((argc == 3 || (argc == 4 && strcmp(argv[3], "--json") == 0))
+            && strcmp(argv[1], "parse") == 0) {
         int json = (argc >= 4 && strcmp(argv[3], "--json") == 0);
         return cmd_parse(argv[2], json);
     }
-    if (argc >= 3 && strcmp(argv[1], "canon") == 0) {
+    if (argc == 3 && strcmp(argv[1], "canon") == 0) {
         return cmd_canon(argv[2]);
     }
-    if (argc >= 3 && strcmp(argv[1], "check") == 0) {
+    if ((argc == 3 || (argc == 4 && strcmp(argv[3], "--json") == 0))
+            && strcmp(argv[1], "check") == 0) {
         int json = (argc >= 4 && strcmp(argv[3], "--json") == 0);
         return cmd_check_impl(argv[2], json, 1);
     }
-    if (argc >= 3 && strcmp(argv[1], "form") == 0) {
+    if ((argc == 3 || (argc == 4 && strcmp(argv[3], "--json") == 0))
+            && strcmp(argv[1], "form") == 0) {
         int json = (argc >= 4 && strcmp(argv[3], "--json") == 0);
         return cmd_check_impl(argv[2], json, 0);
     }
-    if (argc >= 3 && strcmp(argv[1], "types") == 0) {
+    if ((argc == 3 || (argc == 4 && strcmp(argv[3], "--json") == 0))
+            && strcmp(argv[1], "types") == 0) {
         int json = (argc >= 4 && strcmp(argv[3], "--json") == 0);
         return cmd_types(argv[2], json);
     }
@@ -813,11 +818,13 @@ int main(int argc, char **argv)
             && strcmp(argv[5], "--signing-key") == 0) {
         return cmd_compile(argv[2], argv[4], argv[6]);
     }
-    if (argc >= 3 && strcmp(argv[1], "iface") == 0) {
+    if ((argc == 3 || (argc == 4 && strcmp(argv[3], "--json") == 0))
+            && strcmp(argv[1], "iface") == 0) {
         int json = (argc >= 4 && strcmp(argv[3], "--json") == 0);
         return cmd_iface(argv[2], json);
     }
-    if (argc >= 4 && strcmp(argv[1], "iface-diff") == 0) {
+    if ((argc == 4 || (argc == 5 && strcmp(argv[4], "--json") == 0))
+            && strcmp(argv[1], "iface-diff") == 0) {
         int json = (argc >= 5 && strcmp(argv[4], "--json") == 0);
         return cmd_iface_diff(argv[2], argv[3], json);
     }
@@ -853,7 +860,7 @@ int main(int argc, char **argv)
         fprintf(AXI_ERR, "AXI-B025 inspect requires --trusted-key KEYFILE\n");
         return 2;
     }
-    if (argc >= 2 && strcmp(argv[1], "selftest") == 0) {
+    if (argc == 2 && strcmp(argv[1], "selftest") == 0) {
         return axi_hash_selftest();
     }
     if (argc >= 2 && strcmp(argv[1], "bind") == 0) {
@@ -949,7 +956,8 @@ int main(int argc, char **argv)
                                            trusted_key, recorder_key,
                                            argc - 5, argv + 5);
     }
-    if (argc >= 2 && strcmp(argv[1], "caps") == 0) {
+    if ((argc == 2 || (argc == 3 && strcmp(argv[2], "--json") == 0))
+            && strcmp(argv[1], "caps") == 0) {
         return cmd_caps(argc >= 3 && strcmp(argv[2], "--json") == 0);
     }
     fprintf(AXI_ERR,
@@ -996,4 +1004,16 @@ int main(int argc, char **argv)
         "       axi selftest                   prove SHA-256 (FIPS 180-4)\n",
         AXI_VERSION);
     return 2;
+}
+
+/* A successful computation is not a published result until stdio flushes.
+ * Preserve normal semantic exit codes; publication failure is a CLI error. */
+int main(int argc, char **argv)
+{
+    int rc = dispatch(argc, argv);
+    if (fflush(AXI_OUT) != 0 || ferror(AXI_OUT)) {
+        fprintf(AXI_ERR, "AXI-X004 cannot publish CLI output\n");
+        return 2;
+    }
+    return rc;
 }

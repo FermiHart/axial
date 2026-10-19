@@ -47,6 +47,18 @@ for verb in dis inspect verify check-seal; do
     expect_refused "$verb/missing-trust" "$AXI" "$verb" "$TMPD/hello.axb"
 done
 expect_refused run/missing-trust "$AXI" run "$TMPD/hello.axb" hello 20 22
+for verb in lex parse check form types iface canon; do
+    expect_refused "$verb/unknown-option" "$AXI" "$verb" tests/hello.axi --jsno
+done
+for verb in version selftest caps; do
+    expect_refused "$verb/extra-argument" "$AXI" "$verb" --unexpected
+done
+expect_refused iface-diff/extra-argument "$AXI" iface-diff tests/hello.axi tests/hello.axi --unexpected
+if [ -c /dev/full ]; then
+    if "$AXI" version >/dev/full 2>"$TMPD/err"; then bad output-failure;
+    elif grep -q AXI-X004 "$TMPD/err"; then ok output-failure;
+    else bad output-failure; fi
+fi
 cp "$TMPD/hello.axb" "$TMPD/tampered.axb"
 printf '\377' | dd of="$TMPD/tampered.axb" bs=1 seek=0 conv=notrunc 2>/dev/null
 expect_refused tampered-module "$AXI" verify "$TMPD/tampered.axb" --trusted-key "$PK"
