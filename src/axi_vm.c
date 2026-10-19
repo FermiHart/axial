@@ -69,6 +69,19 @@ typedef char vm_invocation_args_scratch_probe[
  * not the compiler front end. One width is now shared instead of restated. */
 #define VM_MAX_DEPTH    256          /* call depth: deterministic wall */
 
+/* The dispatcher needs only operands and cost. Derive its compact table
+ * from the same declaration as assembler/disassembler metadata, avoiding
+ * one cross-translation-unit lookup per executed instruction. */
+typedef struct {
+    uint8_t ops;
+    uint8_t fuel;
+} vm_opinfo;
+static const vm_opinfo VM_OPINFO[OP__COUNT] = {
+#define X(up, nm, operands, cost, doc) [OP_##up] = {operands, cost},
+    AXB_OPCODES(X)
+#undef X
+};
+
 typedef struct {
     const axb_mod *m;
     const axb_manifest *manifest; /* NULL keeps the production v5 semantics. */
@@ -854,7 +867,7 @@ static int run_cell_execute(vm *V, uint32_t ci, vval *reg, vval *ret,
         uint8_t op = (uint8_t)w, a = (uint8_t)(w >> 8),
                 b = (uint8_t)(w >> 16), cc = (uint8_t)(w >> 24);
         uint16_t bc16 = (uint16_t)(b << 8 | cc);
-        const axb_opinfo *oi = axb_op_info(op);
+        const vm_opinfo *oi = op < OP__COUNT ? &VM_OPINFO[op] : NULL;
         {   /* W18 — fuel first, and a cell never spends what it does not have.
              * The charge is checked BEFORE it is applied (cost > remaining,
              * written as a subtraction so no u64 can wrap): the ledger is

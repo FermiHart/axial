@@ -601,6 +601,54 @@ static void memory_account_integrity(void)
     CHECK(account.denied_failure == AXI_MEM_ACCOUNT_CORRUPTION);
 }
 
+static void dispatch_fuel_boundaries(void)
+{
+    /* A taken/untaken branch loop executes exactly four operations per
+     * increment. Every refused instruction must leave fuel and output at
+     * the last completed boundary, even at the final RET. */
+    uint32_t code[] = {instruction(OP_ADD, 0, 0, 1),
+                       instruction(OP_LT, 3, 0, 2),
+                       instruction(OP_JF, 3, 0, 2),
+                       instruction(OP_JMP, 0, 255, 253),
+                       instruction(OP_RET, 0, 0, 0)};
+    axi_vval args[3], out;
+    uint64_t used;
+    memset(args, 0, sizeof args);
+    args[0].kind = args[1].kind = args[2].kind = VB_U64;
+    args[1].bits = 1; args[2].bits = 17;
+    for (uint64_t budget = 1; budget <= 69; budget++) {
+        memset(&out, 0, sizeof out); out.kind = VB_U64; out.bits = 99;
+        CHECK(run(code, 5, 4, args, 3, &out, budget, &used) == (budget >= 68));
+        CHECK(used == (budget < 68 ? budget : 68));
+        CHECK(out.kind == VB_U64 && out.bits == (budget < 68 ? 99u : 17u));
+    }
+    {
+        /* CALL costs four before entering the child. A callee RET and the
+         * caller RET share the outer budget, without rounding or recharge. */
+        uint32_t caller[] = {instruction(OP_CALL, 0, 1, 1),
+                             instruction(OP_RET, 0, 0, 0)};
+        uint32_t callee[] = {instruction(OP_RET, 0, 0, 0)};
+        axb_cell cells[2];
+        axb_mod module;
+        axi_diags diags;
+        memset(cells, 0, sizeof cells); memset(&module, 0, sizeof module);
+        cells[0].name = "caller"; cells[0].nregs = 1;
+        cells[0].code = caller; cells[0].nc = 2;
+        cells[1].name = "callee"; cells[1].nregs = 1;
+        cells[1].code = callee; cells[1].nc = 1;
+        module.cells = cells; module.n = 2;
+        for (uint64_t budget = 1; budget <= 6; budget++) {
+            memset(&diags, 0, sizeof diags); out.bits = 99;
+            CHECK(axi_vm_run_cell_diag(&module, 0, args + 1, 1, &out,
+                    budget, &used, NULL, NULL, &diags) == (budget == 6));
+            CHECK(used == (budget < 4 ? 0 : budget));
+            CHECK(out.bits == (budget == 6 ? 1u : 99u));
+            CHECK(budget == 6 || (diags.n == 1
+                                 && !strcmp(diags.d[0].code, "AXI-R008")));
+        }
+    }
+}
+
 static int worker_exit_without_frame(void *opaque)
 {
     int *marker = opaque;
@@ -653,6 +701,7 @@ int main(int argc, char **argv)
     resource_transactions();
     assembly_spans_and_strings();
     memory_account_integrity();
+    dispatch_fuel_boundaries();
     printf("audit40 runtime: %u checks, %u failures\n", checks, failures);
     return failures != 0;
 }

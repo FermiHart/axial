@@ -201,3 +201,51 @@ performance conclusions use the separate sequential baseline/final runner.
 **Limits.** Full integrity validation is still O(live allocations) per
 operation. This removes redundant traversal without weakening that contract;
 an O(1) redesign would require a separately reviewed corruption model.
+
+## W20 — compact VM dispatch metadata with unchanged fuel
+
+**Problem.** Every dispatched opcode called a function in the bytecode
+translation unit to retrieve a structure containing assembler names plus
+operand and fuel metadata. The runtime needs only the latter two bytes.
+
+**Change.** Generate a private compact operand/cost table from the existing
+`AXB_OPCODES` declaration and index it directly in the VM. There is still one
+declaration of opcode numbers, operand kinds and fuel costs. Unknown-opcode
+handling, register guards, effect gates and trace ordering are unchanged.
+
+**Evidence.** 1,033 normal and ASan+UBSan checks pass. New regressions cover
+every budget from 1 through 69 for a 68-fuel loop, including taken/untaken
+branches, refusal at the final RET, unchanged caller output on refusal and
+unused excess fuel. A nested CALL checks its four-fuel charge plus shared
+callee/caller RET costs at every boundary and the AXI-R008 verdict. Earlier
+arithmetic and union regressions compare observed fuel to public metadata.
+A quick same-build pre-W20/final probe (five runs, median, 1,000,000 loop
+iterations) reduced 33.08 ms to 27.06 ms with exactly 4,000,000 fuel in both.
+Final performance conclusions belong to the sequential baseline/final run.
+
+**Limits.** This optimization targets the dispatcher. Effects, cryptographic
+verification and tracing have separate dominant costs; this microbenchmark
+does not predict their end-to-end latency.
+
+## Validation and integration notes
+
+- `tests/audit40/runtime.c` links with the product sources except
+  `axi_main.c` and `axi_dossier_main.c`, plus `vendor/ed25519.c` and `-lm`.
+  The ordinary run is deterministic and needs no real effect permissions.
+- Run the same executable with `--workers` on the supported POSIX host to
+  exercise local worker failure and success. The sandbox used for this audit
+  blocks packet sends; those six checks require ordinary local UNIX IPC.
+- `tests/audit40/runtime_handles.c` compiles standalone with `-Isrc`; do not
+  also link the production handle-table object into this one fixture.
+- `tests/audit40/runtime_bench.c` links like the main runtime fixture and
+  offers `vm 5000000`, `alloc 8192` and `asm 250000`. It is a benchmark,
+  excluded from correctness gates. Time baseline and final sequentially
+  with the same compiler and flags, and compare results/fuel before timings.
+- Sanitizer validation used `-fsanitize=address,undefined
+  -fno-omit-frame-pointer` and `ASAN_OPTIONS=detect_leaks=0`; this host's
+  tracing constraints prevent LeakSanitizer initialization. This is not a
+  claim that a leak checker passed.
+- VM aliasing and typed equality corrections change execution semantics.
+  Root integration regenerates the source-bound checker identity; earlier
+  CHECKED seals require explicit resealing. Public embed v1 and AXB/replay
+  wire representations are unchanged by these waves.
