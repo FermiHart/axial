@@ -106,6 +106,11 @@ void axi_local_authority_v1_prepared_close(axi_local_authority_v1_prepared *prep
  * Reuses the existing attempt ledger and outcome codes. No receipt is minted
  * by this API; status/refusal/unknown are never relabeled as a policy deny.
  * The request remains valid storage until prepared_close(), including replay.
+ * Fresh CLOCK_BOOTTIME checks after lock acquisition, before spend and before
+ * config publication must satisfy both the action and grant windows. If
+ * durable spend outlives its window, no config is published and UNKNOWN with
+ * effect_performed=0 retains the existing spend for reconciliation. This is
+ * an observation before entering rename, not a hard real-time completion SLA.
  */
 int axi_local_authority_v1_commit(const axi_local_authority_v1_prepared *prepared,
                                    const uint8_t *grant_signed, size_t grant_len,

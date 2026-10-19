@@ -86,10 +86,33 @@ static void issuer_key_id(const uint8_t pk[32], uint8_t out[32])
 uint64_t axi_local_attempt_v1_now_mono(void)
 {
     struct timespec ts;
-    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0) {
+    if (clock_gettime(CLOCK_MONOTONIC, &ts) != 0 || ts.tv_sec < 0
+            || ts.tv_nsec < 0 || ts.tv_nsec >= 1000000000L
+            || (uintmax_t)ts.tv_sec > (UINT64_MAX - (uint64_t)ts.tv_nsec) / UINT64_C(1000000000)) {
         return 0;
     }
     return (uint64_t)ts.tv_sec * 1000000000u + (uint64_t)ts.tv_nsec;
+}
+
+static int authority_time_matches(const axi_local_authority_v1_prepared *prepared,
+                                    const axi_ag1_v1 *grant,
+                                    const axi_local_authority_v1_facts *facts)
+{
+    uint64_t now = facts->now_ns;
+    return prepared->owner.pid == getpid() && facts->uid == prepared->owner.uid
+        && facts->executor_uid == prepared->owner.executor_uid
+        && memcmp(facts->boot, prepared->owner.boot, 16) == 0
+        && now >= prepared->observed.now_ns
+        && now >= prepared->action.not_before && now < prepared->action.not_after
+        && now >= grant->not_before && now < grant->not_after;
+}
+
+static int authority_time_live(const axi_local_authority_v1_prepared *prepared,
+                                 const axi_ag1_v1 *grant)
+{
+    axi_local_authority_v1_facts facts;
+    return axi_local_authority_host_sample(&facts) == 0
+        && authority_time_matches(prepared, grant, &facts);
 }
 
 int axi_local_attempt_v1_store_check(const char *store_dir)
@@ -661,6 +684,7 @@ static int commit_impl(const char *store_dir,
         rc = axi_local_authority_observe_locked(&prepared->owner, &current);
         if (rc != 0) goto done;
         if (!axi_local_authority_action_matches(&action, &current)
+                || !authority_time_matches(prepared, &grant, &current)
                 || current.epoch_generation != prepared->facts.epoch_generation
                 || memcmp(&current.pins, &prepared->facts.pins, sizeof current.pins)) {
             rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
@@ -765,6 +789,11 @@ static int commit_impl(const char *store_dir,
         goto done;
     }
 
+    if (prepared && !authority_time_live(prepared, &grant)) {
+        fill_out(out, AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED, 0, grant_root);
+        rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
+        goto done;
+    }
     /* 7. Durable ATTEMPTED before any effect byte (O_EXCL + fsyncs).
      * New spends always write v2, linked to the active epoch (or zeros
      * when the store predates epochs). */
@@ -880,11 +909,26 @@ static int commit_impl(const char *store_dir,
         goto done;
     }
 
+    if (prepared && !authority_time_live(prepared, &grant)) {
+        /* Spend is irreversible even if its fsyncs crossed expiration.
+         * Keep ATTEMPTED for recovery, and do not begin the config write. */
+        fill_out(out, AXI_LOCAL_ATTEMPT_V1_UNKNOWN, 0, grant_root);
+        rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
+        goto done;
+    }
+
     /* 8. The one fixture effect: temp -> fsync -> rename -> dir fsync. */
-    if (write_full_fsync_at(sdfd, ".tmp.attempt",
-                            payload_len ? payload : (const uint8_t *)"",
-                            payload_len) != 0 ||
-        renameat(sdfd, ".tmp.attempt", sdfd,
+    rc = write_full_fsync_at(sdfd, ".tmp.attempt",
+                              payload_len ? payload : (const uint8_t *)"", payload_len);
+    if (rc == 0 && prepared && !authority_time_live(prepared, &grant)) {
+        /* Temp-file fsync can block. Check the actual clock again before
+         * the atomic config publication; never spend again after expiry. */
+        (void)unlinkat(sdfd, ".tmp.attempt", 0);
+        fill_out(out, AXI_LOCAL_ATTEMPT_V1_UNKNOWN, 0, grant_root);
+        rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
+        goto done;
+    }
+    if (rc != 0 || renameat(sdfd, ".tmp.attempt", sdfd,
                  AXI_LOCAL_ATTEMPT_V1_TARGET_NAME) != 0) {
         unlinkat(sdfd, ".tmp.attempt", 0);
         /* Observed failure after spend: honest FAILED terminal. */

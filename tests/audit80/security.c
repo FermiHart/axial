@@ -13,8 +13,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/stat.h>
+#include <sys/file.h>
 #include <sys/types.h>
 #include <sys/wait.h>
+#include <time.h>
 #include <unistd.h>
 
 static unsigned checks;
@@ -422,7 +424,61 @@ static void w45(void)
     }
 }
 
-int main(int argc, char **argv)
+static void expire_pause(void)
+{
+    struct timespec pause = {1, 100000000L}, remaining;
+    while (nanosleep(&pause, &remaining) != 0) {
+        CHECK(errno == EINTR); pause = remaining;
+    }
+}
+
+static void w46(void)
+{
+    unsigned scenario;
+    for (scenario = 0; scenario < 4; scenario++) {
+        fixture f;
+        axi_local_authority_v1 *owner = NULL;
+        axi_local_authority_v1_prepared *prepared;
+        axi_local_attempt_v1_outcome out;
+        char path[512];
+        int lockfd = -1, status = 0, rc;
+        pid_t child = -1;
+        new_fixture(&f); provision(&f);
+        CHECK(axi_local_authority_v1_enable(f.dir, f.pk) == 0);
+        CHECK(axi_local_authority_v1_open(f.dir, &owner) == 0);
+        if (scenario < 2) f.action.ttl_ns = UINT64_C(1000000000);
+        prepared = ready(&f, owner);
+        if (scenario == 2) {
+            axi_ag1_v1 g;
+            CHECK(axi_ag1_v1_decode_signed(&g, f.grant, sizeof f.grant, f.pk) == 0);
+            g.not_after = g.not_before + UINT64_C(1000000000);
+            CHECK(axi_ag1_v1_encode_signed(&g, f.seed, f.grant) == 0);
+        }
+        if (scenario == 0 || scenario == 2) expire_pause();
+        if (scenario == 1 || scenario == 3) {
+            path_of(path, f.dir, "owner.lock"); lockfd = open(path, O_RDONLY);
+            CHECK(lockfd >= 0 && flock(lockfd, LOCK_EX) == 0);
+            if (scenario == 1) {
+                child = fork(); CHECK(child >= 0);
+                if (child == 0) {
+                    expire_pause(); CHECK(flock(lockfd, LOCK_UN) == 0 && close(lockfd) == 0);
+                    _exit(0);
+                }
+            }
+        }
+        rc = axi_local_authority_v1_commit(prepared, f.grant, sizeof f.grant,
+                scenario == 1 ? axi_local_attempt_v1_now_mono() + UINT64_C(3000000000) : 0, &out);
+        CHECK(rc == (scenario == 3 ? AXI_LOCAL_AUTHORITY_V1_TIMEOUT : AXI_LOCAL_AUTHORITY_V1_REFUSED));
+        CHECK(out.state == AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED && !out.effect_performed);
+        CHECK(!exists(f.dir, "records") && !exists(f.dir, "config"));
+        if (lockfd >= 0) { CHECK(flock(lockfd, LOCK_UN) == 0 && close(lockfd) == 0); }
+        if (child > 0) CHECK(waitpid(child, &status, 0) == child && WIFEXITED(status) && WEXITSTATUS(status) == 0);
+        axi_local_authority_v1_prepared_close(prepared); axi_local_authority_v1_close(owner);
+        rm_fixture(f.dir);
+    }
+}
+
+static int setup_host(void)
 {
     if (geteuid() == 0) {
         /* Real kernel identities; no mocked authentication or ambient root. */
@@ -433,13 +489,21 @@ int main(int argc, char **argv)
         fprintf(stderr, "audit80 security: unsupported host; positive profile needs two real nonzero distinct UIDs\n");
         return 77;
     }
+    return 0;
+}
+
+int main(int argc, char **argv)
+{
+    int rc = setup_host();
+    if (rc) return rc;
     if (argc > 2) return 2;
     if (argc == 1 || !strcmp(argv[1], "W41")) w41();
     if (argc == 1 || !strcmp(argv[1], "W42")) w42();
     if (argc == 1 || !strcmp(argv[1], "W43")) w43();
     if (argc == 1 || !strcmp(argv[1], "W44")) w44();
     if (argc == 1 || !strcmp(argv[1], "W45")) w45();
-    if (argc == 2 && strcmp(argv[1], "W41") && strcmp(argv[1], "W42") && strcmp(argv[1], "W43") && strcmp(argv[1], "W44") && strcmp(argv[1], "W45")) return 2;
+    if (argc == 1 || !strcmp(argv[1], "W46")) w46();
+    if (argc == 2 && strcmp(argv[1], "W41") && strcmp(argv[1], "W42") && strcmp(argv[1], "W43") && strcmp(argv[1], "W44") && strcmp(argv[1], "W45") && strcmp(argv[1], "W46")) return 2;
     printf("audit80 security: %u checks PASS (ruid=%lu euid=%lu)\n", checks,
            (unsigned long)getuid(), (unsigned long)geteuid());
     return 0;
