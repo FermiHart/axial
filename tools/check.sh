@@ -20,13 +20,9 @@ mkdir -p "$TMPROOT" || exit 2
 TMPD=$(mktemp -d "$TMPROOT/axi-check.XXXXXX") || exit 2
 trap 'rm -rf "$TMPD"' EXIT HUP INT TERM
 
-# Ephemeral test identity (fixed vector, never shipped): seed bytes
-# 0x00..0x1f with its matching Ed25519 public key. Octal escapes keep
-# this portable to POSIX sh (dash printf has no \xNN). The toolchain
-# signs test artifacts and verifies them, like production, but with
-# throwaway keys generated fresh on every run.
-printf '\000\001\002\003\004\005\006\007\010\011\012\013\014\015\016\017\020\021\022\023\024\025\026\027\030\031\032\033\034\035\036\037' >"$TMPD/test.seed"
-printf '03a107bff3ce10be1d70dd18e74bc09967e4d6309ba50d5f1ddc8664125531b8' | xxd -r -p >"$TMPD/test.pk"
+# One portable, deterministic public test identity; no xxd dependency.
+. ./tools/test-identity.sh
+axi_test_identity "$TMPD" || { echo "check: test identity setup failed"; exit 2; }
 SEED="$TMPD/test.seed"
 PUB="$TMPD/test.pk"
 
@@ -37,9 +33,11 @@ bad() { fail=$((fail + 1)); printf 'FAIL %s\n' "$1: $2"; }
 run_golden_suite() {
     suite=$1
     command=$2
-    for source in tests/"$suite"/*.axi; do
-        [ -e "$source" ] || continue
+    set -- tests/"$suite"/*.axi
+    [ -e "$1" ] || { bad "$suite" "required suite is empty"; return; }
+    for source do
         base=${source%.axi}
+        [ -f "$base.out" ] || { bad "$base" "missing golden output"; continue; }
         actual=$("$AXI_REAL" "$command" "$source" 2>&1)
         actual_rc=$?
         expected=$(cat "$base.out" 2>/dev/null || printf '<missing golden %s.out>' "$base")
@@ -62,6 +60,8 @@ run_golden_suite iface iface
 if "$AXI_REAL" selftest >/dev/null 2>&1; then ok hash/vectors; else bad hash/vectors "selftest"; fi
 
 # Bytecode round-trip: asm -> dis -> asm is byte-identical.
+set -- tests/bc/*.axs
+[ -e "$1" ] || bad bc "required suite is empty"
 for source in tests/bc/*.axs; do
     [ -e "$source" ] || continue
     name=$(basename "$source")
@@ -88,10 +88,16 @@ for source in tests/bc/*.axs; do
 done
 
 # Runtime goldens.
+set -- tests/run/*.axs
+[ -e "$1" ] || bad run "required suite is empty"
 for source in tests/run/*.axs; do
     [ -e "$source" ] || continue
     name=$(basename "$source" .axs)
     base=${source%.axs}
+    if [ ! -f "$base.cmd" ] || [ ! -f "$base.out" ]; then
+        bad "run/$name" "missing command or golden output"
+        continue
+    fi
     if ! "$AXI_REAL" asm "$source" -o "$TMPD/run.axb" --signing-key "$SEED" >/dev/null 2>&1; then
         bad "run/$name" "asm failed"
         continue

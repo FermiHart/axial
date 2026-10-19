@@ -17,3 +17,16 @@ Validation: clean build, unchanged no-op build, header-triggered dependent
 rebuild, and demo reuse of core objects. No public API or artifact format
 changes. Evidence commands: `make -j4 dev`, `make dev`,
 `touch src/axi_hash.h && make -j4 dev`, `make demo`.
+
+## W32 — Portable and fail-closed fixture preparation
+
+The baseline built successfully but its gate reported 54 PASS / 13 FAIL
+because `xxd` was missing. The same original executable passes all 67
+goldens when supplied the correct public fixture key. A shared POSIX-shell
+fixture helper replaces xxd/Python in both demos and the gate; setup checks
+both key lengths. The gate also refuses absent required suites and missing
+golden/command files rather than silently reducing coverage.
+
+Validation: 67/67 original goldens with both original and candidate
+executables; policy and supply-chain demos. The fixture is explicitly
+documented as a deterministic public test identity, not fresh private keys.

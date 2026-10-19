@@ -23,10 +23,10 @@ trap 'rm -rf "$TMPD"' EXIT
 
 # Compile the policy as a signed module with explicit seed and raw public key.
 "$AXI" check "$POLICY"
-printf '\000\001\002\003\004\005\006\007\010\011\012\013\014\015\016\017\020\021\022\023\024\025\026\027\030\031\032\033\034\035\036\037' >"$TMPD/producer.seed"
-printf '%s' "$TRUSTED_PK_HEX" | xxd -r -p >"$TMPD/producer.pk"
-KEY="$TMPD/producer.seed"
-PK="$TMPD/producer.pk"
+. ./tools/test-identity.sh
+axi_test_identity "$TMPD"
+KEY="$TMPD/test.seed"
+PK="$TMPD/test.pk"
 "$AXI" compile "$POLICY" -o "$MODULE" --signing-key "$KEY"
 "$AXI" verify "$MODULE" --trusted-key "$PK" >/dev/null
 
