@@ -237,3 +237,23 @@ strings, inspects raw constant bits, checks the 2-fuel negative-literal path,
 and reassembles disassembly. It also exercises nonliteral/double negation,
 existing runtime NaN/inf/zero rules, and overflow/junk/u64 refusals with
 preexisting-output preservation. `make gate-fast` passes all 67 goldens.
+
+## W67 — reuse exact formatter work
+
+The formatter now constructs one power of five per value, reuses it for
+both adjacent candidates, and updates it by one exact multiply/divide when
+the precision changes. The positive decimal exponent path scales the
+numerator; the negative path uses the same object as a denominator. The
+boundary comparator explicitly distinguishes these cases. The exact
+decimal expansion also divides by `10^9` per chunk instead of `10`, with
+nine-digit padding on nonleading chunks. This removes repeated wide
+division without changing the exact value or allocating another buffer.
+
+Validation retains the 1,996 exact reader cases and all 8,318 independent
+canonical expectations. `numeric_bench.c` consumes every result into a
+deterministic checksum and covers all exponent fields. `numeric_bench.py`
+records one warmup and seven alternating pairs on an explicitly pinned CPU,
+identical compiler flags, source/binary SHA-256, complete raw samples and
+ranges. The baseline is the already-correct W65 numeric core; these timings
+do not claim equivalence with the former incorrectly rounded lexer or an
+end-to-end compiler speedup. Final measurements include W68 below.

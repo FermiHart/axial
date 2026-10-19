@@ -124,7 +124,8 @@ static int decimal_boundary(axi_numeric_workspace *w, int e10, int sticky,
     unsigned field = (unsigned)(lower >> 52);
     int exponent = -1075, cmp;
     if (field) { m |= F64_HIDDEN; exponent = (int)field - 1076; }
-    if (!big_mul_u64(&w->product, &w->b, m * 2 + 1)) return 0;
+    if (e10 >= 0) big_set(&w->product, m * 2 + 1);
+    else if (!big_mul_u64(&w->product, &w->b, m * 2 + 1)) return 0;
     cmp = big_cmp_scaled(&w->a, e10, &w->product, exponent);
     /* No binary64 boundary can lie strictly inside an 800-digit decimal
      * prefix bucket: every such boundary has <=768 significant digits.
@@ -235,8 +236,13 @@ static int decimal_matches(axi_numeric_workspace *w, uint64_t coefficient,
                             int exponent, uint64_t bits)
 {
     int cmp;
-    big_set(&w->a, coefficient);
-    if (!decimal_prepare(w, exponent)) return 0;
+    /* The formatter retains 5^abs(exponent) in b across both candidates
+     * and updates it once between precisions. For positive exponents it
+     * scales the numerator; for negative exponents it is the denominator.
+     */
+    if (exponent >= 0) {
+        if (!big_mul_u64(&w->a, &w->b, coefficient)) return 0;
+    } else big_set(&w->a, coefficient);
     if (!decimal_boundary(w, exponent, 0, bits - 1, &cmp)) return 0;
     if (cmp < 0 || (!cmp && (bits & 1))) return 0;
     if (!decimal_boundary(w, exponent, 0, bits, &cmp)) return 0;
@@ -260,8 +266,18 @@ static int exact_digits(axi_numeric_workspace *w, uint64_t bits,
     for (int j = 0; j < factor; j++)
         if (!big_mul_add(&w->a, e < 0 ? 5 : 2, 0)) return 0;
     while (w->a.n) {
-        if (n == AXI_NUMERIC_DIGITS) return 0;
-        w->digits[n++] = (char)('0' + big_div_small(&w->a, 10));
+        uint32_t chunk = big_div_small(&w->a, UINT32_C(1000000000));
+        unsigned width = w->a.n ? 9 : 0;
+        /* Extract nine decimal digits per full-width division. Nonleading
+         * chunks retain their zero padding; only the most significant
+         * chunk may be shorter. No extra array or approximate arithmetic.
+         */
+        do {
+            if (n == AXI_NUMERIC_DIGITS) return 0;
+            w->digits[n++] = (char)('0' + chunk % 10);
+            chunk /= 10;
+            if (width) width--;
+        } while (chunk || width);
     }
     for (i = 0; i < n / 2; i++) {
         char c = w->digits[i];
@@ -325,9 +341,17 @@ int axi_f64_to_decimal(uint64_t bits, axi_numeric_workspace *w,
         return AXI_DECIMAL_OK;
     }
     if (!exact_digits(w, magnitude, &nd, &point)) return AXI_DECIMAL_INVALID;
+    big_set(&w->b, 1);
+    for (int j = 0, power = point > 0 ? point - 1 : 1 - point; j < power; j++)
+        if (!big_mul_add(&w->b, 5, 0)) return AXI_DECIMAL_INVALID;
     for (precision = 1; precision <= 17; precision++) {
         uint64_t first, second;
         int up = 0, exponent = point - (int)precision;
+        if (precision > 1) {
+            if (exponent >= 0) {
+                if (big_div_small(&w->b, 5)) return AXI_DECIMAL_INVALID;
+            } else if (!big_mul_add(&w->b, 5, 0)) return AXI_DECIMAL_INVALID;
+        }
         if (precision <= nd) prefix = prefix * 10 + (uint64_t)(w->digits[precision - 1] - '0');
         else prefix *= 10;
         if (precision < nd) {
