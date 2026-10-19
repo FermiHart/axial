@@ -193,3 +193,35 @@ cell deny : fn() -> bool
         artifact = compile_source("negative_constants", source)
         expect_value(artifact, "negatives", [], "i64 -80")
         print("frontend W06: PASS (signed range and compact literal lowering)")
+
+    if GROUP in ("all", "caps"):
+        def cap_cell(name, expression, pure=False):
+            return (f"cell {name} : fn() -> bool\n  fuel 10000\n"
+                    + ("  pure\n" if pure else "  cap fs.Read\n")
+                    + "{ ret " + expression + " }\n")
+
+        forward = [cap_cell(f"c{i}", f"c{i+1}()") for i in range(255)]
+        forward.append(cap_cell("c255", 'fs.path_under("/x", "/")'))
+        fixtures = {
+            "forward": "\n".join(forward),
+            "reverse": "\n".join(reversed(forward)),
+            "diamond": (cap_cell("top", "left() == right()")
+                        + cap_cell("left", "leaf()") + cap_cell("right", "leaf()")
+                        + cap_cell("leaf", 'fs.path_under("/x", "/")')),
+            "cycle": (cap_cell("first", "second()")
+                      + cap_cell("second", 'first() == fs.path_under("/x", "/")')),
+            "self": cap_cell("self", 'self() == fs.path_under("/x", "/")'),
+        }
+        for name, source in fixtures.items():
+            src = tmp / (name + ".axi")
+            src.write_text(source)
+            result = invoke("types", src)
+            check(result.returncode == 0 and not result.stdout and not result.stderr,
+                  f"capability closure {name}: {result.stdout} {result.stderr}")
+        src = tmp / "pure_transitive.axi"
+        src.write_text(cap_cell("caller", "callee()", pure=True)
+                       + cap_cell("callee", 'fs.path_under("/x", "/")'))
+        result = invoke("types", src)
+        check(result.returncode != 0 and "AXI-T019" in result.stdout + result.stderr,
+              "transitive pure caller escaped capability analysis")
+        print("frontend W07: PASS (256-cell forward/reverse, diamond, cycles, purity)")

@@ -26,6 +26,7 @@
 #include "axi_bc.h"
 #include "axi_cap_infer.h"
 #include "axi_cap_table.h"
+#include "axi_alloc.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -202,13 +203,19 @@ static int rshape_has_err(const rshape *rs, const char *lex, uint32_t len)
 
 /* ---- unit-level cell table ------------------------------------------------ */
 
-static const axi_node *find_cell(ck *c, const char *lex, uint32_t len)
+static int find_cell_index(ck *c, const char *lex, uint32_t len)
 {
     int i;
     for (i = 0; i < c->ncells; i++)
         if (lex_eq(c->cells[i]->lex, c->cells[i]->lexlen, lex, len))
-            return c->cells[i];
-    return NULL;
+            return i;
+    return -1;
+}
+
+static const axi_node *find_cell(ck *c, const char *lex, uint32_t len)
+{
+    int i = find_cell_index(c, lex, len);
+    return i < 0 ? NULL : c->cells[i];
 }
 
 static int cell_index(ck *c, const axi_node *cell)
@@ -275,51 +282,93 @@ static void gather_declared_caps(const axi_node *cell, axi_cap_kind *out, const 
     }
 }
 
-static void merge_call_caps(ck *c, const axi_node *n, axi_cap_set *summary,
-                            int *changed)
+typedef struct {
+    const axi_node *site;
+    int callee;
+} cap_call;
+
+typedef struct {
+    cap_call *calls;
+    size_t n, cap;
+    size_t first[257];
+    int failed;
+} cap_graph;
+
+static void collect_cap_calls(ck *c, const axi_node *n, cap_graph *g,
+                              unsigned char seen[256])
 {
     const axi_node *current;
-    for (current = n; current; current = current->next) {
+    for (current = n; current && !g->failed; current = current->next) {
         if (current->kind == N_CALL && current->a
                 && current->a->kind == N_ID) {
-            const axi_node *callee = find_cell(
+            int index = find_cell_index(
                 c, current->a->lex, current->a->lexlen);
-            int index = callee ? cell_index(c, callee) : -1;
-            if (index >= 0) {
-                int i;
-                for (i = 0; i < c->summaries[index].n; i++) {
-                    int before = summary->n;
-                    axi_cap_set_add(summary, c->summaries[index].caps[i],
-                                    current);
-                    if (summary->n != before) *changed = 1;
+            if (index >= 0 && !seen[index]) {
+                if (g->n == g->cap) {
+                    size_t cap = g->cap ? g->cap * 2 : 32;
+                    cap_call *calls;
+                    /* At most 256 distinct callees for each of 256 cells. */
+                    if (cap > 256u * 256u) { g->failed = 1; return; }
+                    calls = axi_realloc(g->calls, cap * sizeof *calls);
+                    if (!calls) { g->failed = 1; return; }
+                    g->calls = calls; g->cap = cap;
                 }
+                g->calls[g->n].site = current;
+                g->calls[g->n++].callee = index;
+                seen[index] = 1;
             }
         }
-        merge_call_caps(c, current->a, summary, changed);
-        merge_call_caps(c, current->b, summary, changed);
-        merge_call_caps(c, current->c, summary, changed);
-        merge_call_caps(c, current->list, summary, changed);
+        collect_cap_calls(c, current->a, g, seen);
+        collect_cap_calls(c, current->b, g, seen);
+        collect_cap_calls(c, current->c, g, seen);
+        collect_cap_calls(c, current->list, g, seen);
     }
 }
 
 static void infer_unit_caps(ck *c)
 {
     int i, pass, changed = 1;
+    cap_graph graph;
+    memset(&graph, 0, sizeof graph);
     for (i = 0; i < c->ncells; i++) {
         axi_cap_binding env[AXI_INFERRED_CAP_MAX];
         axi_cap_infer_result direct;
+        unsigned char seen[256] = {0};
         int nenv;
         gather_cap_env(c->cells[i], env, &nenv);
         axi_cap_infer_env ie = { env, nenv };
         axi_cap_infer_init(&direct);
         if (axi_cap_infer(c->cells[i]->b, &ie, c->ds, &direct) == 0)
             c->summaries[i] = direct.caps;
+        graph.first[i] = graph.n;
+        collect_cap_calls(c, c->cells[i]->b, &graph, seen);
+        if (graph.failed) {
+            tdiag(c, "AXI-T002", c->cells[i],
+                  "cannot build capability call graph under memory pressure",
+                  "retry with enough memory to prove every call edge");
+            free(graph.calls);
+            return;
+        }
     }
+    graph.first[c->ncells] = graph.n;
+    /* Preserve the same monotone fixed-point order and first-use sites,
+     * while resolving names and traversing the AST only once per cell. */
     for (pass = 0; pass < c->ncells && changed; pass++) {
         changed = 0;
-        for (i = 0; i < c->ncells; i++)
-            merge_call_caps(c, c->cells[i]->b, &c->summaries[i], &changed);
+        for (i = 0; i < c->ncells; i++) {
+            axi_cap_set *summary = &c->summaries[i];
+            for (size_t e = graph.first[i]; e < graph.first[i + 1]; e++) {
+                const cap_call *edge = &graph.calls[e];
+                const axi_cap_set *callee = &c->summaries[edge->callee];
+                for (int k = 0; k < callee->n; k++) {
+                    int before = summary->n;
+                    axi_cap_set_add(summary, callee->caps[k], edge->site);
+                    if (summary->n != before) changed = 1;
+                }
+            }
+        }
     }
+    free(graph.calls);
     for (i = 0; i < c->ncells; i++) {
         uint32_t mask = 0;
         int j;

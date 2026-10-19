@@ -111,3 +111,23 @@ generated programs spend one less fuel unit per negative-literal evaluation.
 checks both invalid magnitudes, signed boundary values, artifact absence on
 refusal, and 80 distinct negatives within the constant-pool bound. Arithmetic
 over existing i64 values retains its documented wrapping semantics.
+
+## W07 — reuse resolved capability-call edges
+
+**Problem.** Every fixed-point pass walked every statement and resolved
+callee names again. A forward-ordered 256-cell chain requires 256 passes,
+so unrelated arithmetic or literals were repeatedly revisited too.
+
+**Change.** Build a bounded graph of distinct caller/callee edges once,
+recording the first source call site in encounter order. Subsequent passes
+merge only capability summaries on those edges. Declaration order, first-use
+diagnostics, monotone convergence, and inferred-capability bits are preserved.
+The graph is invocation-owned, bounded by 256 × 256 edges, and allocation
+failure emits a refusal instead of accepting an incomplete closure.
+
+**Validation.** `python3 tests/audit40/frontend_codegen.py build/axi caps`
+checks full 256-cell chains in both orders, a diamond, mutual and self
+recursion, and an invalid transitive pure caller. Run
+`python3 tests/audit40/frontend_bench.py build/axi 7` for warmed, repeated
+process timings of the 256 × 100-statement graph and W01 malformed input.
+Benchmark each revision with identical compiler flags and sequential runs.
