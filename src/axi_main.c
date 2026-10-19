@@ -25,28 +25,50 @@
 #include "axi_aer1_verify.h"
 #include "axi_sign.h"
 #include "axi_vm.h"
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
+/* Bound host snapshots before allocating. Non-regular sources (notably
+ * FIFOs) are refused without blocking. Parsing and hashing use these bytes. */
+#define AXI_CLI_FILE_MAX (64u * 1024u * 1024u)
+
 static char *read_file(const char *path, size_t *out_len)
 {
-    FILE *f = fopen(path, "rb");
-    long sz;
+    struct stat st;
+    FILE *f;
+    int fd, saved;
+    size_t size;
     char *buf;
-    if (!f) return NULL;
-    if (fseek(f, 0, SEEK_END) != 0) { fclose(f); return NULL; }
-    sz = ftell(f);
-    if (sz < 0) { fclose(f); return NULL; }
-    if (fseek(f, 0, SEEK_SET) != 0) { fclose(f); return NULL; }
-    buf = (char *)axi_malloc((size_t)sz + 1);
-    if (!buf) { fclose(f); return NULL; }
-    if (sz > 0 && fread(buf, 1, (size_t)sz, f) != (size_t)sz) {
-        fclose(f); free(buf); return NULL;
+    if (out_len) *out_len = 0;
+    if (!path || !*path || !out_len) { errno = EINVAL; return NULL; }
+    fd = open(path, O_RDONLY | O_NONBLOCK | O_CLOEXEC);
+    if (fd < 0) return NULL;
+    if (fstat(fd, &st) != 0) {
+        saved = errno; close(fd); errno = saved; return NULL;
     }
-    fclose(f);
-    buf[sz] = '\0';
-    *out_len = (size_t)sz;
+    if (!S_ISREG(st.st_mode) || st.st_size < 0) {
+        close(fd); errno = EINVAL; return NULL;
+    }
+    if ((uintmax_t)st.st_size > AXI_CLI_FILE_MAX) {
+        close(fd); errno = EFBIG; return NULL;
+    }
+    size = (size_t)st.st_size;
+    f = fdopen(fd, "rb");
+    if (!f) { saved = errno; close(fd); errno = saved; return NULL; }
+    buf = (char *)axi_malloc(size + 1);
+    if (!buf) { saved = errno; fclose(f); errno = saved; return NULL; }
+    if ((size && fread(buf, 1, size, f) != size)
+            || fgetc(f) != EOF || ferror(f)) {
+        fclose(f); free(buf); errno = EIO; return NULL;
+    }
+    if (fclose(f) != 0) { saved = errno; free(buf); errno = saved; return NULL; }
+    buf[size] = '\0';
+    *out_len = size;
     return buf;
 }
 
@@ -152,14 +174,19 @@ static void print_diags_json(const axi_diags *ds, const char *path)
 
 static void print_read_error(const char *path, int json)
 {
+    int oversized = errno == EFBIG;
+    const char *code = oversized ? "AXI-X003" : "AXI-X001";
+    const char *message = oversized ? "input exceeds the 64 MiB CLI limit"
+                                      : "cannot read file";
     if (json) {
         axi_diags ds;
         axi_diags_init(&ds);
-        axi_diag_add(&ds, "AXI-X001", 0, 0, 0, "cannot read file",
-                     "verify the path and read permission");
+        axi_diag_add(&ds, code, 0, 0, 0, message,
+                     oversized ? "split the input into bounded files"
+                               : "provide a readable regular file");
         print_diags_json(&ds, path);
     } else {
-        fprintf(AXI_ERR, "AXI-X001 cannot read file: %s\n", path);
+        fprintf(AXI_ERR, "%s %s: %s\n", code, message, path);
     }
 }
 
@@ -210,6 +237,12 @@ static int cmd_parse(const char *path, int json)
     }
     axi_diags_init(&ds);
     unit = axi_parse_unit(src, len, path, &ds);
+    if (!unit) {
+        if (json) print_diags_json(&ds, path);
+        else print_diags_human(&ds, path);
+        free(src);
+        return 2;
+    }
 
     if (json) {
         print_diags_json(&ds, path);
@@ -239,6 +272,7 @@ static int cmd_canon(const char *path)
     }
     axi_diags_init(&ds);
     unit = axi_parse_unit(src, len, path, &ds);
+    if (!unit) { print_diags_human(&ds, path); free(src); return 2; }
     if (ds.n > 0) { /* partial tree: refusing beats emitting a wrong canon */
         print_diags_human(&ds, path);
         axi_ast_free(unit);
@@ -355,6 +389,12 @@ static int cmd_check_impl(const char *path, int json, int and_types)
     }
 
     unit = axi_parse_unit(src, len, path, &ds);
+    if (!unit) {
+        if (json) print_diags_json(&ds, path);
+        else print_diags_human(&ds, path);
+        free(src);
+        return 2;
+    }
     if (ds.n > 0 && unit->list == NULL) {
         /* nothing parsed; canon compare would only shout noise */
         if (json) print_diags_json(&ds, path);
@@ -496,6 +536,12 @@ static int cmd_types(const char *path, int json)
     }
     axi_diags_init(&ds);
     unit = axi_parse_unit(src, len, path, &ds);
+    if (!unit) {
+        if (json) print_diags_json(&ds, path);
+        else print_diags_human(&ds, path);
+        free(src);
+        return 2;
+    }
     if (ds.n == 0) /* grammar first; a broken tree would only lie */
         axi_type_check(unit, &ds);
     if (ds.n > 0) {
@@ -530,6 +576,7 @@ static int cmd_compile(const char *in, const char *out_path,
     }
     axi_diags_init(&ds);
     unit = axi_parse_unit(src, n, in, &ds);
+    if (!unit) { print_diags_human(&ds, in); free(src); return 2; }
     if (ds.n == 0)
         axi_type_check(unit, &ds);
     if (ds.n > 0) {
@@ -581,6 +628,12 @@ static axi_node *load_unit_or_null(const char *path, char **src_out, int json)
     }
     axi_diags_init(&ds);
     unit = axi_parse_unit(src, len, path, &ds);
+    if (!unit) {
+        if (json) print_diags_json(&ds, path);
+        else print_diags_human(&ds, path);
+        free(src);
+        return NULL;
+    }
     if (ds.n == 0) axi_type_check(unit, &ds); /* populate inferred iface caps */
     if (ds.n > 0) { /* unreachable: check was green a moment ago */
         print_diags_human(&ds, path);
@@ -715,8 +768,8 @@ static int cmd_lint_safe(const char *path, int json)
     if (!src) { print_read_error(path,json); return 2; }
     axi_diags_init(&ds);
     unit=axi_parse_unit(src,len,path,&ds);
-    if (!ds.n && !ds.dropped) axi_type_check(unit,&ds);
-    if (ds.n || ds.dropped) rc=2;
+    if (unit && !ds.n && !ds.dropped) axi_type_check(unit,&ds);
+    if (!unit || ds.n || ds.dropped) rc=2;
     else { axi_policy_lint(unit,&ds); rc=(ds.n || ds.dropped) ? 1 : 0; }
     if (json) print_diags_json(&ds,path); else print_diags_human(&ds,path);
     axi_ast_free(unit); free(src);

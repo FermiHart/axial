@@ -47,3 +47,18 @@ local Unix datagram sends; fs.Write's fsync worker therefore needs an
 IPC-capable host for the positive integration case. This environmental
 denial was reproduced with a separate socketpair probe; the test retains
 the positive assertion and a bounded deadline, with no skipped success case.
+
+## W34 — Bounded, nonblocking CLI file snapshots
+
+The CLI used an unbounded seek/allocate/read path, followed FIFOs into a
+blocking open and did not detect file growth or close/read errors. It now
+opens once with nonblocking/CLOEXEC flags, requires a regular file, enforces
+a 64 MiB limit before allocation, checks exact EOF and reports an explicit
+oversize diagnostic. Empty regular files remain valid inputs to the parser.
+All CLI parser calls now handle the internal NULL-on-OOM contract introduced
+in W10; allocation failure no longer becomes a CLI null dereference.
+
+Validation: `make gate-audit` runs the actual reader against regular, empty,
+oversized sparse, absent, directory, device and FIFO inputs (16 checks).
+The 67 original goldens remain green. Source files above 64 MiB and special
+files are intentionally refused; this is a documented CLI resource bound.

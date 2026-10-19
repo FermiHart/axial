@@ -15,10 +15,13 @@ CORE_SRC := $(filter-out src/axi_main.c src/axi_dossier_main.c,$(wildcard src/*.
 CORE_OBJ := $(patsubst %.c,$(BUILD)/%.o,$(CORE_SRC))
 AXI_OBJ := $(CORE_OBJ) $(BUILD)/src/axi_main.o
 DEMO_OBJ := $(CORE_OBJ) $(BUILD)/scripts/jash_policy_demo.o
+AUDIT_SRC := $(wildcard tests/audit40/*.c)
+AUDIT_BIN := $(patsubst tests/audit40/%.c,$(BUILD)/audit40/%,$(AUDIT_SRC))
+.SECONDARY: $(patsubst %.c,$(BUILD)/%.o,$(AUDIT_SRC))
 AXI_INC := -Isrc -Iinclude -Ivendor
 CONFIG := $(BUILD)/.build-config
 
-.PHONY: all dev demo gate-fast gate-cli gate clean FORCE
+.PHONY: all dev demo gate-fast gate-cli gate-audit gate clean FORCE
 all: dev
 dev: $(AXI)
 demo: $(DEMO)
@@ -28,6 +31,10 @@ $(AXI): $(AXI_OBJ)
 
 $(DEMO): $(DEMO_OBJ)
 	$(HOSTCC) $(LDFLAGS) -o $@ $(DEMO_OBJ) $(LDLIBS)
+
+$(BUILD)/audit40/%: $(BUILD)/tests/audit40/%.o $(CORE_OBJ)
+	@mkdir -p $(dir $@)
+	$(HOSTCC) $(LDFLAGS) -o $@ $^ $(LDLIBS)
 
 # Keep a content-stable stamp: header edits and changes of compiler/flags
 # invalidate their objects, while an unchanged invocation compiles nothing.
@@ -49,9 +56,12 @@ gate-fast: dev
 gate-cli: dev
 	AXI=$(abspath $(AXI)) sh tests/audit40/cli.sh
 
-gate: gate-fast gate-cli
+gate-audit: $(AUDIT_BIN)
+	@set -e; for test in $(AUDIT_BIN); do "$$test"; done
+
+gate: gate-fast gate-cli gate-audit
 
 clean:
 	rm -rf $(BUILD)
 
--include $(AXI_OBJ:.o=.d) $(DEMO_OBJ:.o=.d)
+-include $(AXI_OBJ:.o=.d) $(DEMO_OBJ:.o=.d) $(patsubst %.c,$(BUILD)/%.d,$(AUDIT_SRC))
