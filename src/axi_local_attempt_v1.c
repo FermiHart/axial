@@ -629,6 +629,11 @@ static int commit_impl(const char *store_dir,
         rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
         goto done;
     }
+    if (!axi_local_store_legacy_allowed(sdfd)) {
+        fill_out(out, AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED, 0, grant_root);
+        rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
+        goto done;
+    }
     /* Epoch enforcement under the lock: a superseded epoch accepts no
      * new grant or mutation (old state stays recovery/status-only).
      * Legacy stores without an epoch file are grandfathered. enforce
