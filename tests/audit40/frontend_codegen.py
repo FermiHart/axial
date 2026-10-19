@@ -171,3 +171,25 @@ cell deny : fn() -> bool
         expect_value(artifact, "wide", [], "u64 7", ("--mem", "16777216"))
         print("frontend W05: PASS (40,000 statements under a 2 MiB stack)")
 
+
+    if GROUP in ("all", "signed"):
+        for magnitude in ("9223372036854775809", "18446744073709551615"):
+            src = tmp / "negative_overflow.axi"
+            src.write_text("cell bad : fn() -> i64\n  fuel 1000\n  pure\n"
+                           "{ ret -" + magnitude + " }\n")
+            artifact = tmp / "negative_overflow.axb"
+            result = invoke("compile", src, "-o", artifact, "--signing-key", seed)
+            check(result.returncode != 0 and "AXI-T009" in result.stderr
+                  and not artifact.exists(),
+                  f"negative literal wrapped into a positive value: {magnitude}")
+        for magnitude in ("1", "9223372036854775807", "9223372036854775808"):
+            source = ("cell negative : fn() -> i64\n  fuel 1000\n  pure\n"
+                      "{ ret -" + magnitude + " }\n")
+            artifact = compile_source("negative" + magnitude, source)
+            expect_value(artifact, "negative", [], "i64 -" + magnitude)
+        source = ("cell negatives : fn() -> i64\n  fuel 10000\n  pure\n{\n"
+                  + "".join(f"  if true {{ let value = -{i} }}\n"
+                            for i in range(1, 81)) + "  ret -80\n}\n")
+        artifact = compile_source("negative_constants", source)
+        expect_value(artifact, "negatives", [], "i64 -80")
+        print("frontend W06: PASS (signed range and compact literal lowering)")

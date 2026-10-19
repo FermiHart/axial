@@ -94,3 +94,20 @@ allocation or register/table refusal. Empty output buffers start terminated.
 compiles and runs the 40,000-statement case under a 2 MiB compiler stack.
 The collection walk now visits each AST node once, excluding builtin table
 lookups; it uses stack proportional to structural depth rather than width.
+
+## W06 — exact signed-literal range and cheaper lowering
+
+**Problem.** The source literal `-18446744073709551615` was accepted as i64
+and emitted as positive one. This is a literal-range error, distinct from
+the language's defined arithmetic wrap. Every ordinary negative literal
+also consumed an unused u64 constant and load before its real i64 load.
+
+**Change.** Reject magnitudes above 2^63 in the type checker and again at
+codegen's boundary. Emit an admitted negative literal with one i64 constant
+and one `ldk`, preserving the minimum signed value. Opcode prices stay fixed;
+generated programs spend one less fuel unit per negative-literal evaluation.
+
+**Validation.** `python3 tests/audit40/frontend_codegen.py build/axi signed`
+checks both invalid magnitudes, signed boundary values, artifact absence on
+refusal, and 80 distinct negatives within the constant-pool bound. Arithmetic
+over existing i64 values retains its documented wrapping semantics.

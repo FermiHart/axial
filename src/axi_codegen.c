@@ -500,22 +500,24 @@ static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent)
         return rd;
     }
     case N_UN: {
+        if (n->op == T_MINUS && n->a && n->a->kind == N_INT) {
+            int k, rd;
+            if (n->a->ival > (UINT64_C(1) << 63)) { c->err = 1; return 0; }
+            /* A signed literal is one constant, not a discarded unsigned
+             * load followed by a second constant. -2^63 remains representable. */
+            k = add_k_num(c, 2, UINT64_C(0) - n->a->ival);
+            rd = alloc_reg(c);
+            if (c->err || c->oom) return 0;
+            ob_indent(o, indent);
+            ob_printf(o, "ldk r%d k%d\n", rd, k);
+            return rd;
+        }
         int ra = gen_expr(c, o, n->a, indent);
         int rd = alloc_reg(c);
         if (c->err || c->oom) return 0;
         if (n->op == T_BANG) {
             ob_indent(o, indent);
             ob_printf(o, "not r%d r%d\n", rd, ra);
-        } else if (n->op == T_MINUS && n->a->kind == N_INT) {
-            /* INV-316 / AXI-INV-101: -<literal> IS an i64 constant (the
-             * checker says so); emit the negated bits directly. Wrap is
-             * defined: -2^63 is the i64 min bit pattern. */
-            int k = add_k_num(c, 2, (uint64_t)(0 - n->a->ival));
-            if (c->err) return 0;
-            free_reg(c, ra);
-            ob_indent(o, indent);
-            ob_printf(o, "ldk r%d k%d\n", rd, k);
-            return rd;
         } else if (n->op == T_MINUS) {
             /* INV-316 / AXI-INV-101: -x expands to 0 - x with the zero of the
              * kind the checker proved (tyann); never a mov that drops the

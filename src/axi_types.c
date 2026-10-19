@@ -872,6 +872,11 @@ static ty check_expr(ck *c, const axi_node *n)
             return mkty(TY_BAD);
         }
         if (n->a->kind == N_INT) { /* -5 is an i64 literal */
+            if (n->a->ival > (UINT64_C(1) << 63)) {
+                tdiag(c, "AXI-T009", n, "negative integer literal is outside i64",
+                      "i64 minimum is -9_223_372_036_854_775_808");
+                return mkty(TY_BAD);
+            }
             ((axi_node *)n)->tyann = 1;    /* AXI-INV-101 */
             return mkty(TY_I64);
         }
