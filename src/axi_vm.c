@@ -439,7 +439,6 @@ static int arith(vm *V, const axb_cell *c, uint32_t pc, uint8_t op,
               "no coercion at runtime either: convert in source");
         return 0;
     }
-    *out = *x;
     if (x->kind == VK_F64) {
         double a, b, r;
         memcpy(&a, &x->bits, 8); memcpy(&b, &y->bits, 8);
@@ -453,6 +452,9 @@ static int arith(vm *V, const axb_cell *c, uint32_t pc, uint8_t op,
                   "use u64/i64, or wait for the stdlib cell (W21)");
             return 0;
         }
+        /* Destination registers may alias either input. Publish only after
+         * both operands have been consumed, including a divisor of zero. */
+        *out = *x;
         memcpy(&out->bits, &r, 8);
         out->bits = canonical_f64_bits(out->bits);
         return 1;
@@ -482,6 +484,7 @@ static int arith(vm *V, const axb_cell *c, uint32_t pc, uint8_t op,
         } else r = a % b;
         break;
     }
+    *out = *x;
     out->bits = r;
     return 1;
 }
