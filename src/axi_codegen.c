@@ -688,12 +688,14 @@ static void gen_stmt(cg *c, outbuf *o, const axi_node *n, int indent)
             size_t else_start = o->len;
             gen_block(c, o, n->c, indent);
             size_t else_end = o->len;
-            /* jf must skip the whole then block plus the trailing jmp. */
+            /* Compute both spans before editing the buffer, then patch the
+             * later site first. Widening the earlier displacement shifts
+             * every saved byte offset after it; a stale jmp_pos can point at
+             * the preceding branch's '+' and leave this jmp at +0. */
             int off_else = (int)count_instrs(o->buf, then_start, else_start);
-            patch_offset(o, jf_pos, off_else + 1);
-            /* jmp must skip the whole else block. */
             int off_end = (int)count_instrs(o->buf, else_start, else_end);
             patch_offset(o, jmp_pos, off_end + 1);
+            patch_offset(o, jf_pos, off_else + 1);
         } else {
             int off = (int)count_instrs(o->buf, then_start, then_end);
             patch_offset(o, jf_pos, off + 1);
