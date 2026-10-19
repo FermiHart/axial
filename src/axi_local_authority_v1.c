@@ -2,6 +2,8 @@
 #include "axi_local_store_v1.h"
 #include "axi_alloc.h"
 #include "axi_hash.h"
+#include "axi_local_epoch_v1.h"
+#include "axi_wipe.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -331,6 +333,8 @@ int axi_local_authority_observe_locked(const axi_local_authority_v1 *owner,
                                          axi_local_authority_v1_facts *facts)
 {
     axi_local_authority_v1_facts staged;
+    axi_local_epoch_v1 epoch;
+    int present = 0;
     int rc = axi_local_authority_host_sample(&staged);
     if (rc != 0) return rc;
     if (owner->pid != getpid() || staged.uid != owner->uid
@@ -338,6 +342,14 @@ int axi_local_authority_observe_locked(const axi_local_authority_v1 *owner,
             || axi_local_authority_v1_resource(owner, &staged.resource_device, &staged.resource_inode) != 0
             || axi_local_authority_previous_locked(owner, &staged.previous, &staged.has_previous) != 0)
         return AXI_LOCAL_AUTHORITY_V1_REFUSED;
+    if (axi_local_epoch_v1_read_at(owner->dirfd, &epoch, &present) != 0 || !present)
+        return AXI_LOCAL_AUTHORITY_V1_REFUSED;
+    staged.epoch_generation = epoch.generation;
+    memcpy(staged.pins.deployment, epoch.deployment, 16);
+#define PIN(field) memcpy(staged.pins.field, epoch.field, 32)
+    PIN(trust_snapshot_root); PIN(policy_binary); PIN(policy_module);
+    PIN(policy_producer); PIN(policy_iface);
+#undef PIN
     *facts = staged;
     return AXI_LOCAL_AUTHORITY_V1_OK;
 }
@@ -353,4 +365,89 @@ int axi_local_authority_v1_observe(const axi_local_authority_v1 *owner,
     rc = axi_local_authority_observe_locked(owner, out);
     (void)flock(lockfd, LOCK_UN); (void)close(lockfd);
     return rc;
+}
+
+int axi_local_authority_action_matches(const axi_local_action_v1 *action,
+                                         const axi_local_authority_v1_facts *facts)
+{
+    if (action->uid != facts->uid || action->executor_uid != facts->executor_uid
+            || action->resource_device != facts->resource_device
+            || action->resource_inode != facts->resource_inode
+            || action->has_previous != facts->has_previous) return 0;
+    if (action->has_previous) {
+        const axi_local_previous_v1 *a = &action->previous, *b = &facts->previous;
+        if (a->device != b->device || a->inode != b->inode || a->size != b->size
+                || a->mtime_ns != b->mtime_ns || memcmp(a->sha256, b->sha256, 32)) return 0;
+    }
+    return 1;
+}
+
+int axi_local_authority_v1_prepare(const axi_local_authority_v1 *owner,
+                                    const void *action_bytes, size_t action_len,
+                                    const uint8_t *payload, size_t payload_len,
+                                    uint64_t deadline_mono_ns,
+                                    axi_local_authority_v1_prepared **out,
+                                    axi_local_admission_v1_result *admission)
+{
+    axi_local_authority_v1_prepared *prepared = NULL;
+    axi_local_admission_v1_result result;
+    uint8_t digest[32];
+    int lockfd = -1, rc = AXI_LOCAL_AUTHORITY_V1_REFUSED, dupfd = -1;
+    memset(&result, 0, sizeof result);
+    result.refusal = AXI_LOCAL_ADMISSION_V1_REFUSE_INPUT;
+    if (out) *out = NULL;
+    if (admission) *admission = result;
+    if (!owner || !out || !admission || !action_bytes || !action_len
+            || action_len > AXI_LOCAL_ACTION_V1_MAX_BYTES
+            || payload_len > AXI_LOCAL_ACTION_V1_MAX_BYTES || (!payload && payload_len)) return rc;
+    prepared = axi_calloc(1, sizeof *prepared);
+    if (!prepared) return rc;
+    prepared->owner.dirfd = -1;
+    prepared->action_len = action_len; prepared->payload_len = payload_len;
+    memcpy(prepared->action_bytes, action_bytes, action_len);
+    if (payload_len) memcpy(prepared->payload, payload, payload_len);
+    if (axi_local_action_v1_decode(&prepared->action, prepared->action_bytes, action_len) != 0
+            || prepared->action.payload_size != payload_len) goto done;
+    axi_sha256(prepared->payload, payload_len, digest);
+    if (memcmp(digest, prepared->action.payload_sha256, 32)) goto done;
+    rc = axi_local_authority_lock(owner, LOCK_SH, deadline_mono_ns, &lockfd);
+    if (rc != 0) goto done;
+    rc = axi_local_authority_observe_locked(owner, &prepared->facts);
+    if (rc != 0) goto done;
+    rc = AXI_LOCAL_AUTHORITY_V1_REFUSED;
+    if (!axi_local_authority_action_matches(&prepared->action, &prepared->facts)) {
+        result.refusal = AXI_LOCAL_ADMISSION_V1_REFUSE_BINDING;
+        goto done;
+    }
+    memcpy(prepared->observed.boot, prepared->facts.boot, 16);
+    prepared->observed.now_ns = prepared->facts.now_ns;
+    prepared->observed.clock_available = 1;
+    prepared->observed.coverage_complete = 1;
+    prepared->observed.profile = AXI_LOCAL_ADMISSION_V1_PROD;
+    if (axi_local_admission_v1_appraise(prepared->action_bytes, action_len,
+            &prepared->facts.pins, &prepared->observed, &result) != 0 || !result.admitted) goto done;
+    dupfd = fcntl(owner->dirfd, F_DUPFD_CLOEXEC, 0);
+    if (dupfd < 0) {
+        result.admitted = 0; result.refusal = AXI_LOCAL_ADMISSION_V1_REFUSE_INPUT;
+        memset(result.context_root, 0, sizeof result.context_root);
+        goto done;
+    }
+    prepared->owner = *owner; prepared->owner.dirfd = dupfd; dupfd = -1;
+    prepared->admission = result;
+    *out = prepared; prepared = NULL;
+    rc = AXI_LOCAL_AUTHORITY_V1_OK;
+done:
+    if (lockfd >= 0) { (void)flock(lockfd, LOCK_UN); (void)close(lockfd); }
+    if (dupfd >= 0) (void)close(dupfd);
+    if (prepared) { axi_private_wipe(prepared, sizeof *prepared); free(prepared); }
+    *admission = result;
+    return rc;
+}
+
+void axi_local_authority_v1_prepared_close(axi_local_authority_v1_prepared *prepared)
+{
+    if (!prepared) return;
+    (void)close(prepared->owner.dirfd);
+    axi_private_wipe(prepared, sizeof *prepared);
+    free(prepared);
 }

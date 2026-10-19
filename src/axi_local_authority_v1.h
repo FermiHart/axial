@@ -20,6 +20,7 @@
 #include "axi_local_attempt_v1.h"
 
 typedef struct axi_local_authority_v1 axi_local_authority_v1;
+typedef struct axi_local_authority_v1_prepared axi_local_authority_v1_prepared;
 
 typedef struct {
     uint64_t resource_device, resource_inode;
@@ -28,6 +29,8 @@ typedef struct {
     uint32_t uid, executor_uid;
     uint8_t boot[16];
     uint64_t now_ns;
+    axi_local_admission_v1_pins pins;
+    uint64_t epoch_generation;
 } axi_local_authority_v1_facts;
 
 #define AXI_LOCAL_AUTHORITY_V1_OK AXI_LOCAL_ATTEMPT_V1_OK
@@ -76,5 +79,24 @@ int axi_local_authority_v1_previous(const axi_local_authority_v1 *owner,
 int axi_local_authority_v1_observe(const axi_local_authority_v1 *owner,
                                     axi_local_authority_v1_facts *out,
                                     uint64_t deadline_mono_ns);
+
+/* Require an active owner-provisioned epoch (no legacy grandfathering),
+ * compare an action with actual host facts, and snapshot its exact bytes and
+ * payload. Outputs give the existing admission context for AG1 issuance;
+ * this function never issues a grant, executes policy or performs an effect.
+ * The opaque prepared request owns an independent dirfd and copied data, so
+ * caller buffers and owner can be released afterwards. It is process-bound
+ * and reusable only for status/replay semantics after a successful commit.
+ * The issuer must sign AG1 roots for these exact bytes/context. Coverage=1
+ * means only this activated local attempt door, not general host/guest paths.
+ * Outputs must be disjoint from inputs and each other. On refusal *out=NULL;
+ * admission is a refusal (zero context unless common appraisal produced it). */
+int axi_local_authority_v1_prepare(const axi_local_authority_v1 *owner,
+                                    const void *action_bytes, size_t action_len,
+                                    const uint8_t *payload, size_t payload_len,
+                                    uint64_t deadline_mono_ns,
+                                    axi_local_authority_v1_prepared **out,
+                                    axi_local_admission_v1_result *admission);
+void axi_local_authority_v1_prepared_close(axi_local_authority_v1_prepared *prepared);
 
 #endif

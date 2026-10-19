@@ -131,6 +131,40 @@ static void mint(fixture *f, const axi_local_admission_v1_result *prepared)
     axi_ag1_v1_root(&g, f->grant_root);
 }
 
+static void provision(fixture *f)
+{
+    axi_local_epoch_v1 epoch;
+    uint64_t generation = 0;
+    memset(&epoch, 0, sizeof epoch);
+    memcpy(epoch.deployment, f->pins.deployment, 16);
+#define PIN(field) memcpy(epoch.field, f->pins.field, 32)
+    PIN(trust_snapshot_root); PIN(policy_binary); PIN(policy_module);
+    PIN(policy_producer); PIN(policy_iface);
+#undef PIN
+    CHECK(axi_local_epoch_v1_provision(f->dir, &epoch, &generation) == 0);
+    CHECK(axi_local_epoch_v1_activate(f->dir, generation) == 0);
+}
+
+static void measured_action(fixture *f, axi_local_authority_v1 *owner)
+{
+    axi_local_authority_v1_facts facts;
+    int n;
+    CHECK(axi_local_authority_v1_observe(owner, &facts, 0) == 0);
+    f->action.uid = facts.uid; f->action.executor_uid = facts.executor_uid;
+    memcpy(f->action.boot, facts.boot, 16);
+    f->action.resource_device = facts.resource_device; f->action.resource_inode = facts.resource_inode;
+    f->action.has_previous = facts.has_previous; f->action.previous = facts.previous;
+    f->action.not_before = facts.now_ns; f->action.not_after = facts.now_ns + f->action.ttl_ns;
+    f->pins = facts.pins;
+    memcpy(f->action.deployment, facts.pins.deployment, 16);
+#define PIN(field) memcpy(f->action.field, facts.pins.field, 32)
+    PIN(trust_snapshot_root); PIN(policy_binary); PIN(policy_module);
+    PIN(policy_producer); PIN(policy_iface);
+#undef PIN
+    n = axi_local_action_v1_encode(&f->action, f->action_bytes, sizeof f->action_bytes);
+    CHECK(n > 0); f->action_len = (size_t)n;
+}
+
 static void w41(void)
 {
     fixture f, other;
@@ -226,6 +260,7 @@ static void w43(void)
     pid_t child;
     int status;
     new_fixture(&f);
+    provision(&f);
     CHECK(axi_local_authority_v1_enable(f.dir, f.pk) == 0);
     CHECK(axi_local_authority_v1_open(f.dir, &owner) == 0);
     CHECK(axi_local_authority_v1_observe(owner, &facts, 0) == 0);
@@ -253,6 +288,57 @@ static void w43(void)
     axi_local_authority_v1_close(owner); rm_fixture(f.dir);
 }
 
+static void w44(void)
+{
+    fixture f;
+    axi_local_authority_v1 *owner = NULL;
+    axi_local_authority_v1_prepared *prepared = NULL;
+    axi_local_admission_v1_result adm;
+    axi_local_authority_v1_facts facts, sentinel;
+    uint8_t payload[7] = {'p','a','y','l','o','a','d'};
+    unsigned field;
+    new_fixture(&f);
+    CHECK(axi_local_authority_v1_enable(f.dir, f.pk) == 0);
+    CHECK(axi_local_authority_v1_open(f.dir, &owner) == 0);
+    memset(&facts, 0x5a, sizeof facts); sentinel = facts;
+    CHECK(axi_local_authority_v1_observe(owner, &facts, 0) != 0);
+    CHECK(!memcmp(&facts, &sentinel, sizeof facts));
+    provision(&f); measured_action(&f, owner);
+    for (field = 0; field < 8; field++) {
+        axi_local_action_v1 saved = f.action;
+        int n;
+        switch (field) {
+        case 0: f.action.uid++; if (f.action.uid == f.action.executor_uid) f.action.uid++; break;
+        case 1: f.action.executor_uid += 2; break;
+        case 2: f.action.resource_device ^= 1; break;
+        case 3: f.action.resource_inode ^= 1; break;
+        case 4: f.action.trust_snapshot_root[0] ^= 1; break;
+        case 5: f.action.policy_binary[0] ^= 1; break;
+        case 6: f.action.boot[0] ^= 1; break;
+        default: f.action.has_previous = 1; break;
+        }
+        n = axi_local_action_v1_encode(&f.action, f.action_bytes, sizeof f.action_bytes);
+        CHECK(n > 0);
+        CHECK(axi_local_authority_v1_prepare(owner, f.action_bytes, (size_t)n, payload, sizeof payload,
+                                             0, &prepared, &adm) != 0);
+        CHECK(prepared == NULL && !adm.admitted);
+        CHECK(!exists(f.dir, "records") && !exists(f.dir, "config"));
+        f.action = saved;
+    }
+    measured_action(&f, owner);
+    CHECK(axi_local_authority_v1_prepare(owner, f.action_bytes, f.action_len, payload, sizeof payload,
+                                         0, &prepared, &adm) == 0 && prepared && adm.admitted);
+    CHECK(axi_local_authority_v1_observe(owner, &facts, 0) == 0);
+    CHECK(facts.epoch_generation == 1 && !memcmp(&facts.pins, &f.pins, sizeof f.pins));
+    /* prepare owns all bytes and its fd after return. Commit tests in W45
+     * prove that subsequent caller mutation cannot alter the signed effect. */
+    memset(f.action_bytes, 0, sizeof f.action_bytes); memset(payload, 0, sizeof payload);
+    axi_local_authority_v1_close(owner); owner = NULL;
+    axi_local_authority_v1_prepared_close(prepared);
+    CHECK(!exists(f.dir, "records") && !exists(f.dir, "config"));
+    rm_fixture(f.dir);
+}
+
 int main(int argc, char **argv)
 {
     if (geteuid() == 0) {
@@ -268,7 +354,8 @@ int main(int argc, char **argv)
     if (argc == 1 || !strcmp(argv[1], "W41")) w41();
     if (argc == 1 || !strcmp(argv[1], "W42")) w42();
     if (argc == 1 || !strcmp(argv[1], "W43")) w43();
-    if (argc == 2 && strcmp(argv[1], "W41") && strcmp(argv[1], "W42") && strcmp(argv[1], "W43")) return 2;
+    if (argc == 1 || !strcmp(argv[1], "W44")) w44();
+    if (argc == 2 && strcmp(argv[1], "W41") && strcmp(argv[1], "W42") && strcmp(argv[1], "W43") && strcmp(argv[1], "W44")) return 2;
     printf("audit80 security: %u checks PASS (ruid=%lu euid=%lu)\n", checks,
            (unsigned long)getuid(), (unsigned long)geteuid());
     return 0;

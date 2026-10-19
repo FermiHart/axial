@@ -17,6 +17,17 @@ struct axi_local_authority_v1 {
     uint8_t boot[16];
 };
 
+struct axi_local_authority_v1_prepared {
+    axi_local_authority_v1 owner;
+    axi_local_authority_v1_facts facts;
+    axi_local_action_v1 action;
+    axi_local_admission_v1_observed observed;
+    axi_local_admission_v1_result admission;
+    size_t action_len, payload_len;
+    uint8_t action_bytes[AXI_LOCAL_ACTION_V1_MAX_BYTES];
+    uint8_t payload[AXI_LOCAL_ACTION_V1_MAX_BYTES];
+};
+
 int axi_local_authority_lock(const axi_local_authority_v1 *owner,
                               int operation, uint64_t deadline, int *lockfd);
 int axi_local_authority_validate_locked(const axi_local_authority_v1 *owner);
@@ -26,5 +37,7 @@ int axi_local_authority_previous_locked(const axi_local_authority_v1 *owner,
 int axi_local_authority_host_sample(axi_local_authority_v1_facts *facts);
 int axi_local_authority_observe_locked(const axi_local_authority_v1 *owner,
                                          axi_local_authority_v1_facts *facts);
+int axi_local_authority_action_matches(const axi_local_action_v1 *action,
+                                         const axi_local_authority_v1_facts *facts);
 
 #endif
