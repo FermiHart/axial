@@ -69,7 +69,7 @@ typedef struct {
 static const uint8_t *rd(trust_reader *r, size_t len)
 {
     const uint8_t *p;
-    if (!r || r->err || len > r->len - r->off) {
+    if (!r || r->err || r->off > r->len || len > r->len - r->off) {
         if (r) r->err = 1;
         return NULL;
     }
@@ -169,7 +169,9 @@ static int parse_snapshot(trust_snapshot *s, const uint8_t *bytes, size_t len)
     uint16_t ni, nk, ng, np, nr;
     size_t i;
 
-    if (!s || !bytes || len == 0 || memcmp(rd(&r, 4), AXI_TRUST_V1_MAGIC, 4) != 0
+    /* Read the complete fixed prefix before passing a pointer to memcmp.
+     * rd() returns NULL for 1--3-byte inputs, not an empty byte string. */
+    if (!s || !bytes || len < 8 || memcmp(rd(&r, 4), AXI_TRUST_V1_MAGIC, 4) != 0
             || rd_u32(&r) != AXI_TRUST_V1_VERSION)
         return -1;
     memset(s, 0, sizeof *s);
