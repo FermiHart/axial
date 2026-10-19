@@ -4,14 +4,19 @@ import pathlib
 import subprocess
 import sys
 import tempfile
+import resource
 
 AXI = pathlib.Path(sys.argv[1]).resolve()
 GROUP = sys.argv[2] if len(sys.argv) > 2 else "all"
 
 
-def invoke(*args, timeout=20):
+def invoke(*args, timeout=20, stack_limit=None):
+    def bounded_stack():
+        _, hard = resource.getrlimit(resource.RLIMIT_STACK)
+        resource.setrlimit(resource.RLIMIT_STACK, (stack_limit, hard))
     return subprocess.run([str(AXI), *map(str, args)], text=True,
-                          capture_output=True, timeout=timeout)
+                          capture_output=True, timeout=timeout,
+                          preexec_fn=bounded_stack if stack_limit else None)
 
 
 def check(cond, msg):
@@ -35,8 +40,8 @@ with tempfile.TemporaryDirectory(prefix="axi-frontend-") as td:
         check(result.returncode == 0, f"{name}: compile refused: {result.stderr}")
         return artifact
 
-    def expect_value(artifact, cell, args, value):
-        result = invoke("run", artifact, cell, *args, "--trusted-key", pub)
+    def expect_value(artifact, cell, args, value, options=()):
+        result = invoke("run", artifact, cell, *args, "--trusted-key", pub, *options)
         check(result.returncode == 0 and result.stdout.strip() == value,
               f"{cell}{args}: expected {value!r}, got rc={result.returncode} "
               f"{result.stdout!r} {result.stderr!r}")
@@ -153,3 +158,16 @@ cell deny : fn() -> bool
         expect_value(artifact, "early", ["true"], "u64 7")
         expect_value(artifact, "early", ["false"], "u64 42")
         print("frontend W04: PASS (ok/zero/false distinction and early returns)")
+
+    if GROUP in ("all", "traversal"):
+        src = tmp / "wide.axi"
+        src.write_text("cell wide : fn() -> u64\n  fuel 100000\n  pure\n{\n"
+                       + "  0\n" * 40000 + "  ret 7\n}\n")
+        artifact = tmp / "wide.axb"
+        result = invoke("compile", src, "-o", artifact, "--signing-key", seed,
+                        stack_limit=2 * 1024 * 1024)
+        check(result.returncode == 0,
+              f"wide sibling list: rc={result.returncode} {result.stderr}")
+        expect_value(artifact, "wide", [], "u64 7", ("--mem", "16777216"))
+        print("frontend W05: PASS (40,000 statements under a 2 MiB stack)")
+

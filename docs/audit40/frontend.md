@@ -78,3 +78,19 @@ is an internal refusal, never implicit integer zero.
 **Validation.** `python3 tests/audit40/frontend_codegen.py build/axi returns`
 checks `ok`, `u64 0`, and `bool false` as distinct results, plus both outcomes
 of 80 independent conditional returns.
+
+## W05 — one bounded-stack codegen traversal
+
+**Problem.** Builtin collection recursed through every sibling statement,
+even though the parser only bounds child nesting. It also restarted from
+each cell, re-walking all later cells. A valid 40,000-statement body crashed
+with SIGSEGV under a 2 MiB host stack before producing an artifact.
+
+**Change.** Iterate sibling lists, recurse only into bounded child structure,
+and collect once for the whole unit. Stop emission after an established
+allocation or register/table refusal. Empty output buffers start terminated.
+
+**Validation.** `python3 tests/audit40/frontend_codegen.py build/axi traversal`
+compiles and runs the 40,000-statement case under a 2 MiB compiler stack.
+The collection walk now visits each AST node once, excluding builtin table
+lookups; it uses stack proportional to structural depth rather than width.

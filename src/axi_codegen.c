@@ -84,6 +84,7 @@ static void ob_init(outbuf *o)
     o->len = 0;
     o->cap = o->buf ? 256 : 0;
     o->failed = o->buf == NULL;
+    if (o->buf) o->buf[0] = '\0';
 }
 
 static void ob_grow(outbuf *o, size_t need)
@@ -346,18 +347,20 @@ static void extract_call_name(const axi_node *n, char *name, size_t namesz)
 
 static void collect_builtins(cg *c, const axi_node *n)
 {
-    if (!n) return;
-    if (n->kind == N_CALL) {
-        char name[80];
-        extract_call_name(n, name, sizeof name);
-        if (name[0] && is_builtin_name(name))
-            (void)add_builtin(c, name);
+    /* Children are parser-depth bounded; sibling lists are not. Traverse
+     * each list iteratively so a wide valid body cannot exhaust host stack. */
+    for (; n && !c->err && !c->oom; n = n->next) {
+        if (n->kind == N_CALL) {
+            char name[80];
+            extract_call_name(n, name, sizeof name);
+            if (name[0] && is_builtin_name(name))
+                (void)add_builtin(c, name);
+        }
+        collect_builtins(c, n->a);
+        collect_builtins(c, n->b);
+        collect_builtins(c, n->c);
+        collect_builtins(c, n->list);
     }
-    collect_builtins(c, n->a);
-    collect_builtins(c, n->b);
-    collect_builtins(c, n->c);
-    collect_builtins(c, n->list);
-    collect_builtins(c, n->next);
 }
 
 /* The call is a cap method iff the base is a bound cap parameter. Binding
@@ -633,7 +636,7 @@ static void gen_block(cg *c, outbuf *o, const axi_node *blk, int indent)
      * bindings born in this block die at its end, and their registers go
      * back to the pool so a later read cannot observe a dead slot. */
     int saved = c->nenv;
-    for (const axi_node *s = blk->list; s; s = s->next)
+    for (const axi_node *s = blk->list; s && !c->err && !c->oom && !o->failed; s = s->next)
         gen_stmt(c, o, s, indent);
     while (c->nenv > saved) {
         c->nenv--;
@@ -825,9 +828,10 @@ char *axi_codegen(const axi_node *unit, size_t *out_len)
             snprintf(name, sizeof name, "%.*s", (int)n->a->lexlen, n->a->lex);
             add_eff(&c, name);
         }
-        if (n->kind == N_CELL || n->kind == N_POLICY)
-            collect_builtins(&c, n);
     }
+    /* One traversal for the unit, rather than re-walking all later cells
+     * from each cell's sibling pointer (quadratic in the number of cells). */
+    collect_builtins(&c, unit->list);
 
     for (int i = 0; i < c.neffs; i++)
         ob_printf(&o, ".eff %s\n", c.effs[i]);
@@ -836,7 +840,7 @@ char *axi_codegen(const axi_node *unit, size_t *out_len)
     if (c.neffs || c.nbuiltins) ob_puts(&o, "\n");
 
     /* Pass 2: emit cells. */
-    for (const axi_node *n = unit->list; n; n = n->next) {
+    for (const axi_node *n = unit->list; n && !c.err && !c.oom && !o.failed; n = n->next) {
         if (n->kind == N_CELL || n->kind == N_POLICY)
             gen_cell(&c, &o, n);
     }
