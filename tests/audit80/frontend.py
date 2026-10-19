@@ -74,3 +74,26 @@ cell text : fn() -> str
         refused("undeclared", "cell f : fn() -> ok fuel 100 { ret err.Io }", "AXI-T018")
         refused("bad_atom", "cell f : fn() -> ok fuel 100 { err." + "a" * 64 + " ret ok }", "AXI-T002")
         print("frontend W51: PASS (error atoms, bindings, branches and string namespace)")
+
+    if GROUP in ("all", "returns"):
+        cases = [("u64", "7", "u64 7"), ("i64", "-7", "i64 -7"),
+                 ("f64", "0.5", "f64 3fe0000000000000"),
+                 ("bool", "false", "bool false"),
+                 ("decision", "true", "decision true"),
+                 ("str", '"x"', "str 1 78")]
+        for ty, literal, expected in cases:
+            for reversed_order in (False, True):
+                returns = "ok | " + ty if reversed_order else ty + " | ok"
+                artifact = compile_source("returns_" + ty + str(reversed_order),
+                    "cell choose : fn(none: bool) -> " + returns + " | err.Io\n"
+                    "  fuel 100\n  pure\n{ if none { ret } let p = " + literal + " ret p }\n")
+                value(artifact, "choose", ["false"], "union 0 " + expected)
+                value(artifact, "choose", ["true"], "union 1 ok")
+        artifact = compile_source("return_json", '''cell choose : fn(p: json, none: bool) -> json | ok
+  fuel 100
+  pure
+{ if none { ret ok } ret p }
+''')
+        value(artifact, "choose", ["{}", "false"], "union 0 json 2 7b7d")
+        value(artifact, "choose", ["{}", "true"], "union 1 ok")
+        print("frontend W52: PASS (all admitted option payloads and canonical manifest tags)")

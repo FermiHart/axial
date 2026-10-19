@@ -999,6 +999,8 @@ static void check_ret(ck *c, const axi_node *n, const rshape *mine)
     ty v;
 
     if (!n->a) { /* bare ret = ok */
+        ((axi_node *)n)->tyann = mine->has_ok && mine->payload
+            ? AXI_RET_NONE : AXI_RET_PLAIN;
         if (!mine->has_ok)
             tdiag(c, "AXI-T016", n, "bare `ret` returns ok, "
                   "but the rettype has no ok member",
@@ -1006,6 +1008,8 @@ static void check_ret(ck *c, const axi_node *n, const rshape *mine)
         return;
     }
     v = check_expr(c, n->a);
+    ((axi_node *)n)->tyann = mine->has_ok && mine->payload && v.k != TY_ERR
+        ? (v.k == TY_UNIT ? AXI_RET_NONE : AXI_RET_SOME) : AXI_RET_PLAIN;
     switch (v.k) {
     case TY_BAD: return;
     case TY_UNION: (void)union_leak(c, n->a); return;

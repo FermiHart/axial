@@ -307,6 +307,21 @@ static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent);
 static void gen_stmt(cg *c, outbuf *o, const axi_node *n, int indent);
 static void gen_block(cg *c, outbuf *o, const axi_node *blk, int indent);
 
+static void emit_return(cg *c, outbuf *o, int value, uint8_t note, int indent)
+{
+    int tagged = -1;
+    if (note == AXI_RET_SOME || note == AXI_RET_NONE) {
+        int tag = alloc_reg(c);
+        int k = add_k_u64(c, note == AXI_RET_NONE ? 1 : 0);
+        tagged = alloc_reg(c);
+        ob_indent(o, indent); ob_printf(o, "ldk r%d k%d\n", tag, k);
+        ob_indent(o, indent); ob_printf(o, "umake r%d r%d r%d\n", tagged, tag, value);
+        free_reg(c, tag);
+    } else if (note != AXI_RET_PLAIN) { c->err = 1; return; }
+    ob_indent(o, indent); ob_printf(o, "ret r%d\n", tagged >= 0 ? tagged : value);
+    free_reg(c, tagged);
+}
+
 /* Move evaluated arguments into their consecutive call slots.
  * If an argument currently lives inside another argument's slot, copy it to
  * a temporary register first so the later slot move does not clobber it. */
@@ -723,8 +738,7 @@ static void gen_stmt(cg *c, outbuf *o, const axi_node *n, int indent)
         /* The checker defines bare ret as ok, not integer zero. A dedicated
          * never-written UNIT register gives both spellings the same value. */
         int r = n->a ? gen_expr(c, o, n->a, indent) : alloc_unit_reg(c);
-        ob_indent(o, indent);
-        ob_printf(o, "ret r%d\n", r);
+        emit_return(c, o, r, n->tyann, indent);
         /* There is no successor on this path. A later branch can reuse this
          * temporary without consuming one permanent register per early ret. */
         free_reg(c, r);

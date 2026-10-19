@@ -16,3 +16,14 @@ conversion between error, string, false, ok or trap is introduced.
 Validation: `python3 tests/audit80/frontend.py build/axi errors` compiles signed
 artifacts and runs direct/bound/dotted errors and string results through the
 real v7 VM; undeclared and invalid atoms refuse without publishing an artifact.
+
+## W52 — source option returns match the frozen v7 representation
+
+The checker now annotates each return as plain, payload arm or ok arm.
+Codegen uses this note to emit tagged options; named errors remain scalar
+errors. The admitted payload type tags precede OK in the frozen manifest,
+so source declaration order does not change arm identity. No new opcode is
+needed and boolean false remains a payload, distinct from the ok arm.
+
+Validation: `frontend.py build/axi returns` executes both arms for all seven
+admitted payload types, both source declaration orders and bound values.
