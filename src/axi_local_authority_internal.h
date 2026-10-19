@@ -12,6 +12,7 @@ struct axi_local_authority_v1 {
     int dirfd;
     uint8_t issuer_pk[32];
     uint64_t device, inode;
+    uint64_t lock_device, lock_inode;
     uint32_t uid, executor_uid;
     pid_t pid;
     uint8_t boot[16];

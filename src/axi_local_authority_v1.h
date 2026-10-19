@@ -53,7 +53,10 @@ int axi_local_authority_v1_enable(const char *store_dir,
  * uid=getuid(), executor_uid=geteuid(), both nonzero and distinct as required
  * by the unchanged action codec. They identify the current process, not a
  * remote requester. Credential changes/fork require reopening the context.
- * Host /proc mount and namespace configuration are part of the host TCB. */
+ * Host /proc mount and namespace configuration are part of the host TCB.
+ * Open tries the shared owner lock once; a busy store refuses without waiting.
+ * The context pins the lock inode. Replacing/removing it invalidates existing
+ * contexts; activation never silently recreates a lock in an enabled store. */
 int axi_local_authority_v1_open(const char *store_dir,
                                  axi_local_authority_v1 **out);
 void axi_local_authority_v1_close(axi_local_authority_v1 *owner);

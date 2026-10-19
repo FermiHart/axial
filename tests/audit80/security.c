@@ -478,6 +478,109 @@ static void w46(void)
     }
 }
 
+static void read_exact_pipe(int fd, void *bytes, size_t len)
+{
+    size_t n = 0;
+    while (n < len) {
+        ssize_t got = read(fd, (uint8_t *)bytes + n, len - n);
+        if (got < 0 && errno == EINTR) continue;
+        CHECK(got > 0); n += (size_t)got;
+    }
+}
+
+typedef struct { int rc; axi_local_attempt_v1_outcome outcome; } worker_result;
+
+static int record_counter(const axi_local_attempt_v1_record_view *view, void *ctx)
+{
+    unsigned *n = ctx;
+    CHECK(view->state == AXI_LOCAL_ATTEMPT_V1_COMMITTED); (*n)++;
+    return 0;
+}
+
+static void concurrent_prior(void)
+{
+    fixture f;
+    int ready_pipe[2], go[2], report[2], status;
+    pid_t children[2];
+    worker_result results[2];
+    unsigned i, effects = 0, spent = 0;
+    char tokens[2];
+    alarm(15); /* A failed child must not hang the pipe barrier forever. */
+    new_fixture(&f); provision(&f);
+    CHECK(axi_local_authority_v1_enable(f.dir, f.pk) == 0);
+    CHECK(pipe(ready_pipe) == 0 && pipe(go) == 0 && pipe(report) == 0);
+    for (i = 0; i < 2; i++) {
+        children[i] = fork(); CHECK(children[i] >= 0);
+        if (children[i] == 0) {
+            axi_local_authority_v1 *owner = NULL;
+            axi_local_authority_v1_prepared *prepared;
+            axi_ag1_v1 grant;
+            worker_result result;
+            char token;
+            close(ready_pipe[0]); close(go[1]); close(report[0]);
+            CHECK(axi_local_authority_v1_open(f.dir, &owner) == 0);
+            prepared = ready(&f, owner);
+            CHECK(axi_ag1_v1_decode_signed(&grant, f.grant, sizeof f.grant, f.pk) == 0);
+            grant.nonce[0] = (uint8_t)(i + 1);
+            CHECK(axi_ag1_v1_encode_signed(&grant, f.seed, f.grant) == 0);
+            CHECK(write(ready_pipe[1], "r", 1) == 1);
+            read_exact_pipe(go[0], &token, 1);
+            memset(&result, 0, sizeof result);
+            result.rc = axi_local_authority_v1_commit(prepared, f.grant, sizeof f.grant,
+                            axi_local_attempt_v1_now_mono() + UINT64_C(3000000000), &result.outcome);
+            CHECK(write(report[1], &result, sizeof result) == sizeof result);
+            axi_local_authority_v1_prepared_close(prepared); axi_local_authority_v1_close(owner);
+            close(ready_pipe[1]); close(go[0]); close(report[1]);
+            _exit(0);
+        }
+    }
+    close(ready_pipe[1]); close(go[0]); close(report[1]);
+    read_exact_pipe(ready_pipe[0], tokens, 2);
+    CHECK(write(go[1], "gg", 2) == 2);
+    read_exact_pipe(report[0], results, sizeof results);
+    close(ready_pipe[0]); close(go[1]); close(report[0]);
+    for (i = 0; i < 2; i++) {
+        CHECK(waitpid(children[i], &status, 0) == children[i] && WIFEXITED(status) && WEXITSTATUS(status) == 0);
+        if (results[i].outcome.effect_performed) {
+            effects++;
+            CHECK(results[i].rc == 0 && results[i].outcome.state == AXI_LOCAL_ATTEMPT_V1_COMMITTED);
+        } else CHECK(results[i].rc == AXI_LOCAL_AUTHORITY_V1_REFUSED
+                       && results[i].outcome.state == AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED);
+    }
+    CHECK(effects == 1);
+    CHECK(axi_local_attempt_v1_scan(f.dir, record_counter, &spent) == 0 && spent == 1);
+    check_config(f.dir, "payload", 7);
+    rm_fixture(f.dir);
+    alarm(0);
+}
+
+static void w47(void)
+{
+    fixture f, legacy;
+    axi_local_authority_v1 *owner = NULL;
+    axi_local_authority_v1_prepared *prepared;
+    axi_local_attempt_v1_outcome out;
+    char path[512], saved[512];
+    new_fixture(&f); provision(&f);
+    CHECK(axi_local_authority_v1_enable(f.dir, f.pk) == 0);
+    legacy = f; mint(&legacy, NULL);
+    CHECK(axi_local_authority_v1_open(f.dir, &owner) == 0);
+    prepared = ready(&f, owner);
+    path_of(path, f.dir, "owner.lock"); path_of(saved, f.dir, "old.lock");
+    CHECK(rename(path, saved) == 0); put_file(path, "", 0);
+    CHECK(axi_local_authority_v1_commit(prepared, f.grant, sizeof f.grant, 0, &out) == AXI_LOCAL_AUTHORITY_V1_REFUSED);
+    CHECK(!out.effect_performed && !exists(f.dir, "records") && !exists(f.dir, "config"));
+    CHECK(unlink(path) == 0);
+    CHECK(axi_local_authority_v1_enable(f.dir, f.pk) != 0 && !exists(f.dir, "owner.lock"));
+    CHECK(axi_local_attempt_v1_commit(legacy.dir, legacy.grant, sizeof legacy.grant, legacy.pk,
+        legacy.action_bytes, legacy.action_len, &legacy.pins, &legacy.observed,
+        (const uint8_t *)"payload", 7, legacy.observed.now_ns, &out) != 0);
+    CHECK(!exists(f.dir, "owner.lock") && !exists(f.dir, "records"));
+    axi_local_authority_v1_prepared_close(prepared); axi_local_authority_v1_close(owner);
+    rm_fixture(f.dir);
+    concurrent_prior();
+}
+
 static int setup_host(void)
 {
     if (geteuid() == 0) {
@@ -503,7 +606,8 @@ int main(int argc, char **argv)
     if (argc == 1 || !strcmp(argv[1], "W44")) w44();
     if (argc == 1 || !strcmp(argv[1], "W45")) w45();
     if (argc == 1 || !strcmp(argv[1], "W46")) w46();
-    if (argc == 2 && strcmp(argv[1], "W41") && strcmp(argv[1], "W42") && strcmp(argv[1], "W43") && strcmp(argv[1], "W44") && strcmp(argv[1], "W45") && strcmp(argv[1], "W46")) return 2;
+    if (argc == 1 || !strcmp(argv[1], "W47")) w47();
+    if (argc == 2 && strcmp(argv[1], "W41") && strcmp(argv[1], "W42") && strcmp(argv[1], "W43") && strcmp(argv[1], "W44") && strcmp(argv[1], "W45") && strcmp(argv[1], "W46") && strcmp(argv[1], "W47")) return 2;
     printf("audit80 security: %u checks PASS (ruid=%lu euid=%lu)\n", checks,
            (unsigned long)getuid(), (unsigned long)geteuid());
     return 0;

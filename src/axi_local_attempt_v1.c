@@ -111,7 +111,8 @@ static int authority_time_live(const axi_local_authority_v1_prepared *prepared,
                                  const axi_ag1_v1 *grant)
 {
     axi_local_authority_v1_facts facts;
-    return axi_local_authority_host_sample(&facts) == 0
+    return axi_local_authority_validate_locked(&prepared->owner) == 0
+        && axi_local_authority_host_sample(&facts) == 0
         && authority_time_matches(prepared, grant, &facts);
 }
 
@@ -627,6 +628,13 @@ static int commit_impl(const char *store_dir,
          * close anyway: no descriptor is ever leaked on refusal paths. */
         close(sdfd);
         sdfd = -1;
+        fill_out(out, AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED, 0, grant_root);
+        rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
+        goto done;
+    }
+    if (!prepared && !axi_local_store_legacy_allowed(sdfd)) {
+        /* Never recreate a missing lock on an activated store. The check
+         * below the lock remains necessary for concurrent activation. */
         fill_out(out, AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED, 0, grant_root);
         rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
         goto done;

@@ -30,6 +30,7 @@ credential changes in disposable subprocesses where authorized.
 | W44 | Mandatory active-epoch source for trust/policy pins; prepare owns immutable action/payload/observations and an independent descriptor. Real facts must match before producing the existing admission context for AG1. | W41–W44 combined: 228 parent checks plus child assertions. Missing epoch, wrong UID/executor/resource/boot/trust/policy/previous refuse without records/config creation; successful prepare survives input/owner release. | Epoch provisioning and issuer administration remain trusted. Prepare does not execute policy or mint grants; policy pins are not binary attestation. |
 | W45 | Connect the held-fd profile to the existing signed AG1/attempt owner. Reobserve resource/prior state and exact epoch generation under LOCK_EX before records creation/spend/effect. Read replay state first. | 421 checks: grant for A through B, unseen/edited/replaced prior file, advanced epoch, retained target after directory rename, copied mutable payload/action, committed replay with no effect. All 14,775 existing audit40 security assertions still pass against these objects. | Legacy unsigned assertions remain available only on stores never activated for this profile. Under-lock validation covers the local config effect, not arbitrary direct host writes. |
 | W46 | Fresh boot-time checks after lock wait, before spend, after spend fsyncs and immediately before config rename; checked monotonic conversion. Preserve irreversible spend if I/O crosses expiration. | 128 ordinary checks cover expired action/grant, real wait past expiry, no-write timeout. 92 fault-harness checks delay real fsyncs until real clock expiry: no config publication, UNKNOWN/effect=0, replay suppressed. | A sample before rename is not a hard real-time completion guarantee. Expiration after durable spend does not refund the grant or claim NOT_ATTEMPTED. |
+| W47 | Pin the actual owner.lock device/inode at context open and verify the held lock/name before use and publication. Missing locks are not recreated by activation or a legacy attempt on enabled stores; interrupted lock waits keep their deadline. | 93 parent checks plus two process workers: replaced/missing lock refuses without records/config writes; two signed requests prepared for the same prior state yield exactly one committed effect and one unspent refusal. | Concurrent service operations must obey this lock; the trusted administrator must quiesce the service before replacing lock/control state. Open uses one nonblocking shared-lock attempt. |
 
 ## Executed evidence
 
@@ -49,6 +50,7 @@ W45: audit80 security: 421 checks PASS (ruid=1000 euid=1001)
 W45 legacy regression: audit40 security: 14775 checks passed
 W46: audit80 security: 128 checks PASS (ruid=1000 euid=1001)
 W46 I/O expiry: audit80 security faults: 92 checks PASS (real-clock expiry)
+W47: audit80 security: 93 checks PASS (ruid=1000 euid=1001)
 ```
 
 `security_faults.sh` links an instrumented attempt object only for tests. Its

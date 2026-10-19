@@ -73,7 +73,8 @@ int axi_local_authority_v1_enable(const char *store_dir, const uint8_t issuer_pk
     if (!issuer_pk || !nonzero(issuer_pk, 32)) return rc;
     dirfd = axi_local_store_open(store_dir);
     if (dirfd < 0) goto done;
-    lockfd = axi_local_store_open_file_at(dirfd, "owner.lock", O_WRONLY | O_CREAT);
+    lockfd = axi_local_store_open_file_at(dirfd, "owner.lock",
+                O_WRONLY | (axi_local_store_legacy_allowed(dirfd) ? O_CREAT : 0));
     if (lockfd < 0 || flock(lockfd, LOCK_EX) != 0 || fstat(dirfd, &st) != 0) goto done;
     fd = axi_local_store_open_file_at(dirfd, AXI_LOCAL_AUTHORITY_CONTROL,
                                       O_WRONLY | O_CREAT | O_EXCL);
@@ -105,6 +106,7 @@ int axi_local_authority_v1_open(const char *store_dir, axi_local_authority_v1 **
 {
     uint8_t raw[AXI_LOCAL_AUTHORITY_CONTROL_SIZE];
     axi_local_authority_v1_facts facts;
+    struct stat lock_stat;
     axi_local_authority_v1 *owner = NULL;
     int dirfd = -1, lockfd = -1, rc = AXI_LOCAL_AUTHORITY_V1_REFUSED;
     if (!out) return rc;
@@ -115,21 +117,26 @@ int axi_local_authority_v1_open(const char *store_dir, axi_local_authority_v1 **
     dirfd = axi_local_store_open(store_dir);
     if (dirfd < 0) goto done;
     lockfd = axi_local_store_open_file_at(dirfd, "owner.lock", O_RDONLY);
-    if (lockfd < 0 || flock(lockfd, LOCK_SH) != 0) goto done;
+    if (lockfd < 0 || flock(lockfd, LOCK_SH | LOCK_NB) != 0
+            || fstat(lockfd, &lock_stat) != 0) goto done;
     if (control_read(dirfd, raw) != 0 || control_valid(dirfd, raw) != 0) goto done;
     owner = axi_calloc(1, sizeof *owner);
     if (!owner) goto done;
     owner->dirfd = dirfd;
     owner->device = get64(raw + 40); owner->inode = get64(raw + 48);
+    owner->lock_device = (uint64_t)lock_stat.st_dev;
+    owner->lock_inode = (uint64_t)lock_stat.st_ino;
     memcpy(owner->issuer_pk, raw + 8, 32);
     owner->uid = facts.uid; owner->executor_uid = facts.executor_uid;
     owner->pid = getpid(); memcpy(owner->boot, facts.boot, 16);
+    if (axi_local_authority_validate_locked(owner) != 0) goto done;
     *out = owner;
     dirfd = -1;
     rc = AXI_LOCAL_AUTHORITY_V1_OK;
 done:
     if (lockfd >= 0) { (void)flock(lockfd, LOCK_UN); (void)close(lockfd); }
     if (dirfd >= 0) (void)close(dirfd);
+    if (rc != AXI_LOCAL_AUTHORITY_V1_OK) free(owner);
     return rc;
 }
 
@@ -156,8 +163,13 @@ int axi_local_authority_v1_resource(const axi_local_authority_v1 *owner,
 int axi_local_authority_validate_locked(const axi_local_authority_v1 *owner)
 {
     uint8_t raw[AXI_LOCAL_AUTHORITY_CONTROL_SIZE];
+    struct stat lock;
     if (!owner || owner->pid != getpid() || owner->uid != (uintmax_t)getuid()
             || owner->executor_uid != (uintmax_t)geteuid()
+            || fstatat(owner->dirfd, "owner.lock", &lock, AT_SYMLINK_NOFOLLOW) != 0
+            || !S_ISREG(lock.st_mode) || lock.st_nlink != 1
+            || (lock.st_mode & 077) != 0 || lock.st_uid != geteuid()
+            || (uint64_t)lock.st_dev != owner->lock_device || (uint64_t)lock.st_ino != owner->lock_inode
             || control_read(owner->dirfd, raw) != 0
             || control_valid(owner->dirfd, raw) != 0
             || memcmp(owner->issuer_pk, raw + 8, 32) != 0
@@ -178,15 +190,18 @@ int axi_local_authority_lock(const axi_local_authority_v1 *owner,
         uint64_t now, remaining;
         struct timespec nap;
         if (flock(fd, operation | LOCK_NB) == 0) {
-            if (axi_local_authority_validate_locked(owner) == 0) {
+            struct stat held;
+            if (fstat(fd, &held) == 0 && held.st_nlink == 1
+                    && (uint64_t)held.st_dev == owner->lock_device
+                    && (uint64_t)held.st_ino == owner->lock_inode
+                    && axi_local_authority_validate_locked(owner) == 0) {
                 *lockfd = fd;
                 return AXI_LOCAL_AUTHORITY_V1_OK;
             }
             (void)flock(fd, LOCK_UN);
             break;
         }
-        if (errno == EINTR) continue;
-        if (errno != EWOULDBLOCK && errno != EAGAIN) break;
+        if (errno != EINTR && errno != EWOULDBLOCK && errno != EAGAIN) break;
         now = axi_local_attempt_v1_now_mono();
         if (!now) break;
         if (now >= deadline) { rc = AXI_LOCAL_AUTHORITY_V1_TIMEOUT; break; }
