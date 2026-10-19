@@ -90,6 +90,7 @@ typedef struct {
     binding         env[ENV_MAX];
     int             nenv;
     int             is_pure;
+    axi_compile_budget *budget;
     int             in_proof;  /* W12: inside proof{}, laws are closed+pure */
 } ck;
 
@@ -311,7 +312,7 @@ static void collect_cap_calls(ck *c, const axi_node *n, cap_graph *g,
                     cap_call *calls;
                     /* At most 256 distinct callees for each of 256 cells. */
                     if (cap > 256u * 256u) { g->failed = 1; return; }
-                    calls = axi_realloc(g->calls, cap * sizeof *calls);
+                    calls = axi_compile_realloc(c->budget, g->calls, cap * sizeof *calls);
                     if (!calls) { g->failed = 1; return; }
                     g->calls = calls; g->cap = cap;
                 }
@@ -348,7 +349,7 @@ static void infer_unit_caps(ck *c)
             tdiag(c, "AXI-T002", c->cells[i],
                   "cannot build capability call graph under memory pressure",
                   "retry with enough memory to prove every call edge");
-            free(graph.calls);
+            (void)axi_compile_free(c->budget, graph.calls);
             return;
         }
     }
@@ -370,7 +371,7 @@ static void infer_unit_caps(ck *c)
             }
         }
     }
-    free(graph.calls);
+    (void)axi_compile_free(c->budget, graph.calls);
     for (i = 0; i < c->ncells; i++) {
         uint32_t mask = 0;
         int j;
@@ -1199,7 +1200,7 @@ static void check_manifest_domain(ck *c, const axi_node *cell)
                   "keep one copy of each law");
         if (!manifest_wire_add(&wire, 4 + len)) oversized = 1;
         if (nlaws < (int)AXB_MANIFEST_MAX_LAWS) laws[nlaws++] = law;
-        else { oversized = 1; free(law); }
+        else { oversized = 1; (void)axi_compile_free(c->budget, law); }
     }
     if (!manifest_wire_add(&wire, 64)) oversized = 1;
 
@@ -1209,7 +1210,7 @@ static void check_manifest_domain(ck *c, const axi_node *cell)
     if (oversized)
         tdiag(c, "AXI-T002", cell, "contract exceeds the 16 KiB manifest v1 bound",
               "shrink names or split the contract into smaller cells");
-    for (int i = 0; i < nlaws; i++) free(laws[i]);
+    for (int i = 0; i < nlaws; i++) (void)axi_compile_free(c->budget, laws[i]);
 }
 
 static void check_cell(ck *c, const axi_node *cell)
@@ -1374,32 +1375,43 @@ static void check_policy(ck *c, const axi_node *cell)
 
 void axi_type_check(const axi_node *unit, axi_diags *ds)
 {
-    ck c;
+    ck *c;
     const axi_node *n;
 
+    if (!unit || !ds) return;
     ((axi_node *)unit)->contract_checked = 0;
-    memset(&c, 0, sizeof c);
-    c.ds = ds;
-    c.src = unit->pos;
+    c = axi_compile_calloc(unit->budget, 1, sizeof *c);
+    if (!c) {
+        axi_diag_add(ds, axi_compile_failure_code(unit->budget), 0, 0, 0,
+            "typechecker workspace unavailable", "increase the compiler budget");
+        return;
+    }
+    c->budget = unit->budget;
+    c->ds = ds;
+    c->src = unit->pos;
 
     for (n = unit->list; n; n = n->next) {
         if ((n->kind != N_CELL && n->kind != N_POLICY) || n->lexlen == 0) continue;
-        if (find_cell(&c, n->lex, n->lexlen)) {
-            tdiag(&c, "AXI-T001", n, "duplicate cell name",
+        if (find_cell(c, n->lex, n->lexlen)) {
+            tdiag(c, "AXI-T001", n, "duplicate cell name",
                   "one name, one cell, one hash (W14): rename it");
             continue;
         }
-        if (c.ncells < 256) {
-            c.cells[c.ncells++] = n;
+        if (c->ncells < 256) {
+            c->cells[c->ncells++] = n;
         } else {
-            tdiag(&c, "AXI-T002", n, "unit exceeds 256 cells",
+            tdiag(c, "AXI-T002", n, "unit exceeds 256 cells",
                   "split the unit; every cell must enter capability analysis");
         }
     }
-    infer_unit_caps(&c); /* AXI-INV-078: finite monotone call-graph fixpoint. */
+    infer_unit_caps(c); /* AXI-INV-078: finite monotone call-graph fixpoint. */
     for (n = unit->list; n; n = n->next) {
-        if (n->kind == N_CELL) check_cell(&c, n);
-        else if (n->kind == N_POLICY) check_policy(&c, n);
+        if (n->kind == N_CELL) check_cell(c, n);
+        else if (n->kind == N_POLICY) check_policy(c, n);
     }
+    if (unit->budget && unit->budget->failure != AXI_COMPILE_OK)
+        axi_diag_add(ds, axi_compile_failure_code(unit->budget), 0, 0, 0,
+            "typechecker allocation refused", "increase the compiler budget");
     if (ds->n == 0) ((axi_node *)unit)->contract_checked = 1;
+    (void)axi_compile_free(unit->budget, c);
 }

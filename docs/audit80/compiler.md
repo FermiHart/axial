@@ -45,3 +45,16 @@ contabilizada junto da AST, recuperação de sintaxe e cleanup da invocação.
 O fixture passou 17 checks; o pico desta revisão intermediária é 3.297 bytes
 com 18 alocações vivas. Alterações posteriores de metadados de AST podem
 mudar esse pico; os testes derivam a fronteira da construção real.
+
+## W59 — análise e renderização recuperáveis
+
+O workspace principal do typechecker, suas arestas de chamada, as strings de
+leis canônicas, os buffers de formatação e as edições de diagnóstico recebem
+a mesma cota explícita. O canonicalizador também reserva o workspace de
+trivia. As variantes antes terminantes do renderer agora retornam `NULL`;
+a falta de memória deixa de chamar `exit(2)` no hospedeiro.
+
+Validação: 28 checks de sucesso e recusa em cada fase, árvore mantida válida
+após recusa e saldo zero após cleanup. Os 67 goldens originais e todo o gate
+de frontend W01–W10 passaram, incluindo as duas varreduras de 99 falhas de
+alocação e o caso de 40.000 statements sob stack de 2 MiB.

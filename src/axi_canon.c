@@ -34,6 +34,7 @@ typedef struct {
     char  *p;
     size_t n, cap;
     int failed;
+    axi_compile_budget *budget;
 } sb;
 
 static void sb_grow(sb *b, size_t need)
@@ -41,14 +42,20 @@ static void sb_grow(sb *b, size_t need)
     size_t cap;
     char *p;
     if (b->failed) return;
-    if (need > (size_t)-1 - b->n - 1) { b->failed = 1; return; }
+    if (need > (size_t)-1 - b->n - 1) {
+        axi_compile_fail(b->budget, AXI_COMPILE_OVERFLOW, need);
+        b->failed = 1; return;
+    }
     if (b->n + need + 1 <= b->cap) return;
     cap = b->cap ? b->cap : 1024;
     while (b->n + need + 1 > cap) {
-        if (cap > (size_t)-1 / 2) { b->failed = 1; return; }
+        if (cap > (size_t)-1 / 2) {
+            axi_compile_fail(b->budget, AXI_COMPILE_OVERFLOW, cap);
+            b->failed = 1; return;
+        }
         cap *= 2;
     }
-    p = (char *)axi_realloc(b->p, cap);
+    p = (char *)axi_compile_realloc(b->budget, b->p, cap);
     if (!p) { b->failed = 1; return; }
     b->p = p;
     b->cap = cap;
@@ -93,7 +100,7 @@ void axi_canon_int_str(uint64_t v, char *out, size_t cap)
     sb b;
     if (!out || cap == 0) return;
     if (cap < 32) { out[0] = '\0'; return; }
-    b.p = out; b.n = 0; b.cap = cap; b.failed = 0;
+    b.p = out; b.n = 0; b.cap = cap; b.failed = 0; b.budget = NULL;
     sb_int(&b, v);
     if (b.failed) out[0] = '\0';
 }
@@ -567,42 +574,40 @@ static void render_cell(sb *b, triv_ctx *tc, const axi_node *cell)
 char *axi_canon_expr_str_fallible(const axi_node *e)
 {
     /* INV-383 / AXI-INV-123: library projection refuses OOM; it never exits. */
-    sb b = {0, 0, 0, 0};
+    sb b = {0};
+    b.budget = e ? e->budget : NULL;
     sb_grow(&b, 1);
     render_expr(&b, e, 0);
-    if (b.failed) { free(b.p); return NULL; }
+    if (b.failed) { (void)axi_compile_free(b.budget, b.p); return NULL; }
     return b.p;
 }
 
 char *axi_canon_expr_str(const axi_node *e)
 {
-    char *s = axi_canon_expr_str_fallible(e);
-    if (!s) {
-        fprintf(AXI_ERR, "AXI-D999 canon: out of memory\n");
-        exit(2);
-    }
-    return s;
+    return axi_canon_expr_str_fallible(e);
 }
 
 char *axi_canon_type_str(const axi_node *t)
 {
-    sb b = {0, 0, 0, 0};
+    sb b = {0};
+    b.budget = t ? t->budget : NULL;
     sb_grow(&b, 1);
     render_type(&b, t);
     if (b.failed) {
-        free(b.p);
-        fprintf(AXI_ERR, "AXI-D999 canon: out of memory\n");
-        exit(2);
+        (void)axi_compile_free(b.budget, b.p);
+        return NULL;
     }
     return b.p;
 }
 
 char *axi_canon_render(const char *src, size_t len, const axi_node *unit)
 {
-    sb b = {0, 0, 0, 0};
+    sb b = {0};
     triv_ctx tc;
     const axi_node *c;
 
+    b.budget = unit ? unit->budget : NULL;
+    if (!unit || !axi_compile_reserve(b.budget, sizeof tc)) return NULL;
     triv_collect(&tc, src, len);
     sb_grow(&b, 1); /* guarantee a buffer even for the empty unit */
 
@@ -626,15 +631,15 @@ char *axi_canon_render(const char *src, size_t len, const axi_node *unit)
     }
     /* file-trailing comments */
     triv_flush(&b, &tc, 0xFFFFFFFFu, 0);
+    (void)axi_compile_release(b.budget, sizeof tc);
     if (b.failed) {
-        free(b.p);
-        fprintf(AXI_ERR, "AXI-D999 canon: out of memory\n");
-        exit(2);
+        (void)axi_compile_free(b.budget, b.p);
+        return NULL;
     }
     /* INV-323 / AXI-INV-105: trivia beyond the cap is a refusal, never a
      * silent drop — the canonical form may not lose a single comment. */
     if (tc.dropped > 0) {
-        free(b.p);
+        (void)axi_compile_free(b.budget, b.p);
         return NULL;
     }
     return b.p;

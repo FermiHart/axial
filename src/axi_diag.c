@@ -2,6 +2,7 @@
  * SPDX-License-Identifier: LicenseRef-SPL-1.0 */
 #include "axi_diag.h"
 #include "axi_alloc.h"
+#include "axi_compile_budget.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -134,6 +135,13 @@ int axi_diags_edits_ok(const axi_diags *ds, char *why, size_t whycap)
 int axi_diags_apply(const axi_diags *ds, const char *src, size_t len,
                     char **out, size_t *outlen, int *napplied)
 {
+    return axi_diags_apply_budget(ds, src, len, out, outlen, napplied, NULL);
+}
+
+int axi_diags_apply_budget(const axi_diags *ds, const char *src, size_t len,
+                           char **out, size_t *outlen, int *napplied,
+                           axi_compile_budget *budget)
+{
     size_t cap, w = 0, cursor = 0;
     char *buf;
     int i, n = 0;
@@ -148,13 +156,13 @@ int axi_diags_apply(const axi_diags *ds, const char *src, size_t len,
             d->ed_textlen > (size_t)-1 - cap) return 0;
         cap += d->ed_textlen;
     }
-    buf = (char *)axi_malloc(cap);
+    buf = (char *)axi_compile_malloc(budget, cap);
     if (!buf) return 0;
     for (i = 0; i < ds->n; i++) {
         const axi_diag *d = &ds->d[i];
         if (!d->has_edit) continue;
         if (d->ed_off < cursor || (size_t)d->ed_off > len || d->ed_len > len - d->ed_off) {
-            free(buf); return 0;
+            (void)axi_compile_free(budget, buf); return 0;
         }
         memcpy(buf + w, src + cursor, d->ed_off - cursor);
         w += d->ed_off - cursor;

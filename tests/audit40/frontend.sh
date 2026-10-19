@@ -15,6 +15,7 @@ fi
 # Intentional flag splitting; no eval and no shell execution from source data.
 "$HOSTCC" $CFLAGS $SAN_FLAGS -Isrc -Iinclude -Ivendor \
     tests/audit40/frontend_diag.c src/axi_lex.c src/axi_diag.c src/axi_alloc.c \
+    src/axi_compile_budget.c src/axi_mem_account.c \
     -o "$TEST_BUILD/diag"
 "$TEST_BUILD/diag"
 "$HOSTCC" $CFLAGS $SAN_FLAGS -Isrc \
