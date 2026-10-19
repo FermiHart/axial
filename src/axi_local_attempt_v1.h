@@ -129,7 +129,10 @@ int axi_local_attempt_v1_scan_timed(const char *store_dir,
  * owned by the caller's effective UID with mode exactly 0700; otherwise
  * REFUSED. No record is read or written, no effect is performed. Same-UID
  * attackers stay outside this guarantee (ADR-059 TCB): ownership proves
- * which UID owns the path, not that no other process shares the UID. */
+ * which UID owns the path, not that no other process shares the UID.
+ * The final store component and internal entries must not be symlinks.
+ * Actual opened descriptors are rechecked; records/locks/epoch files are
+ * private regular files with one link, so FIFOs cannot block these reads. */
 int axi_local_attempt_v1_store_check(const char *store_dir);
 
 /* Monotonic now for deadlines (CLOCK_MONOTONIC nanoseconds). */

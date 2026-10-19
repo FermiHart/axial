@@ -2,6 +2,7 @@
 #include "axi_local_epoch_v1.h"
 
 #include "axi_local_attempt_v1.h"
+#include "axi_local_store_v1.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -99,7 +100,7 @@ static int epoch_unpack(const uint8_t in[EPOCH_RECORD_SIZE],
 static int write_full_fsync_at(int dirfd, const char *name, const void *data,
                                size_t len)
 {
-    int fd = openat(dirfd, name, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    int fd = axi_local_store_open_file_at(dirfd, name, O_WRONLY | O_CREAT | O_TRUNC);
     size_t off = 0;
     if (fd < 0) {
         return -1;
@@ -125,7 +126,7 @@ static int write_full_fsync_at(int dirfd, const char *name, const void *data,
 static int read_exact_at(int dirfd, const char *name,
                          uint8_t out[EPOCH_RECORD_SIZE], int *present)
 {
-    int fd = openat(dirfd, name, O_RDONLY);
+    int fd = axi_local_store_open_file_at(dirfd, name, O_RDONLY);
     size_t off = 0;
     uint8_t extra;
     ssize_t r;
@@ -187,11 +188,11 @@ int axi_local_epoch_v1_provision(const char *store_dir,
         AXI_LOCAL_ATTEMPT_V1_OK) {
         return AXI_LOCAL_EPOCH_V1_REFUSED;
     }
-    sdfd = open(store_dir, O_RDONLY | O_DIRECTORY);
+    sdfd = axi_local_store_open(store_dir);
     if (sdfd < 0) {
         return AXI_LOCAL_EPOCH_V1_REFUSED;
     }
-    lockfd = openat(sdfd, "owner.lock", O_WRONLY | O_CREAT, 0600);
+    lockfd = axi_local_store_open_file_at(sdfd, "owner.lock", O_WRONLY | O_CREAT);
     if (lockfd < 0 || flock(lockfd, LOCK_EX) != 0) {
         rec = AXI_LOCAL_EPOCH_V1_REFUSED;
         goto done;
@@ -252,11 +253,11 @@ int axi_local_epoch_v1_activate(const char *store_dir, uint64_t generation)
         AXI_LOCAL_ATTEMPT_V1_OK) {
         return AXI_LOCAL_EPOCH_V1_REFUSED;
     }
-    sdfd = open(store_dir, O_RDONLY | O_DIRECTORY);
+    sdfd = axi_local_store_open(store_dir);
     if (sdfd < 0) {
         return AXI_LOCAL_EPOCH_V1_REFUSED;
     }
-    lockfd = openat(sdfd, "owner.lock", O_WRONLY | O_CREAT, 0600);
+    lockfd = axi_local_store_open_file_at(sdfd, "owner.lock", O_WRONLY | O_CREAT);
     if (lockfd < 0 || flock(lockfd, LOCK_EX) != 0) {
         rec = AXI_LOCAL_EPOCH_V1_REFUSED;
         goto done;
@@ -308,7 +309,7 @@ int axi_local_epoch_v1_current(const char *store_dir,
         AXI_LOCAL_ATTEMPT_V1_OK) {
         return AXI_LOCAL_EPOCH_V1_REFUSED;
     }
-    sdfd = open(store_dir, O_RDONLY | O_DIRECTORY);
+    sdfd = axi_local_store_open(store_dir);
     if (sdfd < 0) {
         return AXI_LOCAL_ATTEMPT_V1_REFUSED;
     }

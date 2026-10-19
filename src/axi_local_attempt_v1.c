@@ -18,6 +18,7 @@
 #include "axi_ag1_v1.h"
 #include "axi_hash.h"
 #include "axi_local_epoch_v1.h"
+#include "axi_local_store_v1.h"
 
 #include <dirent.h>
 #include <errno.h>
@@ -81,12 +82,6 @@ static void issuer_key_id(const uint8_t pk[32], uint8_t out[32])
     axi_sha256(buf, sizeof(buf), out);
 }
 
-static int fd_is_dir(int fd)
-{
-    struct stat st;
-    return fstat(fd, &st) == 0 && S_ISDIR(st.st_mode);
-}
-
 uint64_t axi_local_attempt_v1_now_mono(void)
 {
     struct timespec ts;
@@ -98,17 +93,9 @@ uint64_t axi_local_attempt_v1_now_mono(void)
 
 int axi_local_attempt_v1_store_check(const char *store_dir)
 {
-    struct stat st;
-    if (!store_dir || !*store_dir) {
-        return AXI_LOCAL_ATTEMPT_V1_REFUSED;
-    }
-    if (stat(store_dir, &st) != 0 || !S_ISDIR(st.st_mode)) {
-        return AXI_LOCAL_ATTEMPT_V1_REFUSED;
-    }
-    if (st.st_uid != geteuid() || (st.st_mode & 0777) != 0700) {
-        return AXI_LOCAL_ATTEMPT_V1_REFUSED;
-    }
-    return AXI_LOCAL_ATTEMPT_V1_OK;
+    int fd = axi_local_store_open(store_dir);
+    if (fd < 0) return AXI_LOCAL_ATTEMPT_V1_REFUSED;
+    return close(fd) == 0 ? AXI_LOCAL_ATTEMPT_V1_OK : AXI_LOCAL_ATTEMPT_V1_REFUSED;
 }
 
 /* Acquire a lock op no later than deadline (monotonic ns).
@@ -145,7 +132,7 @@ static int acquire_timed(int lockfd, uint64_t deadline)
 static int write_full_fsync_at(int dirfd, const char *name, const void *data,
                                size_t len)
 {
-    int fd = openat(dirfd, name, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    int fd = axi_local_store_open_file_at(dirfd, name, O_WRONLY | O_CREAT | O_TRUNC);
     size_t off = 0;
     if (fd < 0) {
         return -1;
@@ -182,7 +169,7 @@ static int read_record_at(int dirfd, const char *name,
                           uint8_t out[ATTEMPT_RECORD_V2_SIZE],
                           size_t *out_len, int *present)
 {
-    int fd = openat(dirfd, name, O_RDONLY);
+    int fd = axi_local_store_open_file_at(dirfd, name, O_RDONLY);
     size_t off = 0;
     uint8_t extra;
     ssize_t r;
@@ -415,11 +402,11 @@ int axi_local_attempt_v1_status(const char *store_dir,
         AXI_LOCAL_ATTEMPT_V1_OK) {
         return AXI_LOCAL_ATTEMPT_V1_REFUSED;
     }
-    sdfd = open(store_dir, O_RDONLY | O_DIRECTORY);
+    sdfd = axi_local_store_open(store_dir);
     if (sdfd < 0) {
         return AXI_LOCAL_ATTEMPT_V1_REFUSED;
     }
-    recfd = openat(sdfd, "records", O_RDONLY | O_DIRECTORY);
+    recfd = axi_local_store_open_directory_at(sdfd, "records");
     close(sdfd);
     if (recfd < 0) {
         if (errno == ENOENT) {
@@ -428,7 +415,7 @@ int axi_local_attempt_v1_status(const char *store_dir,
         }
         return AXI_LOCAL_ATTEMPT_V1_CORRUPT;
     }
-    if (!fd_is_dir(recfd)) {
+    if (axi_local_store_directory_fd(recfd) != 0) {
         close(recfd);
         return AXI_LOCAL_ATTEMPT_V1_CORRUPT;
     }
@@ -579,13 +566,13 @@ static int commit_impl(const char *store_dir,
 
     /* 6. Open the store once; every later access is *at() relative to a
      * dirfd, so caller pathnames are never re-resolved. */
-    sdfd = open(store_dir, O_RDONLY | O_DIRECTORY);
+    sdfd = axi_local_store_open(store_dir);
     if (sdfd < 0) {
         fill_out(out, AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED, 0, grant_root);
         rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
         goto done;
     }
-    if (!fd_is_dir(sdfd)) {
+    if (axi_local_store_directory_fd(sdfd) != 0) {
         /* Unreachable through O_DIRECTORY barring a kernel surprise;
          * close anyway: no descriptor is ever leaked on refusal paths. */
         close(sdfd);
@@ -594,7 +581,7 @@ static int commit_impl(const char *store_dir,
         rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
         goto done;
     }
-    lockfd = openat(sdfd, "owner.lock", O_WRONLY | O_CREAT, 0600);
+    lockfd = axi_local_store_open_file_at(sdfd, "owner.lock", O_WRONLY | O_CREAT);
     if (lockfd < 0) {
         fill_out(out, AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED, 0, grant_root);
         rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
@@ -665,8 +652,8 @@ static int commit_impl(const char *store_dir,
         rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
         goto done;
     }
-    recfd = openat(sdfd, "records", O_RDONLY | O_DIRECTORY);
-    if (recfd < 0 || !fd_is_dir(recfd) ||
+    recfd = axi_local_store_open_directory_at(sdfd, "records");
+    if (recfd < 0 ||
         count_records(recfd, &nrec) != 0) {
         fill_out(out, AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED, 0, grant_root);
         rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
@@ -723,7 +710,7 @@ static int commit_impl(const char *store_dir,
         record_pack(rec, AXI_LOCAL_ATTEMPT_V1_ATTEMPTED, grant_root,
                     roots.action, phash, (uint64_t)payload_len,
                     adm.context_root, epoch_gen, epoch_dep);
-        fd = openat(recfd, hex, O_WRONLY | O_CREAT | O_EXCL, 0600);
+        fd = axi_local_store_open_file_at(recfd, hex, O_WRONLY | O_CREAT | O_EXCL);
         if (fd < 0) {
             /* Lost the race: re-read under the same lock. Any other
              * failure leaves a possibly-existing record unread: report
@@ -757,14 +744,14 @@ static int commit_impl(const char *store_dir,
                  * concurrently completed record lands in the branch
                  * below; anything else absent here is a lie. */
                 struct stat st;
-                if (fstatat(recfd, hex, &st, 0) != 0
-                    || st.st_size != 0
+                if (fstatat(recfd, hex, &st, AT_SYMLINK_NOFOLLOW) != 0
+                    || !S_ISREG(st.st_mode) || st.st_size != 0
                     || unlinkat(recfd, hex, 0) != 0) {
                     rc = AXI_LOCAL_ATTEMPT_V1_CORRUPT;
                     goto done;
                 }
-                fd = openat(recfd, hex, O_WRONLY | O_CREAT | O_EXCL,
-                            0600);
+                fd = axi_local_store_open_file_at(recfd, hex,
+                                                   O_WRONLY | O_CREAT | O_EXCL);
                 if (fd < 0) {
                     rc = AXI_LOCAL_ATTEMPT_V1_CORRUPT;
                     goto done;
@@ -941,7 +928,7 @@ static int scan_impl(const char *store_dir,
         AXI_LOCAL_ATTEMPT_V1_OK) {
         return AXI_LOCAL_ATTEMPT_V1_REFUSED;
     }
-    sdfd = open(store_dir, O_RDONLY | O_DIRECTORY);
+    sdfd = axi_local_store_open(store_dir);
     if (sdfd < 0) {
         return AXI_LOCAL_ATTEMPT_V1_REFUSED;
     }
@@ -949,9 +936,9 @@ static int scan_impl(const char *store_dir,
     /* No O_CREAT: a scanner never materializes lock state. A store with
      * records but no lock file breaks the owner invariant -> CORRUPT.
      * A store with neither is fresh -> OK with zero visits. */
-    lockfd = openat(sdfd, "owner.lock", O_RDONLY);
+    lockfd = axi_local_store_open_file_at(sdfd, "owner.lock", O_RDONLY);
     if (lockfd < 0) {
-        int rfd = openat(sdfd, "records", O_RDONLY | O_DIRECTORY);
+        int rfd = axi_local_store_open_directory_at(sdfd, "records");
         if (rfd < 0) {
             if (errno == ENOENT) {
                 goto done;
@@ -972,7 +959,7 @@ static int scan_impl(const char *store_dir,
         rc = AXI_LOCAL_ATTEMPT_V1_REFUSED;
         goto done;
     }
-    recfd = openat(sdfd, "records", O_RDONLY | O_DIRECTORY);
+    recfd = axi_local_store_open_directory_at(sdfd, "records");
     if (recfd < 0) {
         if (errno == ENOENT) {
             goto done;
@@ -980,7 +967,7 @@ static int scan_impl(const char *store_dir,
         rc = AXI_LOCAL_ATTEMPT_V1_CORRUPT;
         goto done;
     }
-    if (!fd_is_dir(recfd)) {
+    if (axi_local_store_directory_fd(recfd) != 0) {
         rc = AXI_LOCAL_ATTEMPT_V1_CORRUPT;
         goto done;
     }

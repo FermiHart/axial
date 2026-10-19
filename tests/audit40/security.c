@@ -7,6 +7,7 @@
 #include "axi_aer2_v1.h"
 #include "axi_delegation_v1.h"
 #include "axi_local_attempt_v1.h"
+#include "axi_local_epoch_v1.h"
 #include "ed25519.h"
 
 #include <stdio.h>
@@ -279,6 +280,58 @@ static void w25(void)
     CHECK(rmdir(records) == 0); CHECK(rmdir(directory) == 0);
 }
 
+static void w26(void)
+{
+    char directory[] = "/tmp/axial-audit40-store-XXXXXX";
+    char alias[256], records[256], lock[256], file[256], victim[256], temp[256];
+    char name[65];
+    uint8_t root[32] = {0xab}, raw[168], observed[168];
+    axi_local_attempt_v1_outcome out;
+    axi_local_epoch_v1 epoch;
+    unsigned n = 0;
+    int fd;
+    CHECK(mkdtemp(directory) != NULL);
+    fixture_path(alias, directory, "alias"); CHECK(symlink(directory, alias) == 0);
+    CHECK(axi_local_attempt_v1_store_check(alias) == AXI_LOCAL_ATTEMPT_V1_REFUSED);
+    CHECK(unlink(alias) == 0);
+    fixture_path(records, directory, "records"); CHECK(mkdir(records, 0700) == 0);
+    fixture_path(lock, directory, "owner.lock"); fixture_write(lock, "", 0);
+    axi_hash_hex(root, name); fixture_path(file, records, name);
+    fixture_path(victim, directory, "victim");
+    record_fixture(raw, 2, root); fixture_write(victim, raw, sizeof raw);
+    CHECK(symlink(victim, file) == 0);
+    CHECK(axi_local_attempt_v1_status(directory, root, &out) == AXI_LOCAL_ATTEMPT_V1_CORRUPT);
+    CHECK(unlink(file) == 0);
+    CHECK(link(victim, file) == 0);
+    CHECK(axi_local_attempt_v1_status(directory, root, &out) == AXI_LOCAL_ATTEMPT_V1_CORRUPT);
+    CHECK(unlink(file) == 0);
+    CHECK(mkfifo(file, 0600) == 0);
+    alarm(3);
+    CHECK(axi_local_attempt_v1_status(directory, root, &out) == AXI_LOCAL_ATTEMPT_V1_CORRUPT);
+    alarm(0);
+    CHECK(unlink(file) == 0);
+    CHECK(unlink(lock) == 0); CHECK(mkfifo(lock, 0600) == 0);
+    alarm(3);
+    CHECK(axi_local_attempt_v1_scan(directory, visit_count, &n) == AXI_LOCAL_ATTEMPT_V1_CORRUPT);
+    alarm(0);
+    CHECK(n == 0); CHECK(unlink(lock) == 0);
+    fixture_write(lock, "", 0);
+    fixture_path(temp, directory, ".tmp.epoch"); CHECK(symlink(victim, temp) == 0);
+    memset(&epoch, 1, sizeof epoch);
+    CHECK(axi_local_epoch_v1_provision(directory, &epoch, NULL) == AXI_LOCAL_EPOCH_V1_REFUSED);
+    fd = open(victim, O_RDONLY); CHECK(fd >= 0);
+    CHECK(read(fd, observed, sizeof observed) == sizeof observed); CHECK(close(fd) == 0);
+    CHECK(memcmp(raw, observed, sizeof raw) == 0);
+    /* Refusal may clean only the temporary entry; it never follows it. */
+    CHECK(unlink(temp) == 0 || errno == ENOENT);
+    CHECK(axi_local_epoch_v1_provision(directory, &epoch, NULL) == AXI_LOCAL_EPOCH_V1_OK);
+    CHECK(axi_local_epoch_v1_activate(directory, 1) == AXI_LOCAL_EPOCH_V1_OK);
+    CHECK(axi_local_epoch_v1_current(directory, &epoch) == AXI_LOCAL_EPOCH_V1_OK);
+    fixture_path(temp, directory, "epoch_active"); CHECK(unlink(temp) == 0);
+    CHECK(unlink(victim) == 0); CHECK(unlink(lock) == 0);
+    CHECK(rmdir(records) == 0); CHECK(rmdir(directory) == 0);
+}
+
 int main(int argc, char **argv)
 {
     if (argc == 1 || strcmp(argv[1], "W21") == 0) w21();
@@ -286,6 +339,7 @@ int main(int argc, char **argv)
     if (argc == 1 || strcmp(argv[1], "W23") == 0) w23();
     if (argc == 1 || strcmp(argv[1], "W24") == 0) w24();
     if (argc == 1 || strcmp(argv[1], "W25") == 0) w25();
+    if (argc == 1 || strcmp(argv[1], "W26") == 0) w26();
     printf("audit40 security: %u checks passed\n", checks);
     return 0;
 }
