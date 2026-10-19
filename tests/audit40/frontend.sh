@@ -14,7 +14,7 @@ fi
 
 # Intentional flag splitting; no eval and no shell execution from source data.
 "$HOSTCC" $CFLAGS $SAN_FLAGS -Isrc -Iinclude -Ivendor \
-    tests/audit40/frontend_diag.c src/axi_lex.c src/axi_diag.c src/axi_alloc.c \
+    tests/audit40/frontend_diag.c src/axi_lex.c src/axi_numeric.c src/axi_diag.c src/axi_alloc.c \
     src/axi_compile_budget.c src/axi_mem_account.c \
     -o "$TEST_BUILD/diag"
 "$TEST_BUILD/diag"
@@ -23,7 +23,7 @@ fi
 "$TEST_BUILD/json"
 "$HOSTCC" $CFLAGS $SAN_FLAGS -DAXI_ALLOC_FAILPOINT -DAXI_TEST_ALLOCATION_TRACKING \
     -ffunction-sections -fdata-sections -Isrc -Iinclude -Ivendor \
-    tests/audit40/frontend_parser.c src/axi_parse.c src/axi_lex.c src/axi_diag.c \
+    tests/audit40/frontend_parser.c src/axi_parse.c src/axi_lex.c src/axi_numeric.c src/axi_diag.c \
     src/axi_alloc.c src/axi_compile_budget.c src/axi_mem_account.c \
     src/axi_cap_table.c -Wl,--gc-sections \
     -Wl,--wrap=calloc -Wl,--wrap=free -o "$TEST_BUILD/parser"
@@ -31,7 +31,7 @@ python3 tests/audit40/frontend_parser.py "$TEST_BUILD/parser"
 "$HOSTCC" $CFLAGS $SAN_FLAGS -fshort-enums \
     -DAXI_ALLOC_FAILPOINT -DAXI_TEST_ALLOCATION_TRACKING \
     -ffunction-sections -fdata-sections -Isrc -Iinclude -Ivendor \
-    tests/audit40/frontend_parser.c src/axi_parse.c src/axi_lex.c src/axi_diag.c \
+    tests/audit40/frontend_parser.c src/axi_parse.c src/axi_lex.c src/axi_numeric.c src/axi_diag.c \
     src/axi_alloc.c src/axi_compile_budget.c src/axi_mem_account.c \
     src/axi_cap_table.c -Wl,--gc-sections \
     -Wl,--wrap=calloc -Wl,--wrap=free -o "$TEST_BUILD/parser-short-enums"

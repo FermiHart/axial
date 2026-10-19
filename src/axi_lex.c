@@ -11,9 +11,16 @@
 #include "axi.h"
 #include "axi_alloc.h"
 #include "axi_string.h"
+#include "axi_numeric.h"
+#include <float.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#if FLT_RADIX != 2 || DBL_MANT_DIG != 53 || DBL_MAX_EXP != 1024 || DBL_MIN_EXP != -1021
+#error "Axial source f64 requires an IEEE binary64 host double"
+#endif
+typedef char axi_f64_storage_is_64_bits[sizeof(double) == sizeof(uint64_t) ? 1 : -1];
 
 /* ---- keyword table ------------------------------------------------------- */
 
@@ -142,7 +149,7 @@ static void lex_number(axi_lexer *lx, axi_token *t,
 {
     uint64_t v = 0;
     int is_float = 0;
-    double f = 0.0, scale = 0.1;
+    uint64_t fbits = 0;
     int overflow = 0;
 
     while (is_digit(peek(lx)) || peek(lx) == '_') {
@@ -159,13 +166,21 @@ static void lex_number(axi_lexer *lx, axi_token *t,
     }
     if (peek(lx) == '.' && is_digit(peek2(lx))) {
         is_float = 1;
-        f = (double)v;
         advance(lx); /* '.' */
         while (is_digit(peek(lx)) || peek(lx) == '_') {
-            char c = advance(lx);
-            if (c == '_') continue;
-            f += (double)(c - '0') * scale;
-            scale *= 0.1;
+            advance(lx);
+        }
+        {
+            axi_numeric_workspace workspace;
+            int status = axi_f64_from_decimal(start,
+                (size_t)((lx->src + lx->pos) - start), &fbits, &workspace);
+            if (status != AXI_DECIMAL_OK) {
+                axi_diag_add_source(lx->diags, "AXI-L006", lx->src,
+                                    (uint32_t)(start - lx->src),
+                                    (uint32_t)((lx->src + lx->pos) - start),
+                                    "float literal rounds outside finite binary64",
+                                    "use a finite decimal f64 value; the maximum is about 1.7976931348623157 times 10^308");
+            }
         }
     }
     /* trailing junk like 123abc is one diagnostic, consumed (progress law) */
@@ -177,7 +192,7 @@ static void lex_number(axi_lexer *lx, axi_token *t,
                             "letters directly after a number literal",
                             "separate the number and the identifier with a space");
     }
-    if (overflow) {
+    if (overflow && !is_float) {
         axi_diag_add_source(lx->diags, "AXI-L005", lx->src,
                             (uint32_t)(start - lx->src),
                             (uint32_t)((lx->src + lx->pos) - start),
@@ -186,7 +201,8 @@ static void lex_number(axi_lexer *lx, axi_token *t,
     }
     tok_fill(t, is_float ? T_FLOAT : T_INT, line, col,
              start, (size_t)((lx->src + lx->pos) - start));
-    if (is_float) t->fval = f; else t->ival = v;
+    if (is_float) memcpy(&t->fval, &fbits, sizeof fbits);
+    else t->ival = v;
 }
 
 static void lex_string(axi_lexer *lx, axi_token *t,

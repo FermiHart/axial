@@ -44,7 +44,12 @@ and ONE canonical fix. What elsewhere is style, here is law.
 - Comment: `#` to end of line. No block comment (G1).
 - Integer: `[0-9][0-9_]*` — `_` is a visual separator, normalized in the
   lexeme (`1_000_000` → `1000000`). Letter glued to a number → AXI-L004.
-- Float: `INT "." INT` (v0; no exponent until a proven need exists).
+- Float: `INT "." INT` (no exponent syntax). Decimal-f64 profile v1
+  converts the exact decimal value once to binary64, nearest with ties to
+  the even significand, independently of locale and host rounding mode.
+  All finite magnitudes, including subnormals, are admitted. Underflow may
+  round to zero; overflow to infinity is AXI-L006. Integer parts of floats
+  are not limited to u64; the u64 limit still applies to integer literals.
 - String: `"..."` on a single line. Valid escapes: `\n \t \\ \" \0`.
   Unknown escape → AXI-L003. Unterminated on the line → AXI-L002.
   These decode to LF, TAB, backslash, quote and NUL respectively. Embedded

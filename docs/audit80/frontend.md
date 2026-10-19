@@ -142,3 +142,29 @@ Accurately*](https://www.burgerrg.com/FP-Printing-PLDI96.pdf), and
 [David Gay's original dtoa implementation](https://www.netlib.org/fp/dtoa.c)
 explain why a correct reader and a correct printer must agree on rounding
 boundaries. No code from those implementations was imported.
+
+## W64 — the source lexer uses the exact reader
+
+The lexer now loads the integer reader's exact bits with `memcpy`; no host
+arithmetic rounds each fractional digit. Float integer parts may exceed
+u64, so maximum finite binary64 values are expressible in the existing
+plain-decimal grammar. Integer-token overflow remains AXI-L005. A decimal
+that would round to infinity reports AXI-L006 and cannot publish a compiled
+artifact; subnormal underflow rounds to zero. The source token consumes the
+whole numeric spelling and preserves the separate trailing-junk diagnostic.
+Build-time checks reject host `double` formats other than binary64; like
+the existing VM, storage requires IEEE encoding in native integer byte order.
+
+**Migration — decimal-f64 profile v1:** some previously accepted decimal
+sources intentionally produce corrected bits. In particular the old digit
+accumulator read `0.3` one ulp above its nearest binary64 value. Existing
+binary constants are unchanged. To preserve an old artifact's bits during
+recompilation, recover those bits and use the new bit-derived canonical
+decimal spelling; simply retaining an old decimal lexeme is not evidence
+of identical meaning. The checker identity must identify the new source
+semantics. No exponent, NaN or infinity source syntax is added.
+
+Validation: `sh tests/audit80/numeric.sh` runs the same 1,996 independent
+reader expectations both directly and through the actual lexer. All lexer
+standalone runners now link `axi_numeric.c`. The existing 67 golden tests
+remain a separate gate; new tests compare bits, not libc diagnostic printing.
