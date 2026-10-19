@@ -104,6 +104,22 @@ def fixtures():
         else:
             value = digits[:point] + "." + digits[point:]
         values.append(value)
+    # Exact short-dyadic path and adjacent refusals of that optimization:
+    # all uint64 widths, rounding carry, cancellation limits and fallback.
+    for width in range(1, 65):
+        for offset in range(-3, 4):
+            value = (1 << (width - 1)) + offset
+            if 0 <= value < 1 << 64:
+                values.append(str(value) + ".0")
+    for exponent in [-28, -27, -22, -9, -1, 0, 1, 9, 22, 27, 28]:
+        power = 5 ** abs(exponent)
+        for _ in range(64):
+            coefficient = rng.randrange(1, 1 << 64)
+            values.append(plain_decimal(coefficient, exponent))
+            if exponent < 0:
+                multiple = coefficient % max(1, ((1 << 64) - 1) // power) + 1
+                exact = multiple * power
+                values += [plain_decimal(exact, exponent), plain_decimal(exact + 1, exponent)]
     return values
 
 

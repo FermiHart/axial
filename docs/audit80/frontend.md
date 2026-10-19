@@ -257,3 +257,102 @@ identical compiler flags, source/binary SHA-256, complete raw samples and
 ranges. The baseline is the already-correct W65 numeric core; these timings
 do not claim equivalence with the former incorrectly rounded lexer or an
 end-to-end compiler speedup. Final measurements include W68 below.
+
+## W68 — exact short-decimal path and environmental limits
+
+Short decimals now bypass multiprecision search when their complete
+coefficient fits uint64 and powers of five can be represented or fully
+cancelled. The remaining exact `m * 2^e` is rounded once by integer quotient,
+remainder and an even-significand tie. Carry into the next binary exponent
+is explicit. The admitted decimal exponent range of this shortcut is
+[-27,27], so its nonzero values are normal binary64 and cannot suffer a
+second subnormal rounding. Every other input uses the exact W63 path.
+There is no approximate candidate, host float operation or weaker fallback.
+
+The final reader suite has 3,785 expectations, adding every uint64 width,
+rounding carries, cancellation boundaries, successful short paths and
+immediate fallback neighbors to the earlier long-input tests. The formatter
+still passes 8,318 independent interval expectations. `numeric_limits.c`
+also checks all four standard rounding modes while preexisting floating-
+point exception flags are raised; reader, formatter and lexer preserve
+both the mode and those flags. It tests all available locale names from
+C/POSIX/C.UTF-8/German/French and reports how many use a non-dot separator,
+so an unavailable locale is not presented as evidence. The local audit
+generates German and French locales in its build directory for the comma
+separator cases; they are optional test infrastructure, not product
+dependencies.
+
+One-MiB tests exercise exact midpoints, a nonzero digit after a million
+discarded zeroes, a tail of nines just below a midpoint, overflow, tiny
+underflow, leading integer zeroes and final-byte syntax refusal. Output
+sentinels, null-argument refusals, nonfinite formatter refusals, and complete
+1-MiB scans are checked. Numeric workspace remains **2,372 bytes** on the
+tested C99 ABI, exposed via `sizeof` rather than a guessed constant.
+
+### Final measured helper cost
+
+The final paired run compares the exact W65 numeric source with W67–W68.
+Both binaries used GCC 13.3.0, C99, `-O1 -Wall -Wextra -Werror -Wpedantic`,
+CPU affinity `{0}`, one warmup per workload/binary and seven alternating
+pairs. The timed region uses C `clock()` process CPU time, with no timed
+I/O. Every warmup and sample matched the workload's output checksum.
+
+| Workload | W65 median (range), ms | W68 median (range), ms | Median change |
+|---|---:|---:|---:|
+| 8,192 formatted values, all exponent fields | 453.746 (435.144–470.197) | 121.553 (118.503–125.474) | -73.21% |
+| 65,536 reads, repeated fixed 16-value mix | 86.569 (84.805–95.057) | 29.346 (28.232–31.109) | -66.10% |
+
+The reader mix includes exact integers/dyadics and decimals that take the
+general path; its proportions are explicit in `numeric_bench.c`. The
+formatter mixes exponent fields uniformly, which differs from many real
+programs. These are descriptive local microbenchmarks, with the ranges
+shown, and establish no end-to-end speedup or production latency promise.
+Workspace is unchanged at 2,372 bytes. Raw warmups/pairs, compiler identity,
+flags and source/binary hashes are emitted by `numeric_bench.py` to the
+requested JSON path; the audit's final run is
+`build/numeric80-final-benchmark.json` for final evidence integration.
+
+### Reproduction and integration
+
+```sh
+make -j2 dev
+sh tests/audit80/frontend.sh build/axi
+sh tests/audit80/numeric.sh build/axi
+sh tests/audit40/frontend.sh build/axi
+make gate-fast
+
+make -j2 BUILD=build-numeric-san \
+  CFLAGS='-std=c99 -Wall -Wextra -Werror -O1 -D_POSIX_C_SOURCE=200809L -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie' \
+  LDFLAGS='-fsanitize=address,undefined -no-pie' dev
+# Optional comma locales, when localedef and locale sources are installed:
+mkdir -p build/numeric80-locales
+localedef --no-archive -i de_DE -f UTF-8 build/numeric80-locales/de_DE.UTF-8
+localedef --no-archive -i fr_FR -f UTF-8 build/numeric80-locales/fr_FR.UTF-8
+LOCPATH="$PWD/build/numeric80-locales" \
+ASAN_OPTIONS=detect_leaks=0:abort_on_error=1 UBSAN_OPTIONS=halt_on_error=1 \
+CFLAGS='-std=c99 -Wall -Wextra -Werror -Wpedantic -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie' \
+AXI_TEST_BUILD=build-numeric-san/audit80-numeric \
+sh tests/audit80/numeric.sh build-numeric-san/axi
+ASAN_OPTIONS=detect_leaks=0:abort_on_error=1 UBSAN_OPTIONS=halt_on_error=1 \
+CFLAGS='-std=c99 -Wall -Wextra -Werror -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie' \
+AXI_TEST_BUILD=build-numeric-san/audit80-frontend \
+sh tests/audit80/frontend.sh build-numeric-san/axi
+```
+
+Standalone lexer tests link `axi_numeric.c`; `numeric_limits.c` additionally
+links `-lm` for the test's fenv operations. The numeric implementation itself
+has no libm dependency. Both the numeric reader and renderer take an explicit
+workspace; the lexer and canonical builder must reserve
+`AXI_NUMERIC_SCRATCH_BYTES` through the root compiler quota integration.
+The numeric helpers are not recursive and retain no additional arrays.
+
+Limits: this is mathematical reasoning with bounded arithmetic, independent
+differential evidence and local sanitizer execution, not a machine-checked
+proof or exhaustive enumeration of all 2^64 bit patterns. Actual native
+execution was tested on the available binary64 host; no guest, big-endian
+hardware or alternative double encoding is claimed. The standalone numeric
+core consumes/produces raw uint64 IEEE bits; source/VM double storage keeps
+the project's native IEEE layout requirement. The VM's existing arithmetic
+and signed-zero/NaN normalization contracts remain separate. LeakSanitizer
+is disabled in the reported ASan/UBSan commands; hosted CI is not inferred
+from these local results.

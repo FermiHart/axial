@@ -111,7 +111,9 @@ static int big_cmp_scaled(const axi_numeric_big *a, int ae,
     return 0;
 }
 
-/* The prepared decimal is a / b * 2^e10, with b an exact power of five.
+/* The prepared decimal is a * 2^e10 for e10 >= 0, otherwise a / b * 2^e10.
+ * In the latter case b is an exact power of five; in the former case the
+ * formatter may retain its numerator's power-of-five cache in b.
  * Compare with the boundary above finite nonnegative binary64 `lower`:
  * (2*M + 1) * 2^(E-1). This also gives the subnormal/normal boundary and
  * the overflow threshold above the largest finite value without infinity
@@ -165,6 +167,51 @@ static int decimal_round(axi_numeric_workspace *w, int e10, int sticky,
     return AXI_DECIMAL_OK;
 }
 
+/* Exact short-decimal path. A uint64 coefficient times 10^e is dyadic if
+ * all denominator fives cancel. With |e| <= 27 the remaining m * 2^e is
+ * normal binary64; round m once to 53 bits using integer remainder bits.
+ * If a factor cannot be represented/cancelled, the exact general path
+ * remains authoritative. No floating-point "fast approximation" is used.
+ */
+static int short_dyadic(const char *digits, unsigned nd, int e10,
+                        uint64_t *bits)
+{
+    uint64_t m = 0, scan, significand;
+    unsigned i, width = 0;
+    int exponent;
+    if (nd > 20 || e10 < -27 || e10 > 27) return 0;
+    for (i = 0; i < nd; i++) {
+        unsigned digit = (unsigned)(digits[i] - '0');
+        if (m > (UINT64_MAX - digit) / 10) return 0;
+        m = m * 10 + digit;
+    }
+    if (e10 >= 0) {
+        for (int j = 0; j < e10; j++) {
+            if (m > UINT64_MAX / 5) return 0;
+            m *= 5;
+        }
+    } else {
+        for (int j = 0; j < -e10; j++) {
+            if (m % 5) return 0;
+            m /= 5;
+        }
+    }
+    if (!m) return 0; /* zero is handled before this helper */
+    for (scan = m; scan; scan >>= 1) width++;
+    exponent = e10 + (int)width - 1;
+    if (width <= 53) significand = m << (53 - width);
+    else {
+        unsigned shift = width - 53;
+        uint64_t remainder = m & ((UINT64_C(1) << shift) - 1);
+        uint64_t half = UINT64_C(1) << (shift - 1);
+        significand = m >> shift;
+        if (remainder > half || (remainder == half && (significand & 1))) significand++;
+        if (significand == (F64_HIDDEN << 1)) { significand >>= 1; exponent++; }
+    }
+    *bits = ((uint64_t)(exponent + 1023) << 52) | (significand & F64_FRACTION);
+    return 1;
+}
+
 int axi_f64_from_decimal(const char *source, size_t len, uint64_t *out_bits,
                          axi_numeric_workspace *w)
 {
@@ -204,6 +251,10 @@ int axi_f64_from_decimal(const char *source, size_t len, uint64_t *out_bits,
     if (!significant || point < -323) { *out_bits = 0; return AXI_DECIMAL_OK; }
     if (point > 309) return AXI_DECIMAL_OVERFLOW;
     if (!sticky) kept = last_nonzero;
+    if (!sticky && short_dyadic(w->digits, kept, point - (int)kept, &bits)) {
+        *out_bits = bits;
+        return AXI_DECIMAL_OK;
+    }
     big_set(&w->a, 0);
     for (i = 0; i < kept; i++)
         if (!big_mul_add(&w->a, 10, (uint32_t)(w->digits[i] - '0')))
