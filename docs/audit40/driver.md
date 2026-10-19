@@ -41,7 +41,7 @@ These checks were absent from the public 67-test gate. `make gate` includes
 both the original goldens and this suite.
 
 The added same-producer/recorder test exposed a real baseline late refusal:
-io.Write occurred before the invalid recording identity was refused. W20
+io.Write occurred before the invalid recording identity was refused. W16
 fixes that preflight. The restricted execution sandbox also denies even
 local Unix datagram sends; fs.Write's fsync worker therefore needs an
 IPC-capable host for the positive integration case. This environmental
@@ -108,3 +108,21 @@ cells, exact values/fuel, prefixes, absent cells, interface mismatch and zero
 fuel. The same test executable supports `--bench ITERATIONS CELLS` for a
 warm-context comparison against pristine sources. Small modules and context
 creation must be assessed separately from repeated large-module lookup.
+
+## W38 — Verify the model once per seal verification
+
+Checked-seal verification previously reverified the whole module separately
+for every law, even after the subject-root encoder had already verified that
+same immutable model. Law execution now uses the existing private preverified
+pure VM door, after exact proof-signature and transitive-capability checks.
+The accounted variant uses the accounted VM path instead of allocating its
+execution state outside the caller's account. Seal construction validates
+law shape before execution. Signing seed cleanup uses the existing volatile
+wipe helper.
+
+Validation: a 64-law record executes at exactly 192 fuel, both ordinary and
+accounted verification release all ownership, and altered fuel/verdict/name/
+subject/checker fields are refused. A well-formed but false fuel assertion
+passes structural verification and fails re-execution, explicitly preserving
+the distinction between signed facts and checked behavior. One-byte memory
+limits refuse cleanly. `seal --bench ITERATIONS LAWS` is a matched probe.

@@ -13,6 +13,7 @@
 #include "axi_sign.h"
 #include "axi_u64.h"
 #include "axi_vm.h"
+#include "axi_wipe.h"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -868,7 +869,7 @@ int axb_contract_v1_write_signed_text(const char *src, size_t len,
         fprintf(AXI_ERR, "AXI-N004 %s: signed AXB v7 publication failed\n",
                 out_path);
 done:
-    memset(seed, 0, sizeof seed);
+    axi_private_wipe(seed, sizeof seed);
     axb_contract_mod_free(&model);
     return rc;
 }
@@ -968,6 +969,27 @@ done:
 /* INV-480 / AXI-INV-148: AXPC never trusts a producer-stated proposition.
  * Static admission rederives every identity; proof-required admission also
  * reexecutes the complete law set under the frozen empty-authority envelope. */
+static int seal_law_shape_valid(const axb_manifest *manifest)
+{
+    return manifest->nparams == 0 && manifest->nreturns == 1
+        && manifest->returns[0].tag == AXB_MT_BOOL && manifest->ncaps == 0
+        && manifest->flags == AXB_MANIFEST_FLAG_PURE;
+}
+
+/* The subject-root encoder already verifies the immutable complete model.
+ * Re-running that verifier for every law is redundant. Execute through the
+ * existing private, pure preverified door and retain caller memory accounting. */
+static int seal_run_verified_law(const axb_contract_mod *model, uint32_t cell,
+                                  axi_vval *value, uint64_t budget,
+                                  uint64_t *used, axi_mem_account *account)
+{
+    if (account)
+        return axi_vm_run_contract_cell_preverified_accounted_diag(
+            model, cell, NULL, 0, value, budget, used, NULL, NULL, account);
+    return axi_vm_run_contract_cell_preverified_pure_diag(
+        model, cell, NULL, 0, value, budget, used, NULL, NULL);
+}
+
 int axb_contract_seal_verify_accounted(const axb_contract_mod *m, int execute,
                                         axi_mem_account *account)
 {
@@ -1000,10 +1022,7 @@ int axb_contract_seal_verify_accounted(const axb_contract_mod *m, int execute,
         budget = manifest->fuel_max;
         if (budget > AXPC_MAX_AGGREGATE_FUEL)
             budget = AXPC_MAX_AGGREGATE_FUEL;
-        if (manifest->nparams != 0 || manifest->nreturns != 1
-                || manifest->returns[0].tag != AXB_MT_BOOL
-                || manifest->ncaps != 0
-                || manifest->flags != AXB_MANIFEST_FLAG_PURE
+        if (!seal_law_shape_valid(manifest)
                 || law->cell_index != i || law->name.len != name_len
                 || !law->name.p
                 || memcmp(law->name.p, cell->name, name_len) != 0
@@ -1022,8 +1041,7 @@ int axb_contract_seal_verify_accounted(const axb_contract_mod *m, int execute,
             axi_vval value;
             uint64_t used = 0;
             memset(&value, 0, sizeof value);
-            if (axi_vm_run_contract_cell_diag(m, i, NULL, 0, &value, budget,
-                                              &used, NULL, NULL, NULL) != 1
+            if (seal_run_verified_law(m, i, &value, budget, &used, account) != 1
                     || value.kind != VB_BOOL || value.bits != 1
                     || used != law->fuel_used)
                 return 1;
@@ -1072,6 +1090,12 @@ int cmd_seal_contract_signed(const char *in, const char *out_path,
         if (strncmp(model.body.cells[i].name, "law_", 4) != 0) continue;
         if (nlaws >= AXPC_MAX_LAWS) goto done;
         manifest = &model.manifest[i];
+        if (!seal_law_shape_valid(manifest)) {
+            fprintf(AXI_ERR, "AXI-S002 %s: law `%s` requires a pure, "
+                    "CAP-free, zero-argument boolean contract\n",
+                    in, model.body.cells[i].name);
+            goto done;
+        }
         budget = manifest->fuel_max;
         if (budget > AXPC_MAX_AGGREGATE_FUEL)
             budget = AXPC_MAX_AGGREGATE_FUEL;
@@ -1095,8 +1119,8 @@ int cmd_seal_contract_signed(const char *in, const char *out_path,
         fuel = 0;
         /* INV-476 / AXI-INV-145: activation cannot erase the diagnostic that
          * explains why a law trapped. */
-        if (axi_vm_run_contract_cell_diag(&model, i, NULL, 0, &value, budget,
-                                          &fuel, NULL, NULL, NULL) != 1) {
+        /* Parsing above verified this model, including transitive caps. */
+        if (seal_run_verified_law(&model, i, &value, budget, &fuel, NULL) != 1) {
             fprintf(AXI_ERR, "AXI-S002 %s: law `%s` is not green (trapped) | "
                     "fix: a law runs to bool true on budget; the cell does not "
                     "seal until it does\n", in, model.body.cells[i].name);
@@ -1144,7 +1168,7 @@ int cmd_seal_contract_signed(const char *in, const char *out_path,
     }
 done:
     free(body);
-    memset(seed, 0, sizeof seed);
+    axi_private_wipe(seed, sizeof seed);
     axb_contract_mod_free(&model);
     free(src);
     return rc;
