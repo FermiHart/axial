@@ -167,10 +167,68 @@ static void union_aliases(void)
     }
 }
 
+static void equal_pair(const axi_vval *left, const axi_vval *right, int expected)
+{
+    axi_vval args[2] = {*left, *right}, out;
+    uint64_t used;
+    for (uint8_t destination = 0; destination < 3; destination++) {
+        uint32_t code[] = {instruction(OP_EQ, destination, 0, 1),
+                           instruction(OP_RET, destination, 0, 0)};
+        CHECK(run(code, 2, 3, args, 2, &out, 100, &used));
+        CHECK(out.kind == VB_BOOL && out.bits == (uint64_t)expected && used == 2);
+    }
+}
+
+static void typed_equality(void)
+{
+    axi_vval left, right;
+    memset(&left, 0, sizeof left);
+    left.kind = VB_UNION; left.payload_kind = VB_STR; left.tag = 1;
+    left.s = "allow"; left.slen = 5;
+    right = left; right.s = "deny!";
+    equal_pair(&left, &right, 0);
+    right.s = "allow";
+    equal_pair(&left, &right, 1);
+    right.tag = 0;
+    equal_pair(&left, &right, 0);
+    right = left; right.payload_kind = VB_BYTES;
+    equal_pair(&left, &right, 0);
+    left.payload_kind = VB_U64; left.bits = 1;
+    right = left; right.payload_kind = VB_BOOL;
+    equal_pair(&left, &right, 0);
+    right.payload_kind = VB_I64;
+    equal_pair(&left, &right, 0);
+    left.payload_kind = VB_F64; left.bits = fbits(0.0);
+    right = left; right.bits = fbits(-0.0);
+    equal_pair(&left, &right, 1);
+    left.bits = right.bits = UINT64_C(0x7ff8000000000000);
+    equal_pair(&left, &right, 0);
+    left.payload_kind = VB_ERR; left.atom = "Denied"; left.atom_len = 6;
+    left.s = "one"; left.slen = 3;
+    right = left; right.atom = "Failed";
+    equal_pair(&left, &right, 0);
+    right = left; right.s = "two";
+    equal_pair(&left, &right, 0);
+    right = left;
+    equal_pair(&left, &right, 1);
+    left.kind = right.kind = VB_ERR; right.s = "two";
+    equal_pair(&left, &right, 0);
+    right.s = left.s;
+    equal_pair(&left, &right, 1);
+    left.s = right.s = NULL; left.slen = right.slen = 0;
+    equal_pair(&left, &right, 1);
+    left.kind = right.kind = VB_F64;
+    left.bits = fbits(0.0); right.bits = fbits(-0.0);
+    equal_pair(&left, &right, 1);
+    left.bits = right.bits = UINT64_C(0x7ff8000000000000);
+    equal_pair(&left, &right, 0);
+}
+
 int main(void)
 {
     arithmetic_aliases();
     union_aliases();
+    typed_equality();
     printf("audit40 runtime: %u checks, %u failures\n", checks, failures);
     return failures != 0;
 }

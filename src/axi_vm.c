@@ -162,6 +162,46 @@ static vval union_payload(const vval *value)
     return payload;
 }
 
+static int bytes_equal(const char *a, uint32_t alen,
+                        const char *b, uint32_t blen)
+{
+    return alen == blen && (alen == 0 || (a && b && memcmp(a, b, alen) == 0));
+}
+
+/* Equality uses the same closed kind for a scalar and a union payload. A
+ * union's arm and payload kind are part of its value, as are error payloads. */
+static int value_equal(const vval *x, const vval *y)
+{
+    uint8_t kind = x->kind;
+    if (kind != y->kind) return 0;
+    if (kind == VK_UNION) {
+        if (x->aux != y->aux || x->pay_kind != y->pay_kind) return 0;
+        kind = x->pay_kind;
+    }
+    switch (kind) {
+    case VK_STR: case VK_BYTES:
+        return bytes_equal(x->s, x->slen, y->s, y->slen);
+    case VK_ERR:
+        return bytes_equal(x->atom, x->atom_len, y->atom, y->atom_len)
+            && bytes_equal(x->s, x->slen, y->s, y->slen);
+    case VK_CAP:
+        return x->cap_generation == y->cap_generation
+            && x->cap_slot == y->cap_slot
+            && memcmp(x->cap_proof, y->cap_proof, sizeof x->cap_proof) == 0
+            && bytes_equal(x->atom, x->atom_len, y->atom, y->atom_len);
+    case VK_F64: {
+        double a, b;
+        memcpy(&a, &x->bits, sizeof a);
+        memcpy(&b, &y->bits, sizeof b);
+        return a == b;
+    }
+    case VK_UNIT: case VK_U64: case VK_I64: case VK_BOOL:
+        return x->bits == y->bits;
+    default:
+        return 0;
+    }
+}
+
 static void vtrap(vm *V, const axb_cell *c, uint32_t pc, const char *code,
                    const char *msg, const char *fix) {
     if (V->diags)
@@ -906,29 +946,7 @@ static int run_cell_execute(vm *V, uint32_t ci, vval *reg, vval *ret,
             if (!arith(V, c, pc, op, &reg[b], &reg[cc], &reg[a])) return 0;
             break;
         case OP_EQ: {
-            const vval *x = &reg[b], *y = &reg[cc];
-            int eq = 0;
-            if (x->kind == y->kind) {
-                if (x->kind == VK_STR || x->kind == VK_BYTES)
-                    eq = x->slen == y->slen
-                        && memcmp(x->s, y->s, x->slen) == 0;
-                else if (x->kind == VK_ERR)
-                    eq = x->atom_len == y->atom_len
-                        && memcmp(x->atom, y->atom, x->atom_len) == 0;
-                else if (x->kind == VK_CAP)
-                    eq = x->cap_generation == y->cap_generation
-                        && x->cap_slot == y->cap_slot
-                        && memcmp(x->cap_proof, y->cap_proof,
-                                  sizeof x->cap_proof) == 0
-                        && x->atom_len == y->atom_len
-                        && x->atom && y->atom
-                        && memcmp(x->atom, y->atom, x->atom_len) == 0;
-                else if (x->kind == VK_F64) {
-                    double da, db; memcpy(&da, &x->bits, 8); memcpy(&db, &y->bits, 8);
-                    eq = (da == db);
-                }
-                else eq = x->bits == y->bits && x->aux == y->aux;
-            }
+            int eq = value_equal(&reg[b], &reg[cc]);
             reg[a] = VUNIT(); reg[a].kind = VK_BOOL; reg[a].bits = (uint64_t)eq;
             break;
         }

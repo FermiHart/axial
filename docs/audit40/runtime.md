@@ -38,3 +38,22 @@ separate and aliased destinations, all four union instructions, exact fuel,
 error atom/payload retention and nonzero-arm early propagation. All pass.
 
 **Limits.** Nested union and CAP payloads remain outside the existing format.
+
+## W13 — type- and content-aware value equality
+
+**Problem.** EQ compared unions by tag and scalar bits only, making different
+string payloads, error atoms and even payload kinds equal. Union f64 equality
+also treated signed zero and NaN differently from scalar f64. Scalar errors
+ignored their payload. New tests reproduced 24 failing comparisons.
+
+**Change.** One closed-kind comparison handles scalars and union payloads.
+Union arms and kinds must match; strings/bytes compare their exact lengths and
+contents; errors compare atom and payload; f64 keeps IEEE equality. Zero-byte
+comparisons do not call `memcmp` with null payload pointers.
+
+**Evidence.** 656 checks pass, including equal/different string bytes, union
+arms, equal bits with different kinds, +/-0, NaN, error atom and payload, and
+all EQ destination aliases. Fuel remains two units including RET.
+
+**Compatibility.** Programs relying on the erroneous equality of distinct
+union/error values now receive false. Wire representations are unchanged.
