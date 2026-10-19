@@ -2,8 +2,9 @@
  * SPDX-License-Identifier: LicenseRef-SPL-1.0
  *
  * LL(1) per SPEC-GRAMMAR §3 (G6: one-token lookahead, local repair).
- * Nodes are individually heap-allocated. The returned unit owns its complete
- * tree; lex/pos slices borrow the source until axi_ast_free(unit) returns.
+ * Nodes are individually heap-allocated with a private parse-ownership link.
+ * The returned unit owns its complete tree; lex/pos slices borrow the source
+ * until axi_ast_free(unit) returns.
  */
 #ifndef AXI_AST_H
 #define AXI_AST_H
@@ -41,8 +42,9 @@ struct axi_node {
     uint8_t      contract_checked; /* AXI-INV-122: unit passed type/cap closure */
 };
 
-/* Parse a whole unit. Never returns NULL; on errors the tree is partial
- * and diags carry AXI-P0xx entries (G8: caged, keep going). */
+/* Parse a whole unit. Syntax errors return a partial tree and AXI-P0xx
+ * diagnostics (G8: caged, keep going). Allocation failure reclaims every
+ * partial node and returns NULL with AXI-D999; the process is not terminated. */
 axi_node *axi_parse_unit(const char *src, size_t len, const char *path,
                          axi_diags *diags);
 

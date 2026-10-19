@@ -45,7 +45,7 @@ static const char *TOK_NAMES[T_COUNT] = {
 
 const char *axi_tok_name(axi_tok_kind k)
 {
-    if (k < 0 || k >= T_COUNT) return "?";
+    if ((unsigned)k >= (unsigned)T_COUNT) return "?";
     return TOK_NAMES[k];
 }
 

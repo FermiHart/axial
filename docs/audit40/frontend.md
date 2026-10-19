@@ -180,3 +180,73 @@ correctly-rounded decimal-to-binary algorithm. The rare normalized-source
 fallback does not prove one globally unique spelling for all source strings
 that happen to accumulate to the same float. A stronger numeric redesign
 requires separate semantic/version decisions; it is not claimed here.
+
+## W10 — fail-atomic parser ownership and enum bounds
+
+**Problem.** Any parser-node allocation failure called `exit(2)`, terminating
+an embedding process and abandoning its invocation. Returning NULL alone
+would leak nodes allocated before attachment to the partial syntax tree.
+
+**Change.** Track allocations in a private invocation list. On OOM, reclaim
+all nodes and return NULL with `AXI-D999`; keep partial trees for ordinary
+syntax errors. A subsequent parse in the same process is independent. The
+internal `axi_parse_unit` NULL contract is now documented; CLI callers must
+handle it. The public embed v1 ABI is unchanged. The private ownership link
+costs one pointer per parser node; this is an explicit memory tradeoff for
+complete cleanup on every allocation failure, not a memory-reduction claim.
+
+As part of boundary review, capability-table indexing now rejects negative
+enum representations through an unsigned range check. Token-name bounds use
+the same portable pattern: the prior `k < 0` failed the `-fshort-enums`
+warnings-as-errors build. Capability IDs and table rows are unchanged. The
+generator referenced by this public table's comment is not included in this
+repository; the guard is fixed in the checked-in implementation.
+
+**Validation.** `frontend_parser.py` sweeps all 99 allocations across three
+valid, malformed and empty inputs. Every forced failure returns to its host,
+emits the OOM diagnostic, leaves zero tracked allocations, and permits a new
+parse in the same process. Tests run with normal enums and `-fshort-enums`,
+including invalid capability and token kinds.
+
+## Reproduce this workstream
+
+```sh
+make dev
+sh tests/audit40/frontend.sh build/axi
+ASAN_OPTIONS=detect_leaks=0 SANITIZE=1 \
+  AXI_TEST_BUILD=build/audit40-frontend-san sh tests/audit40/frontend.sh build/axi
+python3 tests/audit40/frontend_bench.py build/axi 7
+```
+
+The runner builds focused C tests with the selected compiler, and runs
+source-to-signed-artifact tests on the explicitly supplied `axi` executable.
+`SANITIZE=1` instruments the C diagnostic, JSON and parser tests; it does not
+implicitly rebuild the product executable. To instrument that executable,
+build it with the same sanitizer flags and pass its path explicitly.
+
+The focused parser test uses linker section GC to avoid unrelated CLI stream
+functions and `--wrap=calloc/free` to check actual ownership. These are test
+linker options, not new product dependencies. AddressSanitizer and UBSan pass.
+LeakSanitizer cannot inspect `/proc/.../task` in the audit's restricted host;
+the command therefore disables that unavailable component and verifies zero
+live parser allocations independently. This is not a claim that LSan ran.
+
+Existing lex/parse/canon/types/iface goldens remain unchanged and pass. The
+original aggregate gate in this worktree reports its missing `xxd` helper
+before artifact/runtime failures; aggregate gate repair and integrated
+validation belong to the root audit workstream.
+
+## Additional audit limits
+
+- The source checker admits error/union forms that the current source
+  codegen still refuses (`err.Name`, `?`); this audit does not claim complete
+  lowering of all type-green AST forms.
+- Source string decoding intentionally follows the existing shared two-
+  escape rule (`\\"`, `\\\\`). Lexer acceptance and older grammar prose list
+  additional escapes; that semantic/documentation discrepancy is preserved
+  for an explicit language decision, not silently changed.
+- Arena accounting, allocation wrappers and hashing were read. No new
+  cryptographic primitive or unmeasured hash acceleration is introduced.
+- The call graph is bounded and freed per invocation; the compiler as a
+  whole still has no general arena/resource envelope covering every AST and
+  formatting allocation. CLI source limits are handled by the root stream.
