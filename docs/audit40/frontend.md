@@ -131,3 +131,25 @@ recursion, and an invalid transitive pure caller. Run
 `python3 tests/audit40/frontend_bench.py build/axi 7` for warmed, repeated
 process timings of the 256 × 100-statement graph and W01 malformed input.
 Benchmark each revision with identical compiler flags and sequential runs.
+
+## W08 — batch unchanged JSON output
+
+**Problem.** The JSON escaper called its sink once per ASCII byte or Unicode
+scalar. Large ordinary text therefore repeated callback and buffer-accounting
+work tens of thousands of times.
+
+**Change.** Emit each contiguous valid, unescaped UTF-8 run in one sink call.
+Quote/backslash/control escaping and invalid-byte `\\u00xx` spelling remain
+byte-identical. Sink failure still stops immediately and returns refusal.
+
+**Validation.** `frontend_json.c` checks exact escaping for quotes, controls,
+NUL, valid multi-byte Unicode, overlong sequences, surrogates and values past
+the Unicode limit. It validates the resulting JSON and tests sink failure.
+A 65,536-byte ASCII run now requires one sink call, versus 65,536 before.
+
+```sh
+cc -std=c99 -O1 -Wall -Wextra -Werror -Isrc \
+  tests/audit40/frontend_json.c src/axi_json.c -o build/frontend-json
+build/frontend-json
+build/frontend-json 256  # matched-build CPU benchmark, 16 MiB input
+```
