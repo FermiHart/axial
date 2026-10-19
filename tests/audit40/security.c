@@ -6,11 +6,16 @@
 #include "axi_aer1_verify.h"
 #include "axi_aer2_v1.h"
 #include "axi_delegation_v1.h"
+#include "axi_local_attempt_v1.h"
 #include "ed25519.h"
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
 
 static unsigned checks;
 #define CHECK(x) do { checks++; if (!(x)) { \
@@ -211,12 +216,76 @@ static void w24(void)
     CHECK(memcmp(&gotd, &savedd, sizeof gotd) == 0);
 }
 
+static void fixture_path(char out[256], const char *directory, const char *name)
+{
+    int n = snprintf(out, 256, "%s/%s", directory, name);
+    CHECK(n > 0 && n < 256);
+}
+
+static void fixture_write(const char *path, const void *bytes, size_t n)
+{
+    int fd = open(path, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+    CHECK(fd >= 0);
+    CHECK(write(fd, bytes, n) == (ssize_t)n);
+    CHECK(close(fd) == 0);
+}
+
+static void record_fixture(uint8_t out[168], uint8_t version, const uint8_t root[32])
+{
+    memset(out, 0, 168); memcpy(out, "AXA1", 4);
+    out[4] = version; out[5] = AXI_LOCAL_ATTEMPT_V1_COMMITTED;
+    memcpy(out + 8, root, 32); out[40] = 1; out[72] = 2; out[112] = 3;
+}
+
+static int visit_count(const axi_local_attempt_v1_record_view *view, void *ctx)
+{
+    unsigned *n = ctx;
+    CHECK(view->state == AXI_LOCAL_ATTEMPT_V1_COMMITTED);
+    (*n)++;
+    return 0;
+}
+
+static void w25(void)
+{
+    char directory[] = "/tmp/axial-audit40-record-XXXXXX";
+    char records[256], lock[256], name[65], file[256];
+    uint8_t root[32] = {0xab}, raw[168];
+    axi_local_attempt_v1_outcome out;
+    unsigned n = 0;
+    CHECK(mkdtemp(directory) != NULL);
+    fixture_path(records, directory, "records"); CHECK(mkdir(records, 0700) == 0);
+    fixture_path(lock, directory, "owner.lock"); fixture_write(lock, "", 0);
+    axi_hash_hex(root, name); fixture_path(file, records, name);
+    record_fixture(raw, 1, root); fixture_write(file, raw, 144);
+    CHECK(axi_local_attempt_v1_status(directory, root, &out) == AXI_LOCAL_ATTEMPT_V1_OK);
+    CHECK(out.state == AXI_LOCAL_ATTEMPT_V1_COMMITTED);
+    CHECK(axi_local_attempt_v1_scan(directory, visit_count, &n) == AXI_LOCAL_ATTEMPT_V1_OK);
+    CHECK(n == 1);
+    record_fixture(raw, 2, root); fixture_write(file, raw, 168);
+    CHECK(axi_local_attempt_v1_status(directory, root, &out) == AXI_LOCAL_ATTEMPT_V1_OK);
+    record_fixture(raw, 1, root); fixture_write(file, raw, 168);
+    CHECK(axi_local_attempt_v1_status(directory, root, &out) == AXI_LOCAL_ATTEMPT_V1_CORRUPT);
+    CHECK(axi_local_attempt_v1_scan(directory, visit_count, &n) == AXI_LOCAL_ATTEMPT_V1_CORRUPT);
+    record_fixture(raw, 2, root); fixture_write(file, raw, 144);
+    CHECK(axi_local_attempt_v1_status(directory, root, &out) == AXI_LOCAL_ATTEMPT_V1_CORRUPT);
+    record_fixture(raw, 2, root); raw[8] ^= 1; fixture_write(file, raw, 168);
+    n = 0;
+    CHECK(axi_local_attempt_v1_scan(directory, visit_count, &n) == AXI_LOCAL_ATTEMPT_V1_CORRUPT);
+    CHECK(n == 0);
+    fixture_write(file, "", 0);
+    CHECK(axi_local_attempt_v1_status(directory, root, &out) == AXI_LOCAL_ATTEMPT_V1_OK);
+    CHECK(out.state == AXI_LOCAL_ATTEMPT_V1_NOT_ATTEMPTED);
+    CHECK(unlink(file) == 0); CHECK(unlink(lock) == 0);
+    CHECK(rmdir(records) == 0); CHECK(rmdir(directory) == 0);
+}
+
 int main(int argc, char **argv)
 {
     if (argc == 1 || strcmp(argv[1], "W21") == 0) w21();
     if (argc == 1 || strcmp(argv[1], "W22") == 0) w22();
     if (argc == 1 || strcmp(argv[1], "W23") == 0) w23();
     if (argc == 1 || strcmp(argv[1], "W24") == 0) w24();
+    if (argc == 1 || strcmp(argv[1], "W25") == 0) w25();
     printf("audit40 security: %u checks passed\n", checks);
     return 0;
 }

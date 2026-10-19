@@ -262,9 +262,10 @@ static void record_pack(uint8_t out[ATTEMPT_RECORD_V2_SIZE], uint8_t state,
     memcpy(out + 152, epoch_deployment, 16);
 }
 
-static int version_ok(uint8_t v)
+static int version_ok(uint8_t v, size_t len)
 {
-    return v == ATTEMPT_VERSION || v == ATTEMPT_VERSION_2;
+    return (v == ATTEMPT_VERSION && len == ATTEMPT_RECORD_SIZE)
+        || (v == ATTEMPT_VERSION_2 && len == ATTEMPT_RECORD_V2_SIZE);
 }
 
 static int record_unpack(const uint8_t *in, size_t len,
@@ -275,7 +276,7 @@ static int record_unpack(const uint8_t *in, size_t len,
     }
     if (in[0] != ATTEMPT_MAGIC_0 || in[1] != ATTEMPT_MAGIC_1 ||
         in[2] != ATTEMPT_MAGIC_2 || in[3] != ATTEMPT_MAGIC_3 ||
-        !version_ok(in[4])) {
+        !version_ok(in[4], len) || root_zero(in + 8)) {
         return -1;
     }
     if (in[6] != 0 || in[7] != 0) {
@@ -312,7 +313,7 @@ static int record_view_from_bytes(const uint8_t *in, size_t len,
     }
     if (in[0] != ATTEMPT_MAGIC_0 || in[1] != ATTEMPT_MAGIC_1 ||
         in[2] != ATTEMPT_MAGIC_2 || in[3] != ATTEMPT_MAGIC_3 ||
-        !version_ok(in[4])) {
+        !version_ok(in[4], len) || root_zero(in + 8)) {
         return -1;
     }
     if (in[6] != 0 || in[7] != 0) {
@@ -998,6 +999,7 @@ static int scan_impl(const char *store_dir,
     dupfd = -1;
     while ((e = readdir(d)) != NULL) {
         axi_local_attempt_v1_record_view view;
+        char stored_name[65];
         size_t reclen = 0;
         if (!name_is_record(e->d_name)) {
             /* Crash tmp debris (.tmp.rec) and friends: ignored. The gap
@@ -1024,6 +1026,13 @@ static int scan_impl(const char *store_dir,
             continue;
         }
         if (record_view_from_bytes(rec, reclen, &view) != 0) {
+            rc = AXI_LOCAL_ATTEMPT_V1_CORRUPT;
+            break;
+        }
+        /* The file name is the sole spent-record key, including during
+         * reconciliation. A valid body under a different key is corrupt. */
+        hex32(view.grant_root, stored_name);
+        if (strcmp(stored_name, e->d_name) != 0) {
             rc = AXI_LOCAL_ATTEMPT_V1_CORRUPT;
             break;
         }
