@@ -168,3 +168,40 @@ Validation: `sh tests/audit80/numeric.sh` runs the same 1,996 independent
 reader expectations both directly and through the actual lexer. All lexer
 standalone runners now link `axi_numeric.c`. The existing 67 golden tests
 remain a separate gate; new tests compare bits, not libc diagnostic printing.
+
+## W65 — unique shortest canonical decimal from bits
+
+The numeric core now renders any finite binary64 bit pattern, including
+negative zero, using only integers. It first derives the exact finite
+decimal expansion of the dyadic value, then examines decimal grids with
+1 through 17 significant digits. For each grid it checks the two adjacent
+decimals against the target's exact lower and upper rounding boundaries.
+The closest admitted candidate wins; an exact distance tie uses an even
+scaled decimal coefficient. Trailing coefficient zeroes are then removed,
+and the result is expanded into the existing grammar with a decimal point
+and no exponent. The result depends only on bits, never on the old lexeme.
+
+These are exhaustive decisions for each grid: an interval containing the
+value can contain a grid point only if it contains one of the two adjacent
+points. At a decimal decade boundary, any admitted candidate in a different
+decade has the intervening power of ten closer to the value; that power is
+already a one-digit candidate. At powers of two the lower and upper binary
+gaps can differ, so the second decimal candidate is necessary. Seventeen
+digits suffice: the nearest such decimal has relative error at most
+`5 * 10^-17`, less than the smallest relative half-gap `2^-54` for finite
+binary64; subnormal intervals are no narrower in relative terms.
+
+The renderer returns a borrowed span in the same explicit workspace. It
+has no nested reader invocation, extra output array, dynamic allocation,
+libc float formatting or locale dependency. NaNs and infinities refuse
+without publishing either output field; every finite bit pattern has a
+source spelling. The frozen binary NaN/inf representations are not changed.
+
+Validation: `numeric.py DRIVER format` compares 8,318 bit patterns with an
+independent Python `Fraction` oracle that intersects decimal integer ranges
+with exact rational rounding intervals. It does not call the production
+reader or try the production formatter's two candidates. Fixtures cover
+all normal exponent boundaries and their immediate neighbors, subnormal
+powers, both zero signs, 2,000 deterministic random values, maximum finite
+and nonfinite refusals. Expected canonical strings, exact rational values,
+and re-reading the produced decimals are all checked separately.

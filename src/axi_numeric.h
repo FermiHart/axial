@@ -52,4 +52,16 @@ enum {
 int axi_f64_from_decimal(const char *source, size_t len, uint64_t *out_bits,
                          axi_numeric_workspace *workspace);
 
+/* One spelling per finite binary64 bit pattern, including signed zero.
+ * Minimize significant digits that round back to these bits; among equally
+ * short candidates choose the closest exact decimal, then an even decimal
+ * significand on a distance tie. Always emit '.' and no exponent/underscore.
+ * A negative value has a leading unary '-'. NaN/infinity refuse.
+ * On success text points into workspace->text, len excludes its final NUL.
+ * Both output fields are unchanged on refusal. All pointers are required;
+ * output fields must be outside workspace. No other buffer is retained.
+ */
+int axi_f64_to_decimal(uint64_t bits, axi_numeric_workspace *workspace,
+                       const char **text, size_t *len);
+
 #endif

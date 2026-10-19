@@ -121,5 +121,127 @@ def check_reader(driver):
     print(f"numeric W63: PASS ({len(values)} exact-integer reader fixtures)")
 
 
+def binary_value(bits):
+    if bits == INF:
+        return Fraction(1 << 1024)  # theoretical finite successor for overflow
+    field, fraction = bits >> 52, bits & ((1 << 52) - 1)
+    mantissa = fraction | ((1 << 52) if field else 0)
+    exponent = field - 1075 if field else -1074
+    if exponent < 0:
+        return Fraction(mantissa, 1 << -exponent)
+    return Fraction(mantissa << exponent)
+
+
+def power10(exponent):
+    return Fraction(10 ** exponent) if exponent >= 0 else Fraction(1, 10 ** -exponent)
+
+
+def plain_decimal(coefficient, exponent):
+    while coefficient and coefficient % 10 == 0:
+        coefficient //= 10
+        exponent += 1
+    digits = str(coefficient)
+    point = len(digits) + exponent
+    if point <= 0:
+        return "0." + "0" * -point + digits
+    if point >= len(digits):
+        return digits + "0" * (point - len(digits)) + ".0"
+    return digits[:point] + "." + digits[point:]
+
+
+def canonical_expected(bits):
+    """Independent printer oracle: enumerate legal integer interval ranges.
+
+    This does not try the C formatter's two candidates or call any reader.
+    It intersects each p-digit decimal grid with the exact rational IEEE
+    rounding interval, then chooses its closest legal integer coefficient.
+    """
+    negative, bits = bits >> 63, bits & ((1 << 63) - 1)
+    if bits >= INF:
+        return 1, "unchanged"
+    if not bits:
+        return 0, "-0.0" if negative else "0.0"
+    exact = binary_value(bits)
+    lower = (binary_value(bits - 1) + exact) / 2
+    upper = (binary_value(bits + 1) + exact) / 2
+    inclusive = not bits % 2
+    decade = len(str(exact.numerator)) - len(str(exact.denominator))
+    if exact < power10(decade):
+        decade -= 1
+    for precision in range(1, 18):
+        candidates = []
+        # The interval may cross a decimal decade boundary. The adjacent
+        # decades cover it even for the widest relative interval (bit 1).
+        for exponent in range(decade - precision, decade - precision + 3):
+            scale = power10(exponent)
+            low, high = lower / scale, upper / scale
+            first = (low.numerator + low.denominator - 1) // low.denominator
+            last = high.numerator // high.denominator
+            if not inclusive and low.denominator == 1:
+                first += 1
+            if not inclusive and high.denominator == 1:
+                last -= 1
+            first = max(first, 10 ** (precision - 1))
+            last = min(last, 10 ** precision - 1)
+            if first > last:
+                continue
+            scaled = exact / scale
+            closest = min(last, max(first, round_even(scaled.numerator, scaled.denominator)))
+            value = closest * scale
+            candidates.append((abs(value - exact), closest % 2, value, closest, exponent))
+        if candidates:
+            _, _, _, coefficient, exponent = min(candidates)
+            return 0, ("-" if negative else "") + plain_decimal(coefficient, exponent)
+    raise AssertionError(("no decimal in 17 digits", bits))
+
+
+def format_fixtures():
+    values = {0, 1 << 63, INF, INF | (1 << 63), INF + 1, (1 << 64) - 1,
+              0x7FF8000000000000, 0x7FEFFFFFFFFFFFFF, 0x7FEFFFFFFFFFFFFE}
+    for field in range(1, 2047):
+        power = field << 52
+        values.update([power - 1, power, power + 1])
+    for bit in range(53):
+        power = 1 << bit
+        values.update([power - 1, power, power + 1])
+    values.update(range(32))
+    rng = random.Random(0xA8065)
+    for _ in range(2000):
+        values.add(rng.randrange(INF) | (rng.randrange(2) << 63))
+    return sorted(values)
+
+
+def check_formatter(driver):
+    values = format_fixtures()
+    run = subprocess.run([str(driver), "format"],
+                         input="".join(f"{bits:016x}\n" for bits in values),
+                         text=True, capture_output=True, check=True)
+    actual = run.stdout.splitlines()
+    assert len(actual) == len(values), (len(actual), len(values), run.stderr)
+    reparsed = []
+    reparsed_bits = []
+    for bits, result in zip(values, actual):
+        status, text = result.split()
+        wanted = canonical_expected(bits)
+        assert (int(status), text) == wanted, (f"{bits:016x}", status, text, wanted)
+        if not int(status):
+            decimal = text.removeprefix("-")
+            assert expected(decimal) == (0, bits & ((1 << 63) - 1)), (bits, text)
+            reparsed.append(decimal)
+            reparsed_bits.append(bits & ((1 << 63) - 1))
+    run = subprocess.run([str(driver)], input="\n".join(reparsed) + "\n",
+                         text=True, capture_output=True, check=True)
+    rows = run.stdout.splitlines()
+    assert len(rows) == len(reparsed_bits)
+    for bits, result in zip(reparsed_bits, rows):
+        assert result == f"0 {bits:016x}", (bits, result)
+    print(f"numeric W65: PASS ({len(values)} rational-interval canonical fixtures and exact round trips)")
+
+
 if __name__ == "__main__":
-    check_reader(Path(sys.argv[1]).resolve())
+    driver = Path(sys.argv[1]).resolve()
+    group = sys.argv[2] if len(sys.argv) > 2 else "all"
+    if group in ("reader", "all"):
+        check_reader(driver)
+    if group in ("format", "all"):
+        check_formatter(driver)

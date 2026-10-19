@@ -135,17 +135,23 @@ static int decimal_boundary(axi_numeric_workspace *w, int e10, int sticky,
     return 1;
 }
 
+static int decimal_prepare(axi_numeric_workspace *w, int e10)
+{
+    int i;
+    big_set(&w->b, 1);
+    if (e10 >= 0) {
+        for (i = 0; i < e10; i++) if (!big_mul_add(&w->a, 5, 0)) return 0;
+    } else {
+        for (i = 0; i < -e10; i++) if (!big_mul_add(&w->b, 5, 0)) return 0;
+    }
+    return 1;
+}
+
 static int decimal_round(axi_numeric_workspace *w, int e10, int sticky,
                          uint64_t *bits)
 {
     uint64_t lo = 0, hi = F64_INFINITY;
-    int i;
-    big_set(&w->b, 1);
-    if (e10 >= 0) {
-        for (i = 0; i < e10; i++) if (!big_mul_add(&w->a, 5, 0)) return AXI_DECIMAL_INVALID;
-    } else {
-        for (i = 0; i < -e10; i++) if (!big_mul_add(&w->b, 5, 0)) return AXI_DECIMAL_INVALID;
-    }
+    if (!decimal_prepare(w, e10)) return AXI_DECIMAL_INVALID;
     while (lo < hi) {
         uint64_t mid = lo + (hi - lo) / 2;
         int cmp;
@@ -204,4 +210,152 @@ int axi_f64_from_decimal(const char *source, size_t len, uint64_t *out_bits,
     status = decimal_round(w, point - (int)kept, sticky, &bits);
     if (status == AXI_DECIMAL_OK) *out_bits = bits;
     return status;
+}
+
+static uint32_t big_div_small(axi_numeric_big *a, uint32_t divisor)
+{
+    uint64_t remainder = 0;
+    unsigned i = a->n;
+    while (i) {
+        uint64_t v;
+        i--;
+        v = (remainder << 32) | a->limb[i];
+        a->limb[i] = (uint32_t)(v / divisor);
+        remainder = v % divisor;
+    }
+    while (a->n && !a->limb[a->n - 1]) a->n--;
+    return (uint32_t)remainder;
+}
+
+/* Does coefficient * 10^exponent round to `bits`? A formatter knows its
+ * target, so the two exact boundaries suffice instead of another search.
+ * This also handles the unequal gaps on either side of powers of two.
+ */
+static int decimal_matches(axi_numeric_workspace *w, uint64_t coefficient,
+                            int exponent, uint64_t bits)
+{
+    int cmp;
+    big_set(&w->a, coefficient);
+    if (!decimal_prepare(w, exponent)) return 0;
+    if (!decimal_boundary(w, exponent, 0, bits - 1, &cmp)) return 0;
+    if (cmp < 0 || (!cmp && (bits & 1))) return 0;
+    if (!decimal_boundary(w, exponent, 0, bits, &cmp)) return 0;
+    return cmp < 0 || (!cmp && !(bits & 1));
+}
+
+/* Convert the exact finite dyadic to significant decimal digits. Removing
+ * factors of two first keeps integral values and simple fractions small.
+ * All digits fit the same workspace used by the reader's retained prefix.
+ */
+static int exact_digits(axi_numeric_workspace *w, uint64_t bits,
+                         unsigned *count, int *point)
+{
+    uint64_t m = bits & F64_FRACTION;
+    unsigned field = (unsigned)(bits >> 52), n = 0, i;
+    int e = -1074, factor;
+    if (field) { m |= F64_HIDDEN; e = (int)field - 1075; }
+    while (e < 0 && !(m & 1)) { m >>= 1; e++; }
+    big_set(&w->a, m);
+    factor = e < 0 ? -e : e;
+    for (int j = 0; j < factor; j++)
+        if (!big_mul_add(&w->a, e < 0 ? 5 : 2, 0)) return 0;
+    while (w->a.n) {
+        if (n == AXI_NUMERIC_DIGITS) return 0;
+        w->digits[n++] = (char)('0' + big_div_small(&w->a, 10));
+    }
+    for (i = 0; i < n / 2; i++) {
+        char c = w->digits[i];
+        w->digits[i] = w->digits[n - i - 1];
+        w->digits[n - i - 1] = c;
+    }
+    *point = (int)n + (e < 0 ? e : 0);
+    while (n > 1 && w->digits[n - 1] == '0') n--;
+    *count = n;
+    return 1;
+}
+
+static int write_decimal(axi_numeric_workspace *w, uint64_t coefficient,
+                          int exponent, int negative, size_t *len)
+{
+    unsigned nd = 0;
+    size_t used = 0;
+    int point, i;
+    while (coefficient && coefficient % 10 == 0) { coefficient /= 10; exponent++; }
+    do {
+        if (nd == sizeof w->small) return 0;
+        w->small[nd++] = (char)('0' + coefficient % 10);
+        coefficient /= 10;
+    } while (coefficient);
+    point = (int)nd + exponent;
+    /* The shortest binary64 representation needs <=17 significant digits
+     * and a decimal point in [-323,309]. Leave explicit slack and check it
+     * before writing, rather than relying on a caller's buffer estimate.
+     */
+    if (point < -323 || point > 309 || nd > 17) return 0;
+    if (negative) w->text[used++] = '-';
+    if (point <= 0) {
+        w->text[used++] = '0'; w->text[used++] = '.';
+        for (i = 0; i < -point; i++) w->text[used++] = '0';
+        for (i = (int)nd - 1; i >= 0; i--) w->text[used++] = w->small[i];
+    } else {
+        for (i = 0; i < point; i++)
+            w->text[used++] = (unsigned)i < nd ? w->small[nd - (unsigned)i - 1] : '0';
+        w->text[used++] = '.';
+        if ((unsigned)point >= nd) w->text[used++] = '0';
+        else for (i = point; (unsigned)i < nd; i++)
+            w->text[used++] = w->small[nd - (unsigned)i - 1];
+    }
+    if (used >= sizeof w->text) return 0;
+    w->text[used] = '\0';
+    *len = used;
+    return 1;
+}
+
+int axi_f64_to_decimal(uint64_t bits, axi_numeric_workspace *w,
+                       const char **text, size_t *len)
+{
+    uint64_t magnitude = bits & UINT64_C(0x7fffffffffffffff), prefix = 0;
+    unsigned nd, precision;
+    int point, negative = (int)(bits >> 63);
+    size_t size;
+    if (!w || !text || !len || magnitude >= F64_INFINITY) return AXI_DECIMAL_INVALID;
+    if (!magnitude) {
+        if (!write_decimal(w, 0, 0, negative, &size)) return AXI_DECIMAL_INVALID;
+        *text = w->text; *len = size;
+        return AXI_DECIMAL_OK;
+    }
+    if (!exact_digits(w, magnitude, &nd, &point)) return AXI_DECIMAL_INVALID;
+    for (precision = 1; precision <= 17; precision++) {
+        uint64_t first, second;
+        int up = 0, exponent = point - (int)precision;
+        if (precision <= nd) prefix = prefix * 10 + (uint64_t)(w->digits[precision - 1] - '0');
+        else prefix *= 10;
+        if (precision < nd) {
+            char next = w->digits[precision];
+            up = next > '5';
+            if (next == '5') {
+                unsigned j;
+                up = (int)(prefix & 1);
+                for (j = precision + 1; j < nd && !up; j++) if (w->digits[j] != '0') up = 1;
+            }
+        }
+        first = prefix + (unsigned)up;
+        second = prefix + (unsigned)!up;
+        /* An interval containing the exact value can contain a decimal on
+         * this grid only if it contains one of its two adjacent candidates.
+         * Try the closest first, resolving equal distance to even. The
+         * other side matters at asymmetric binary rounding intervals.
+         */
+        if (decimal_matches(w, first, exponent, magnitude)) {
+            if (!write_decimal(w, first, exponent, negative, &size)) return AXI_DECIMAL_INVALID;
+            *text = w->text; *len = size;
+            return AXI_DECIMAL_OK;
+        }
+        if (precision < nd && decimal_matches(w, second, exponent, magnitude)) {
+            if (!write_decimal(w, second, exponent, negative, &size)) return AXI_DECIMAL_INVALID;
+            *text = w->text; *len = size;
+            return AXI_DECIMAL_OK;
+        }
+    }
+    return AXI_DECIMAL_INVALID; /* 17 digits suffice for every finite binary64. */
 }
