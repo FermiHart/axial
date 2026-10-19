@@ -56,6 +56,34 @@ static int canonical_result(const void **result, size_t *rlen,
     return 1;
 }
 
+static int canonical_name(const char name[AXI_CAPNAME]);
+
+static size_t replay_name_len(const char *name)
+{
+    size_t n = 0;
+    if (name) while (n < AXI_CAPNAME && name[n]) n++;
+    return n;
+}
+
+static int replay_shape(const axi_replay *R)
+{
+    return R && !R->oom && R->n <= R->cap && R->cursor <= R->n
+        && (R->cap == 0 || R->records);
+}
+
+static int record_shape(const axi_replay_entry *rec)
+{
+    static const uint8_t zero[32];
+    return rec && rec->payload_len <= sizeof rec->payload
+        && rec->result_len <= sizeof rec->result
+        && canonical_name(rec->cap) && canonical_name(rec->cell)
+        && rec->nbytes == (uint64_t)rec->payload_len
+        && rec->has_result_str <= 1 && rec->has_record_digest <= 1
+        && (rec->has_result_str || rec->result_len == sizeof(uint64_t))
+        && (rec->has_record_digest || (rec->record_nbytes == 0
+            && memcmp(rec->record_digest, zero, sizeof zero) == 0));
+}
+
 typedef char replay_digest_scratch_probe[
     sizeof(uint8_t[64 + 64 + 8 + 32 + 32 + 8 + 1 + 32 + 8 + 1
                    + 4 + 1024 + 4 + 1024])
@@ -69,7 +97,10 @@ int axi_replay_entry_digest_accounted(const axi_replay_entry *rec,
                    + 4 + 1024 + 4 + 1024];
     uint8_t digest[32];
     size_t offset = 0;
-    if (!rec || !out) return 0;
+    /* This door is also reachable with caller-built or mutated records.
+     * Bound lengths before either reading their arrays or building preimage. */
+    if (!rec || !out || rec->payload_len > sizeof rec->payload
+            || rec->result_len > sizeof rec->result) return 0;
     if (account && !axi_mem_reserve(account, sizeof bytes)) return 0;
 #define APPEND(src, len) do { memcpy(bytes + offset, (src), (len)); offset += (len); } while (0)
     APPEND(rec->cap, AXI_CAPNAME);
@@ -97,10 +128,22 @@ static int canonical_name(const char name[AXI_CAPNAME])
 {
     const char *nul = memchr(name, '\0', AXI_CAPNAME);
     size_t i;
-    if (!nul) return 0;
+    if (!nul || nul == name) return 0;
     for (i = (size_t)(nul - name) + 1; i < AXI_CAPNAME; i++)
         if (name[i] != '\0') return 0;
     return 1;
+}
+
+static int record_verify(const axi_replay_entry *rec, axi_mem_account *account)
+{
+    uint8_t digest[32];
+    if (!record_shape(rec)) return 0;
+    axi_sha256(rec->payload, rec->payload_len, digest);
+    if (memcmp(digest, rec->digest, 32) != 0) return 0;
+    axi_sha256(rec->result, rec->result_len, digest);
+    if (memcmp(digest, rec->result_digest, 32) != 0) return 0;
+    return axi_replay_entry_digest_accounted(rec, digest, account)
+        && memcmp(digest, rec->entry_digest, 32) == 0;
 }
 
 /* ---- init / free -------------------------------------------------------- */
@@ -148,7 +191,7 @@ int axi_replay_prepare(axi_replay *R, size_t payload_len)
 {
     size_t bytes;
     if (!R || R->mode != AXI_REPLAY_RECORD) return 0;
-    if (payload_len > sizeof R->records[0].payload) {
+    if (!replay_shape(R) || payload_len > sizeof R->records[0].payload) {
         R->oom = 1;
         return -1;
     }
@@ -188,8 +231,18 @@ int axi_replay_record(axi_replay *R, const char *cap, const char *cell,
                       const uint8_t *record_digest, uint64_t record_nbytes,
                       int has_result_str)
 {
+    size_t cap_len, cell_len;
     if (!R || R->mode != AXI_REPLAY_RECORD) return 0; /* no-op when not recording */
-    if (plen > sizeof R->records[0].payload || rlen > sizeof R->records[0].result) {
+    cap_len = replay_name_len(cap);
+    cell_len = replay_name_len(cell);
+    if (!replay_shape(R) || cap_len == 0 || cap_len >= AXI_CAPNAME
+            || cell_len == 0 || cell_len >= AXI_CAPNAME
+            || plen > sizeof R->records[0].payload
+            || rlen > sizeof R->records[0].result
+            || (!payload && plen) || (!result && rlen)
+            || (has_result_str != 0 && has_result_str != 1)
+            || (!has_result_str && (!result || rlen != sizeof(long)))
+            || (!record_digest && record_nbytes != 0)) {
         R->oom = 1;
         return -1;
     }
@@ -201,8 +254,8 @@ int axi_replay_record(axi_replay *R, const char *cap, const char *cell,
         return -1;
     }
     memset(rec, 0, sizeof *rec);
-    strncpy(rec->cap, cap, AXI_CAPNAME - 1); rec->cap[AXI_CAPNAME - 1] = '\0';
-    strncpy(rec->cell, cell, AXI_CAPNAME - 1); rec->cell[AXI_CAPNAME - 1] = '\0';
+    memcpy(rec->cap, cap, cap_len);
+    memcpy(rec->cell, cell, cell_len);
     rec->nbytes = plen;
     axi_sha256(payload, plen, rec->digest);
     if (has_result_str || result) axi_sha256(result, rlen, rec->result_digest);
@@ -235,13 +288,11 @@ int axi_replay_peek(axi_replay *R, const char *cap, const char *cell,
                     uint8_t *out_record_digest, uint64_t *out_record_nbytes,
                     int *out_has_record_digest, int *out_has_result_str)
 {
-    if (!R || R->mode != AXI_REPLAY_REPLAY) return -1;
+    if (!replay_shape(R) || R->mode != AXI_REPLAY_REPLAY
+            || !cap || !cell || (!payload && plen) || !out_len) return -1;
     if (R->cursor >= R->n) return -1; /* no more records */
     axi_replay_entry *rec = &R->records[R->cursor];
-    uint8_t entry_digest[32];
-    if (!axi_replay_entry_digest_accounted(rec, entry_digest, R->account))
-        return -1;
-    if (memcmp(entry_digest, rec->entry_digest, 32) != 0) return -1;
+    if (!record_verify(rec, R->account)) return -1;
 
     /* Verify this is the expected effect */
     if (strcmp(rec->cap, cap) != 0 || strcmp(rec->cell, cell) != 0) return -1;
@@ -250,16 +301,8 @@ int axi_replay_peek(axi_replay *R, const char *cap, const char *cell,
      * result, fuel or receipt field is delivered to the VM. */
     if (rec->nbytes != plen || rec->payload_len != plen
             || (plen > 0 && memcmp(rec->payload, payload, plen) != 0)) return -1;
-    uint8_t d[32];
-    axi_sha256(payload, plen, d);
-    if (memcmp(d, rec->digest, 32) != 0) return -1;
-    if (rec->has_result_str || rec->result_len > 0)
-        axi_sha256(rec->result, rec->result_len, d);
-    else memset(d, 0, sizeof d);
-    if (memcmp(d, rec->result_digest, 32) != 0) return -1;
-
     /* Return recorded result */
-    if (rec->result_len > *out_len) return -1;
+    if (rec->result_len > *out_len || (rec->result_len && !out_result)) return -1;
     if (rec->result_len > 0 && out_result) memcpy(out_result, rec->result, rec->result_len);
     *out_len = rec->result_len;
     if (out_fuel_used) *out_fuel_used = rec->fuel_used;
@@ -273,7 +316,8 @@ int axi_replay_peek(axi_replay *R, const char *cap, const char *cell,
 
 int axi_replay_commit(axi_replay *R)
 {
-    if (!R || R->mode != AXI_REPLAY_REPLAY || R->cursor >= R->n) return -1;
+    if (!replay_shape(R) || R->mode != AXI_REPLAY_REPLAY
+            || R->cursor >= R->n) return -1;
     R->cursor++;
     return 0;
 }
@@ -292,7 +336,10 @@ int axi_replay_next(axi_replay *R, const char *cap, const char *cell,
         && axi_replay_commit(R) == 0 ? 0 : -1;
 }
 
-int axi_replay_at_end(const axi_replay *R) { return R->cursor >= R->n; }
+int axi_replay_at_end(const axi_replay *R)
+{
+    return replay_shape(R) && R->cursor == R->n;
+}
 
 /* ---- serialization helpers ---------------------------------------------- */
 
@@ -332,7 +379,10 @@ static int rd_be64(uint64_t *v, axi_replay_read_fn r, void *user)
 
 int axi_replay_save_to(const axi_replay *R, axi_replay_write_fn w, void *user)
 {
-    if (!R || !w) return -1;
+    if (!replay_shape(R) || !w || R->n > 10000) return -1;
+    /* No callback sees a prefix of a semantically invalid record set. */
+    for (size_t i = 0; i < R->n; i++)
+        if (!record_verify(&R->records[i], R->account)) return -1;
 
     /* Magic + version */
     if (w("AXI-REPLAY-v3", 14, user) != 14) return -1;
@@ -418,6 +468,7 @@ static int replay_load_empty(axi_replay *R, axi_replay_read_fn r, void *user)
         rec->result_len = rlen;
         if (rlen > 0 && r(rec->result, rlen, user) != rlen) return -1;
         if (r(rec->entry_digest, 32, user) != 32) return -1;
+        if (!record_shape(rec)) return -1;
         if (rec->nbytes != rec->payload_len) return -1;
         uint8_t digest[32];
         axi_sha256(rec->payload, rec->payload_len, digest);

@@ -1,5 +1,6 @@
 /* Audit40 runtime regressions. SPDX-License-Identifier: LicenseRef-SPL-1.0 */
 #include "axi_vm.h"
+#include "axi_replay.h"
 
 #include <stdio.h>
 #include <string.h>
@@ -224,11 +225,108 @@ static void typed_equality(void)
     equal_pair(&left, &right, 0);
 }
 
+typedef struct {
+    uint8_t bytes[8192];
+    size_t len, cursor;
+} replay_buffer;
+
+static size_t replay_write(const void *bytes, size_t len, void *opaque)
+{
+    replay_buffer *buffer = opaque;
+    if (len > sizeof buffer->bytes - buffer->len) return 0;
+    memcpy(buffer->bytes + buffer->len, bytes, len);
+    buffer->len += len;
+    return len;
+}
+
+static size_t replay_read(void *bytes, size_t len, void *opaque)
+{
+    replay_buffer *buffer = opaque;
+    if (len > buffer->len - buffer->cursor) return 0;
+    memcpy(bytes, buffer->bytes + buffer->cursor, len);
+    buffer->cursor += len;
+    return len;
+}
+
+static void replay_bounds(void)
+{
+    axi_replay replay, loaded;
+    axi_replay_entry saved;
+    replay_buffer buffer;
+    uint8_t digest[32], output[16];
+    uint64_t fuel = 71;
+    size_t output_len;
+    long result = 3;
+    axi_replay_init(&replay, NULL);
+    axi_replay_set_mode(&replay, AXI_REPLAY_RECORD);
+    CHECK(axi_replay_record(&replay, "io.Write", "audit", "abc", 3,
+                            &result, sizeof result, 2, NULL, 0, 0) == 0);
+    CHECK(replay.n == 1);
+    saved = replay.records[0];
+    memset(&buffer, 0, sizeof buffer);
+    CHECK(axi_replay_save_to(&replay, replay_write, &buffer) == 0);
+    axi_replay_init(&loaded, NULL);
+    loaded.mode = AXI_REPLAY_REPLAY;
+    CHECK(axi_replay_load_from(&loaded, replay_read, &buffer) == 0);
+    CHECK(loaded.n == 1 && loaded.cursor == 0);
+    output_len = sizeof output;
+    CHECK(axi_replay_next(&loaded, "io.Write", "audit", "abc", 3,
+                          output, &output_len, &fuel, NULL, NULL, NULL, NULL) == 0);
+    CHECK(output_len == 8 && output[7] == 3 && fuel == 2
+          && axi_replay_at_end(&loaded));
+    axi_replay_free(&loaded);
+    replay.mode = AXI_REPLAY_REPLAY;
+    for (unsigned mutation = 0; mutation < 8; mutation++) {
+        replay.records[0] = saved;
+        switch (mutation) {
+        case 0: replay.records[0].payload_len = 1025; break;
+        case 1: replay.records[0].result_len = (size_t)-1; break;
+        case 2: memset(replay.records[0].cap, 'x', AXI_CAPNAME); break;
+        case 3: replay.records[0].has_result_str = 2; break;
+        case 4: replay.records[0].nbytes = 4; break;
+        case 5: replay.records[0].record_nbytes = 1; break;
+        case 6: replay.records[0].payload[0] ^= 1; break;
+        case 7: replay.records[0].result[0] ^= 1; break;
+        }
+        memset(&buffer, 0, sizeof buffer);
+        memset(digest, 0xa5, sizeof digest);
+        if (mutation < 2) {
+            CHECK(!axi_replay_entry_digest_accounted(&replay.records[0], digest, NULL));
+            CHECK(digest[0] == 0xa5 && digest[31] == 0xa5);
+        }
+        CHECK(axi_replay_save_to(&replay, replay_write, &buffer) != 0);
+        CHECK(buffer.len == 0);
+        memset(output, 0x5a, sizeof output); output_len = sizeof output; fuel = 71;
+        CHECK(axi_replay_peek(&replay, "io.Write", "audit", "abc", 3,
+                              output, &output_len, &fuel, NULL, NULL, NULL, NULL) != 0);
+        CHECK(output[0] == 0x5a && output_len == sizeof output && fuel == 71
+              && replay.cursor == 0);
+    }
+    replay.records[0] = saved;
+    output_len = sizeof output;
+    CHECK(axi_replay_peek(&replay, "io.Write", "audit", "abc", 3,
+                          NULL, &output_len, NULL, NULL, NULL, NULL, NULL) != 0);
+    CHECK(axi_replay_peek(&replay, "io.Write", "audit", "abc", 3,
+                          output, NULL, NULL, NULL, NULL, NULL, NULL) != 0);
+    replay.mode = AXI_REPLAY_RECORD;
+    replay.oom = 1;
+    CHECK(axi_replay_prepare(&replay, 0) != 0);
+    CHECK(axi_replay_record(&replay, "io.Write", "audit", "abc", 3,
+                            &result, sizeof result, 2, NULL, 0, 0) != 0);
+    CHECK(replay.n == 1);
+    replay.oom = 0;
+    CHECK(axi_replay_record(&replay, "", "audit", "abc", 3,
+                            &result, sizeof result, 2, NULL, 0, 0) != 0);
+    CHECK(replay.n == 1);
+    axi_replay_free(&replay);
+}
+
 int main(void)
 {
     arithmetic_aliases();
     union_aliases();
     typed_equality();
+    replay_bounds();
     printf("audit40 runtime: %u checks, %u failures\n", checks, failures);
     return failures != 0;
 }

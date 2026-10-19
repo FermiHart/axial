@@ -57,3 +57,26 @@ all EQ destination aliases. Fuel remains two units including RET.
 
 **Compatibility.** Programs relying on the erroneous equality of distinct
 union/error values now receive false. Wire representations are unchanged.
+
+## W14 — bounded, fail-closed replay records
+
+**Problem.** The shared replay entry digest trusted caller-controlled lengths
+and copied them into a 2,306-byte automatic buffer. ASan reproduced an
+out-of-bounds write with payload_len=1024 and result_len=1025 on the baseline.
+The v3 writer published malformed record prefixes, while recording could
+silently truncate identity names or resume after a prior failed reservation.
+
+**Change.** Check digest lengths before any copy, validate record shape and
+content before replay/callback output, validate the whole record set before
+serialization, reject invalid names/pointers/flags, preserve failed state, and
+require an actual output destination for nonempty replay results. The v3
+decoder applies the same record-shape rules. The v4 wire codec is unchanged.
+
+**Evidence.** 706 checks pass, including record/load/replay round trip,
+oversized and SIZE_MAX lengths, malformed names and flags, content tampering,
+invalid receipt fields, sticky failure, and unchanged outputs/cursor/callback
+count on refusal. ASan+UBSan also pass with leak detection disabled because
+this execution host reports that LeakSanitizer cannot run under ptrace.
+
+**Limits.** This validates in-memory structure and byte framing; authenticity
+continues to belong to the existing explicitly trusted signed-v4 boundary.
