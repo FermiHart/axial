@@ -45,4 +45,14 @@ void axi_local_authority_v1_close(axi_local_authority_v1 *owner);
 int axi_local_authority_v1_resource(const axi_local_authority_v1 *owner,
                                      uint64_t *device, uint64_t *inode);
 
+/* Read config under the same owner lock used by commits. The exact bounded
+ * bytes and fstat metadata must stay stable through the read, and the name
+ * must still designate that descriptor. Missing config publishes present=0
+ * and a zero previous object. Unsafe/special/oversized files refuse.
+ * Deadline is CLOCK_MONOTONIC ns (0: try once, UINT64_MAX: wait). All outputs
+ * stay unchanged on refusal. This snapshot alone authorizes no mutation. */
+int axi_local_authority_v1_previous(const axi_local_authority_v1 *owner,
+                                     axi_local_previous_v1 *previous,
+                                     uint8_t *present, uint64_t deadline_mono_ns);
+
 #endif

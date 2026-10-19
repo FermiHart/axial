@@ -25,6 +25,7 @@ credential changes in disposable subprocesses where authorized.
 | Wave | Implemented change | Evidence | Limits |
 | --- | --- | --- | --- |
 | W41 | Opt-in issuer configuration bound to held directory; lifecycle and resource observation; legacy mutation guard under owner lock. | 55 checks: activation/idempotence/wrong key, missing/foreign config, retained fd after rename, legacy mutation refusal. | Owner setup is trusted; activation may remain after an I/O refusal to prevent downgrade. |
+| W42 | Under-lock prior-config observation: exact bounded read, SHA-256, checked nanosecond mtime, stable metadata and descriptor/name binding. | 56 checks: absent/empty/4096-byte state, digest/metadata, 4097-byte refusal, hardlink/symlink/FIFO/directory refusal and unchanged output on refusal. | Concurrent writers must participate in the owner lock; same-UID noncooperative writers remain in the TCB. |
 
 ## Executed evidence
 
@@ -37,4 +38,10 @@ dropping supplementary groups and root credentials.
 
 ```
 W41: audit80 security: 55 checks PASS (ruid=1000 euid=1001)
+W42: audit80 security: 56 checks PASS (ruid=1000 euid=1001)
 ```
+
+When only the authorized execution surface permits credential changes, build
+with `AXI_AUDIT_BUILD_ONLY=1 sh tests/audit80/security.sh`, then execute that
+same `build/audit80-security/security` binary there. Exit 77 explicitly means
+the host cannot supply the required distinct identities; it is not a pass.

@@ -1,6 +1,7 @@
 #include "axi_local_authority_internal.h"
 #include "axi_local_store_v1.h"
 #include "axi_alloc.h"
+#include "axi_hash.h"
 
 #include <errno.h>
 #include <fcntl.h>
@@ -8,6 +9,7 @@
 #include <string.h>
 #include <sys/file.h>
 #include <sys/stat.h>
+#include <time.h>
 #include <unistd.h>
 
 static int nonzero(const uint8_t *p, size_t n)
@@ -141,4 +143,118 @@ int axi_local_authority_v1_resource(const axi_local_authority_v1 *owner,
             || (uint64_t)st.st_ino != owner->inode) return AXI_LOCAL_AUTHORITY_V1_REFUSED;
     *device = owner->device; *inode = owner->inode;
     return AXI_LOCAL_AUTHORITY_V1_OK;
+}
+
+int axi_local_authority_validate_locked(const axi_local_authority_v1 *owner)
+{
+    uint8_t raw[AXI_LOCAL_AUTHORITY_CONTROL_SIZE];
+    if (!owner || control_read(owner->dirfd, raw) != 0
+            || control_valid(owner->dirfd, raw) != 0
+            || memcmp(owner->issuer_pk, raw + 8, 32) != 0
+            || get64(raw + 40) != owner->device
+            || get64(raw + 48) != owner->inode) return AXI_LOCAL_AUTHORITY_V1_REFUSED;
+    return AXI_LOCAL_AUTHORITY_V1_OK;
+}
+
+int axi_local_authority_lock(const axi_local_authority_v1 *owner,
+                              int operation, uint64_t deadline, int *lockfd)
+{
+    int fd, rc = AXI_LOCAL_AUTHORITY_V1_REFUSED;
+    if (!owner || !lockfd) return rc;
+    *lockfd = -1;
+    fd = axi_local_store_open_file_at(owner->dirfd, "owner.lock", O_RDONLY);
+    if (fd < 0) return rc;
+    for (;;) {
+        uint64_t now, remaining;
+        struct timespec nap;
+        if (flock(fd, operation | LOCK_NB) == 0) {
+            if (axi_local_authority_validate_locked(owner) == 0) {
+                *lockfd = fd;
+                return AXI_LOCAL_AUTHORITY_V1_OK;
+            }
+            (void)flock(fd, LOCK_UN);
+            break;
+        }
+        if (errno == EINTR) continue;
+        if (errno != EWOULDBLOCK && errno != EAGAIN) break;
+        now = axi_local_attempt_v1_now_mono();
+        if (!now) break;
+        if (now >= deadline) { rc = AXI_LOCAL_AUTHORITY_V1_TIMEOUT; break; }
+        remaining = deadline - now;
+        nap.tv_sec = 0;
+        nap.tv_nsec = (long)(remaining < UINT64_C(1000000) ? remaining : UINT64_C(1000000));
+        if (nanosleep(&nap, NULL) != 0 && errno != EINTR) break;
+    }
+    (void)close(fd);
+    return rc;
+}
+
+static int same_file(const struct stat *a, const struct stat *b)
+{
+    return a->st_dev == b->st_dev && a->st_ino == b->st_ino
+        && a->st_size == b->st_size && a->st_uid == b->st_uid
+        && a->st_mode == b->st_mode && a->st_nlink == b->st_nlink
+        && a->st_mtim.tv_sec == b->st_mtim.tv_sec && a->st_mtim.tv_nsec == b->st_mtim.tv_nsec
+        && a->st_ctim.tv_sec == b->st_ctim.tv_sec && a->st_ctim.tv_nsec == b->st_ctim.tv_nsec;
+}
+
+int axi_local_authority_previous_locked(const axi_local_authority_v1 *owner,
+                                          axi_local_previous_v1 *previous,
+                                          uint8_t *present)
+{
+    uint8_t bytes[AXI_LOCAL_ACTION_V1_MAX_BYTES], extra;
+    axi_local_previous_v1 staged;
+    struct stat before, after, named;
+    size_t n = 0, length;
+    ssize_t got;
+    int fd, rc = AXI_LOCAL_AUTHORITY_V1_REFUSED;
+    memset(&staged, 0, sizeof staged);
+    fd = axi_local_store_open_file_at(owner->dirfd, AXI_LOCAL_ATTEMPT_V1_TARGET_NAME, O_RDONLY);
+    if (fd < 0) {
+        if (errno != ENOENT) return rc;
+        if (fstatat(owner->dirfd, AXI_LOCAL_ATTEMPT_V1_TARGET_NAME,
+                     &named, AT_SYMLINK_NOFOLLOW) == 0 || errno != ENOENT) return rc;
+        *previous = staged; *present = 0;
+        return AXI_LOCAL_AUTHORITY_V1_OK;
+    }
+    if (fstat(fd, &before) != 0 || before.st_size < 0
+            || (uintmax_t)before.st_size > sizeof bytes
+            || before.st_mtim.tv_sec < 0 || before.st_mtim.tv_nsec < 0
+            || before.st_mtim.tv_nsec >= 1000000000L
+            || (uintmax_t)before.st_mtim.tv_sec >
+                (UINT64_MAX - (uint64_t)before.st_mtim.tv_nsec) / UINT64_C(1000000000)) goto done;
+    length = (size_t)before.st_size;
+    while (n < length) {
+        got = read(fd, bytes + n, length - n);
+        if (got < 0 && errno == EINTR) continue;
+        if (got <= 0) goto done;
+        n += (size_t)got;
+    }
+    do { got = read(fd, &extra, 1); } while (got < 0 && errno == EINTR);
+    if (got != 0 || fstat(fd, &after) != 0 || !same_file(&before, &after)
+            || fstatat(owner->dirfd, AXI_LOCAL_ATTEMPT_V1_TARGET_NAME,
+                         &named, AT_SYMLINK_NOFOLLOW) != 0 || !same_file(&after, &named)) goto done;
+    staged.device = (uint64_t)before.st_dev; staged.inode = (uint64_t)before.st_ino;
+    staged.size = length;
+    staged.mtime_ns = (uint64_t)before.st_mtim.tv_sec * UINT64_C(1000000000)
+                     + (uint64_t)before.st_mtim.tv_nsec;
+    axi_sha256(bytes, length, staged.sha256);
+    rc = AXI_LOCAL_AUTHORITY_V1_OK;
+done:
+    if (close(fd) != 0) rc = AXI_LOCAL_AUTHORITY_V1_REFUSED;
+    if (rc == 0) { *previous = staged; *present = 1; }
+    return rc;
+}
+
+int axi_local_authority_v1_previous(const axi_local_authority_v1 *owner,
+                                     axi_local_previous_v1 *previous,
+                                     uint8_t *present, uint64_t deadline_mono_ns)
+{
+    int lockfd = -1, rc;
+    if (!owner || !previous || !present) return AXI_LOCAL_AUTHORITY_V1_REFUSED;
+    rc = axi_local_authority_lock(owner, LOCK_SH, deadline_mono_ns, &lockfd);
+    if (rc != 0) return rc;
+    rc = axi_local_authority_previous_locked(owner, previous, present);
+    (void)flock(lockfd, LOCK_UN); (void)close(lockfd);
+    return rc;
 }

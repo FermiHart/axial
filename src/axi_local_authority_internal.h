@@ -14,4 +14,11 @@ struct axi_local_authority_v1 {
     uint64_t device, inode;
 };
 
+int axi_local_authority_lock(const axi_local_authority_v1 *owner,
+                              int operation, uint64_t deadline, int *lockfd);
+int axi_local_authority_validate_locked(const axi_local_authority_v1 *owner);
+int axi_local_authority_previous_locked(const axi_local_authority_v1 *owner,
+                                          axi_local_previous_v1 *previous,
+                                          uint8_t *present);
+
 #endif

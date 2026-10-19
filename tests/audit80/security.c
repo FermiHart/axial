@@ -171,6 +171,52 @@ static void w41(void)
     rm_fixture(f.dir); rm_fixture(relocated); rm_fixture(other.dir);
 }
 
+static void w42(void)
+{
+    fixture f;
+    axi_local_authority_v1 *owner = NULL;
+    axi_local_previous_v1 previous, saved;
+    uint8_t present = 99, digest[32], bytes[4097];
+    char config[512], linkname[512];
+    struct stat st;
+    new_fixture(&f);
+    CHECK(axi_local_authority_v1_enable(f.dir, f.pk) == 0);
+    CHECK(axi_local_authority_v1_open(f.dir, &owner) == 0);
+    memset(&previous, 0x5a, sizeof previous);
+    CHECK(axi_local_authority_v1_previous(owner, &previous, &present, 0) == 0 && !present);
+    memset(&saved, 0, sizeof saved); CHECK(memcmp(&previous, &saved, sizeof saved) == 0);
+    path_of(config, f.dir, "config"); path_of(linkname, f.dir, "alias");
+    put_file(config, "before", 6); CHECK(stat(config, &st) == 0);
+    CHECK(axi_local_authority_v1_previous(owner, &previous, &present, 0) == 0 && present);
+    axi_sha256("before", 6, digest);
+    CHECK(previous.device == (uint64_t)st.st_dev && previous.inode == (uint64_t)st.st_ino);
+    CHECK(previous.size == 6 && !memcmp(previous.sha256, digest, 32));
+    CHECK(previous.mtime_ns == (uint64_t)st.st_mtim.tv_sec * UINT64_C(1000000000)
+                                  + (uint64_t)st.st_mtim.tv_nsec);
+    memset(bytes, 7, sizeof bytes); put_file(config, bytes, 4096);
+    CHECK(axi_local_authority_v1_previous(owner, &previous, &present, 0) == 0);
+    CHECK(previous.size == 4096); saved = previous;
+    put_file(config, bytes, 4097); present = 77;
+    CHECK(axi_local_authority_v1_previous(owner, &previous, &present, 0) != 0);
+    CHECK(!memcmp(&previous, &saved, sizeof saved) && present == 77);
+    put_file(config, "", 0);
+    CHECK(axi_local_authority_v1_previous(owner, &previous, &present, 0) == 0 && present);
+    axi_sha256("", 0, digest); CHECK(previous.size == 0 && !memcmp(previous.sha256, digest, 32));
+    CHECK(link(config, linkname) == 0);
+    CHECK(axi_local_authority_v1_previous(owner, &previous, &present, 0) != 0);
+    CHECK(unlink(linkname) == 0 && unlink(config) == 0);
+    put_file(linkname, "victim", 6); CHECK(symlink("alias", config) == 0);
+    CHECK(axi_local_authority_v1_previous(owner, &previous, &present, 0) != 0);
+    CHECK(unlink(config) == 0 && mkfifo(config, 0600) == 0);
+    alarm(2);
+    CHECK(axi_local_authority_v1_previous(owner, &previous, &present, 0) != 0);
+    alarm(0); CHECK(unlink(config) == 0);
+    CHECK(mkdir(config, 0700) == 0);
+    CHECK(axi_local_authority_v1_previous(owner, &previous, &present, 0) != 0);
+    CHECK(rmdir(config) == 0);
+    axi_local_authority_v1_close(owner); rm_fixture(f.dir);
+}
+
 int main(int argc, char **argv)
 {
     if (geteuid() == 0) {
@@ -182,8 +228,10 @@ int main(int argc, char **argv)
         fprintf(stderr, "audit80 security: unsupported host; positive profile needs two real nonzero distinct UIDs\n");
         return 77;
     }
-    if (argc == 1 || (argc == 2 && !strcmp(argv[1], "W41"))) w41();
-    else return 2;
+    if (argc > 2) return 2;
+    if (argc == 1 || !strcmp(argv[1], "W41")) w41();
+    if (argc == 1 || !strcmp(argv[1], "W42")) w42();
+    if (argc == 2 && strcmp(argv[1], "W41") && strcmp(argv[1], "W42")) return 2;
     printf("audit80 security: %u checks PASS (ruid=%lu euid=%lu)\n", checks,
            (unsigned long)getuid(), (unsigned long)geteuid());
     return 0;

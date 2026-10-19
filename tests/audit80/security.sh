@@ -37,5 +37,6 @@ for audit_src in "$audit_source"/src/*.c "$audit_source/vendor/ed25519.c" "$audi
 done
 # shellcheck disable=SC2086
 "$audit_cc" $audit_flags "$@" -lm -o "$audit_build/security"
+[ "${AXI_AUDIT_BUILD_ONLY:-0}" = 1 ] && exit 0
 # shellcheck disable=SC2086
 "$audit_build/security" $audit_modes
