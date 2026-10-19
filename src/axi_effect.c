@@ -505,6 +505,7 @@ static long axi_eff_dispatch(const axi_host_eff_ctx *ctx, const void *buf, size_
     axi_effect_journal *journal = ctx ? ctx->journal : NULL;
     uint64_t attempt = 0;
     int mode = ctx && ctx->replay ? ctx->replay->mode : AXI_REPLAY_NONE;
+    if (!ctx || (!buf && len)) return -1;
 
     if (mode == AXI_REPLAY_REPLAY) {
         uint8_t *rbuf;
@@ -520,7 +521,12 @@ static long axi_eff_dispatch(const axi_host_eff_ctx *ctx, const void *buf, size_
                                                  &attempt) != 0) return -1;
         if (!effect_deadline_allows_attempt(ctx, journal, attempt)) return -1;
         rbuf = axi_resource_output_alloc(ctx->resources, ctx->account, rlen);
-        if (!rbuf) return -1;
+        if (!rbuf) {
+            ((axi_host_eff_ctx *)ctx)->host_outcome = -1;
+            if (journal)
+                (void)axi_effect_journal_finish_effect(journal, attempt, ctx);
+            return -1;
+        }
         if (axi_replay_peek(ctx->replay, cap, cell, buf, len, rbuf, &rlen,
                             &fuel_used, rdig, &rec_nbytes, &has_rec, &has_str) != 0) {
             if (journal) {
@@ -529,14 +535,12 @@ static long axi_eff_dispatch(const axi_host_eff_ctx *ctx, const void *buf, size_
             }
             return -1;
         }
-        if (journal && axi_effect_journal_attempt(journal, attempt) != 0)
-            return -1;
-        if (ctx) ((axi_host_eff_ctx *)ctx)->attempt_state = AXI_EFFECT_ATTEMPTED;
         /* Replay must burn the same fuel the original effect burned,
-         * including fuel spent by a spawned child. */
+         * including fuel spent by a spawned child. Refuse an invalid budget
+         * before ATTEMPTED; subtraction must never wrap into extra authority. */
         if (ctx->fuel_used) {
-            uint64_t remaining = ctx->fuel_budget - *ctx->fuel_used;
-            if (fuel_used > remaining) {
+            if (*ctx->fuel_used > ctx->fuel_budget
+                    || fuel_used > ctx->fuel_budget - *ctx->fuel_used) {
                 if (ctx->fuel_exhausted) *ctx->fuel_exhausted = 1;
                 if (journal) {
                     ((axi_host_eff_ctx *)ctx)->host_outcome = -1;
@@ -544,8 +548,11 @@ static long axi_eff_dispatch(const axi_host_eff_ctx *ctx, const void *buf, size_
                 }
                 return -1;
             }
-            *ctx->fuel_used += fuel_used;
         }
+        if (journal && axi_effect_journal_attempt(journal, attempt) != 0)
+            return -1;
+        ((axi_host_eff_ctx *)ctx)->attempt_state = AXI_EFFECT_ATTEMPTED;
+        if (ctx->fuel_used) *ctx->fuel_used += fuel_used;
         if (has_str) {
             if (rlen > (size_t)LONG_MAX) goto replay_failed;
             replay_result = (long)rlen;

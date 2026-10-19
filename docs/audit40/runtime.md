@@ -101,3 +101,27 @@ transitions, sticky failure, duplicates and unterminated grant entries.
 **Limits.** Existing canonical production names serialize byte-identically.
 The grant set remains a fixed maximum of 32 entries; whole-table validation
 is intentional at the authority boundary.
+
+## W16 — effect preflight and observable worker failures
+
+**Problem.** A recorder key equal to the producer key was rejected only while
+signing replay evidence, after effects had run. Replay fuel subtraction could
+wrap for an already-overdrawn context, and output-allocation refusal left a
+PREPARED journal attempt open. Worker datagram sockets do not expose peer EOF,
+so a child exiting without a frame hid failure until the full deadline.
+
+**Change.** Check recorder independence before VM execution, reserve and wipe
+the temporary key material, reject overdrawn replay/spawn fuel before
+subtraction, finish failed replay preparation, and use UNIX sequenced-packet
+worker channels. Packet framing and FD passing stay exact; unsupported hosts
+refuse the effect rather than falling back to a weaker transport.
+
+**Evidence.** 746 normal checks pass. `runtime --workers` adds six checks for
+a child exiting without a frame and a successful worker; these pass with
+ordinary local UNIX IPC enabled. A signed io.Write CLI probe using identical
+keys exits 1 with AXI-R025 and zero stdout bytes, before the write. The baseline
+had written before its signing refusal.
+
+**Environment.** This sandbox returns EPERM for worker socket sends. That is
+not a normal-host fsync defect; positive worker tests were run through the
+authorized unsandboxed local-test door. No network endpoint was contacted.

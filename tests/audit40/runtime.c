@@ -2,9 +2,11 @@
 #include "axi_vm.h"
 #include "axi_replay.h"
 #include "axi_json.h"
+#include "axi_platform.h"
 
 #include <stdio.h>
 #include <string.h>
+#include <unistd.h>
 
 static unsigned checks, failures;
 
@@ -387,13 +389,107 @@ static void effect_records_and_grants(void)
     CHECK(grants.n == 2);
 }
 
-int main(void)
+static uint64_t fixed_now(void *opaque, int *ok)
 {
+    (void)opaque;
+    *ok = 1;
+    return 1;
+}
+
+static void replay_effect_refusal(void)
+{
+    axi_replay replay;
+    axi_effect_journal journal;
+    axi_mem_account account;
+    axi_resource_envelope resources;
+    axi_resource_vector ceiling = {10, 10000, 10000, 10, 10};
+    axi_host_eff_ctx ctx;
+    const axi_host_eff *effect = axi_host_eff_find("io.Write");
+    uint8_t root[32] = {0};
+    uint64_t used = 4;
+    int exhausted = 0;
+    long result = 3;
+    axi_replay_init(&replay, root); replay.mode = AXI_REPLAY_RECORD;
+    CHECK(axi_replay_record(&replay, "io.Write", "audit", "abc", 3,
+                            &result, sizeof result, 2, NULL, 0, 0) == 0);
+    replay.mode = AXI_REPLAY_REPLAY;
+    axi_effect_journal_init(&journal, root);
+    axi_mem_account_init(&account, 65536);
+    axi_resource_envelope_init(&resources, &ceiling, 100, fixed_now, NULL);
+    memset(&ctx, 0, sizeof ctx);
+    ctx.resources = &resources; ctx.account = &account; ctx.replay = &replay;
+    ctx.journal = &journal; ctx.cell_name = "audit";
+    ctx.fuel_budget = 3; ctx.fuel_used = &used; ctx.fuel_exhausted = &exhausted;
+    CHECK(effect != NULL);
+    CHECK(effect->fn(&ctx, "abc", 3) < 0);
+    CHECK(used == 4 && exhausted == 1 && replay.cursor == 0);
+    CHECK(ctx.attempt_state == AXI_EFFECT_NOT_ATTEMPTED);
+    CHECK(journal.n == 2 && journal.open_attempt == 0
+          && journal.row[1].state == AXI_JOURNAL_FAILED
+          && axi_effect_journal_verify(&journal) == 0);
+    CHECK(axi_resource_outputs_free(&resources, &account));
+    CHECK(account.live == 0);
+    axi_effect_journal_free(&journal);
+    axi_effect_journal_init(&journal, root);
+    axi_mem_account_init(&account, 1); used = 0; exhausted = 0;
+    CHECK(effect->fn(&ctx, "abc", 3) < 0);
+    CHECK(journal.n == 2 && journal.open_attempt == 0
+          && axi_effect_journal_verify(&journal) == 0);
+    CHECK(ctx.attempt_state == AXI_EFFECT_NOT_ATTEMPTED && replay.cursor == 0);
+    CHECK(effect->fn(NULL, "abc", 3) < 0);
+    axi_effect_journal_free(&journal);
+    axi_replay_free(&replay);
+}
+
+static int worker_exit_without_frame(void *opaque)
+{
+    int *marker = opaque;
+    char entered = 'x';
+    if (write(*marker, &entered, 1) != 1) _exit(2);
+    _exit(0);
+}
+
+static int worker_success(void *opaque)
+{
+    (void)opaque;
+    return 0;
+}
+
+static void worker_transport(void)
+{
+    axi_resource_envelope resources;
+    axi_resource_vector ceiling = {1, 0, 0, 0, 1};
+    axi_host_eff_ctx ctx;
+    int clock_ok, marker[2];
+    uint64_t now = axi_platform_monotonic_ns(NULL, &clock_ok);
+    char entered = 0;
+    CHECK(clock_ok);
+    axi_resource_envelope_init(&resources, &ceiling, now + 2000000000u,
+                               axi_platform_monotonic_ns, NULL);
+    resources.reserved.children = 1;
+    memset(&ctx, 0, sizeof ctx); ctx.resources = &resources;
+    CHECK(pipe(marker) == 0);
+    CHECK(axi_platform_blocking_call(&ctx, worker_exit_without_frame, &marker[1]) < 0);
+    close(marker[1]);
+    CHECK(read(marker[0], &entered, 1) == 1 && entered == 'x');
+    close(marker[0]);
+    CHECK(resources.first_denial == AXI_RESOURCE_OK);
+    CHECK(axi_platform_blocking_call(&ctx, worker_success, NULL) == 0);
+}
+
+int main(int argc, char **argv)
+{
+    if (argc == 2 && strcmp(argv[1], "--workers") == 0) {
+        worker_transport();
+        printf("audit40 workers: %u checks, %u failures\n", checks, failures);
+        return failures != 0;
+    }
     arithmetic_aliases();
     union_aliases();
     typed_equality();
     replay_bounds();
     effect_records_and_grants();
+    replay_effect_refusal();
     printf("audit40 runtime: %u checks, %u failures\n", checks, failures);
     return failures != 0;
 }

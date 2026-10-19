@@ -2700,6 +2700,20 @@ static int cli_aer_publish(cli_run_fixed *fixed,
                                     options->aer_path) == 0;
 }
 
+static int cli_recorder_independent(const uint8_t seed[32],
+                                    const uint8_t producer_pk[32],
+                                    axi_mem_account *account)
+{
+    uint8_t pk[ED25519_PUBKEY], sk[ED25519_SECKEY];
+    int independent;
+    if (!axi_mem_reserve(account, sizeof pk + sizeof sk)) return 0;
+    ed25519_keypair_from_seed(seed, pk, sk);
+    independent = memcmp(pk, producer_pk, sizeof pk) != 0;
+    secure_zero(sk, sizeof sk);
+    secure_zero(pk, sizeof pk);
+    return axi_mem_release(account, sizeof pk + sizeof sk) && independent;
+}
+
 int cmd_run_contract_trusted(const char *path, const char *cellname,
                              const char *trusted_key_path,
                              int argc, char **argv)
@@ -2785,6 +2799,12 @@ int cmd_run_contract_trusted(const char *path, const char *cellname,
                 || axi_signing_seed_load(options.recorder_key_path,
                                          fixed.recorder_seed) != 0) {
             fprintf(AXI_ERR, "AXI-R025 signed replay binding is invalid\n");
+            goto done;
+        }
+        if (!cli_recorder_independent(fixed.recorder_seed, fixed.producer_pk,
+                                      &account)) {
+            fprintf(AXI_ERR, "AXI-R025 replay recorder key must differ from "
+                    "the artifact producer key\n");
             goto done;
         }
     }
