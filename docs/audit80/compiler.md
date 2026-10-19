@@ -58,3 +58,17 @@ Validação: 28 checks de sucesso e recusa em cada fase, árvore mantida válida
 após recusa e saldo zero após cleanup. Os 67 goldens originais e todo o gate
 de frontend W01–W10 passaram, incluindo as duas varreduras de 99 falhas de
 alocação e o caso de 40.000 statements sob stack de 2 MiB.
+
+## W60 — geração de texto e projeções
+
+Constantes de erro e string, nomes de builtins, buffers de emissão, modelo
+da interface, listas, leis e diff usam o orçamento da AST. O decoder de
+strings tem uma wrapper de orçamento sobre a implementação sem alocação
+W55; não há um segundo significado de escapes. A recusa preserva a AST e
+limpa os temporários antes de retornar. A coleta de diferenças deixou de
+encerrar o processo em OOM e recusa antes de publicar um veredito parcial.
+
+Validação: 35 checks cobrindo strings com LF/NUL semântico, constantes de
+erro em namespace próprio, geração de código, interface textual/JSON e
+cotas insuficientes. Fonte e AST permanecem contabilizadas enquanto cada
+projeção ocorre; o saldo volta a zero no encerramento.

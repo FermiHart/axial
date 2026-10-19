@@ -37,3 +37,24 @@ O perfil cobre o `config` relativo ao store ativado. Administração, processo
 do serviço, kernel e escritores não cooperativos com o mesmo UID permanecem
 confiáveis. Isolamento de guest e perda física de energia não são resultados
 deste checkpoint. A execução segue automaticamente para W51–W80.
+
+## Checkpoint W60 — 20 de 40 waves adicionais
+
+Erros nomeados, retornos opcionais e propagação com `?` agora percorrem
+fonte, checker, bytecode assinado e VM. A emissão mantém a representação
+canônica existente, distingue erros de strings e avalia cada expressão
+propagada uma vez. Lexer, assembler e canon compartilham as cinco escapes
+de string e preservam os bytes semânticos, inclusive NUL embutido.
+
+O compilador ganhou contexto explícito de cota, sem contador global:
+ownership de fonte/AST, análise de tipos, renderização, geração e projeções
+usam a mesma conta. OOM e recusa não encerram o hospedeiro nem apagam a
+primeira causa. Montagem/assinatura e ativação da cota na CLI entram em
+W61–W62; este checkpoint não anuncia que essa integração já ocorreu.
+
+Validação integrada: `make -j2 gate` completo PASS no host; todos os casos
+W51–W56 PASS; 130 checks C novos do orçamento e suas fases PASS. Os
+goldens de runtime permaneceram idênticos nesta árvore. A dependência do
+runner isolado de strings foi atualizada para os módulos de ownership,
+mantendo a compilação real do decoder. Identidade regenerada para 124
+arquivos de produto e pins ABI v1 válidos. Execução segue para W61–W80.

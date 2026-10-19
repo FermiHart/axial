@@ -24,6 +24,7 @@ typedef struct {
     char *buf;
     size_t len, cap;
     int failed;
+    axi_compile_budget *budget;
 } outbuf;
 
 typedef struct {
@@ -56,13 +57,14 @@ typedef struct {
     int unit_reg;
     int err;
     int oom;
+    axi_compile_budget *budget;
 } cg;
 
 static void clear_consts(cg *c)
 {
     int i;
     for (i = 0; i < c->nk; i++) {
-        if (c->k[i].tag == 1 || c->k[i].tag == 4) free(c->k[i].s);
+        if (c->k[i].tag == 1 || c->k[i].tag == 4) (void)axi_compile_free(c->budget, c->k[i].s);
         c->k[i].s = NULL;
         c->k[i].slen = 0;
     }
@@ -75,13 +77,14 @@ static void cg_free(cg *c)
 {
     int i;
     clear_consts(c);
-    for (i = 0; i < c->nbuiltins; i++) free(c->builtins[i]);
-    for (i = 0; i < c->neffs; i++) free(c->effs[i]);
+    for (i = 0; i < c->nbuiltins; i++) (void)axi_compile_free(c->budget, c->builtins[i]);
+    for (i = 0; i < c->neffs; i++) (void)axi_compile_free(c->budget, c->effs[i]);
 }
 
-static void ob_init(outbuf *o)
+static void ob_init(outbuf *o, axi_compile_budget *budget)
 {
-    o->buf = axi_malloc(256);
+    o->budget = budget;
+    o->buf = axi_compile_malloc(budget, 256);
     o->len = 0;
     o->cap = o->buf ? 256 : 0;
     o->failed = o->buf == NULL;
@@ -98,7 +101,7 @@ static void ob_grow(outbuf *o, size_t need)
         if (o->cap > (size_t)-1 / 2) { o->failed = 1; return; }
         o->cap *= 2;
     }
-    buf = axi_realloc(o->buf, o->cap);
+    buf = axi_compile_realloc(o->budget, o->buf, o->cap);
     if (!buf) { o->failed = 1; return; }
     o->buf = buf;
 }
@@ -238,24 +241,24 @@ static int add_k_num(cg *c, int tag, uint64_t bits)
 
 /* Strip surrounding quotes and undo the escapes the axial lexer accepts
  * for " and \, so the constant stores the semantic string value. */
-static char *unquote_str(const char *s, uint32_t len, uint32_t *outlen)
+static char *unquote_str(axi_compile_budget *budget, const char *s, uint32_t len, uint32_t *outlen)
 {
     /* INV-323 / AXI-INV-105: one decoder, one meaning — shared with the
      * assembler through axi_str_unescape. */
-    return axi_str_unescape(s, len, outlen);
+    return axi_compile_str_unescape(budget, s, len, outlen);
 }
 
 static int add_k_str(cg *c, const char *s, uint32_t len)
 {
     uint32_t vlen;
-    char *v = unquote_str(s, len, &vlen);
+    char *v = unquote_str(c->budget, s, len, &vlen);
     if (!v) { c->oom = 1; return 0; }
     for (int i = 0; i < c->nk; i++)
         if (c->k[i].tag == 1 && c->k[i].slen == vlen && memcmp(c->k[i].s, v, vlen) == 0) {
-            free(v);
+            (void)axi_compile_free(c->budget, v);
             return i;
         }
-    if (c->nk >= MAX_CONST) { free(v); c->err = 1; return 0; }
+    if (c->nk >= MAX_CONST) { (void)axi_compile_free(c->budget, v); c->err = 1; return 0; }
     c->k[c->nk].tag = 1;
     c->k[c->nk].u = 0;
     c->k[c->nk].s = v;
@@ -273,7 +276,7 @@ static int add_k_err(cg *c, const char *s, uint32_t len)
         if (c->k[i].tag == 4 && c->k[i].slen == len
                 && memcmp(c->k[i].s, s, len) == 0) return i;
     if (c->nk >= MAX_CONST) { c->err = 1; return 0; }
-    copy = axi_malloc((size_t)len + 1);
+    copy = axi_compile_malloc(c->budget, (size_t)len + 1);
     if (!copy) { c->oom = 1; return 0; }
     memcpy(copy, s, len); copy[len] = '\0';
     c->k[c->nk].tag = 4;
@@ -288,7 +291,7 @@ static int add_builtin(cg *c, const char *name)
     for (int i = 0; i < c->nbuiltins; i++)
         if (strcmp(c->builtins[i], name) == 0) return i;
     if (c->nbuiltins >= MAX_BUILTIN) { c->err = 1; return 0; }
-    c->builtins[c->nbuiltins] = axi_strdup(name);
+    c->builtins[c->nbuiltins] = axi_compile_strdup(c->budget, name);
     if (!c->builtins[c->nbuiltins]) { c->oom = 1; return 0; }
     return c->nbuiltins++;
 }
@@ -298,7 +301,7 @@ static int add_eff(cg *c, const char *name)
     for (int i = 0; i < c->neffs; i++)
         if (strcmp(c->effs[i], name) == 0) return i;
     if (c->neffs >= MAX_EFF) { c->err = 1; return 0; }
-    c->effs[c->neffs] = axi_strdup(name);
+    c->effs[c->neffs] = axi_compile_strdup(c->budget, name);
     if (!c->effs[c->neffs]) { c->oom = 1; return 0; }
     return c->neffs++;
 }
@@ -859,7 +862,7 @@ static void gen_cell(cg *c, outbuf *o, const axi_node *cell)
 
     /* Generate body first so we know constants and reg usage. */
     outbuf body;
-    ob_init(&body);
+    ob_init(&body, c->budget);
     if (body.failed) c->oom = 1;
     gen_block(c, &body, cell->b, 1);
     if (body.failed) c->oom = 1;
@@ -895,7 +898,7 @@ static void gen_cell(cg *c, outbuf *o, const axi_node *cell)
         o->len += body.len;
         o->buf[o->len] = '\0';
     }
-    free(body.buf);
+    (void)axi_compile_free(body.budget, body.buf);
 
     ob_indent(o, 0);
     ob_puts(o, "end\n");
@@ -906,8 +909,11 @@ char *axi_codegen(const axi_node *unit, size_t *out_len)
 {
     outbuf o;
     cg c;
+    if (out_len) *out_len = 0;
+    if (!unit || !axi_compile_reserve(unit->budget, sizeof c)) return NULL;
     memset(&c, 0, sizeof c);
-    ob_init(&o);
+    c.budget = unit->budget;
+    ob_init(&o, c.budget);
 
     /* k0 is always 0 (unit / false) */
     c.k[0].tag = 0; c.k[0].u = 0; c.nk = 1;
@@ -940,12 +946,14 @@ char *axi_codegen(const axi_node *unit, size_t *out_len)
      * opcode. c->err covers register exhaustion, unbound names, unknown
      * nodes and every saturated table — none of them may reach publish. */
     if (o.failed || c.oom || c.err) {
-        free(o.buf);
+        (void)axi_compile_free(o.budget, o.buf);
         cg_free(&c);
+        (void)axi_compile_release(c.budget, sizeof c);
         if (out_len) *out_len = 0;
         return NULL;
     }
     if (out_len) *out_len = o.len;
     cg_free(&c);
+    (void)axi_compile_release(c.budget, sizeof c);
     return o.buf;
 }

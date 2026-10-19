@@ -1,6 +1,7 @@
 /* Axial compiler invocation budget. SPDX-License-Identifier: LicenseRef-SPL-1.0 */
 #include "axi_compile_budget.h"
 #include "axi_alloc.h"
+#include "axi.h"
 #include <errno.h>
 #include <stdint.h>
 #include <stdlib.h>
@@ -219,4 +220,21 @@ void axi_compile_account_init(axi_mem_account *account, axi_compile_budget *b)
     account->reservation_context = b;
     account->reserve_external = bridge_reserve;
     account->release_external = bridge_release;
+}
+
+char *axi_compile_str_unescape(axi_compile_budget *b, const char *lexeme,
+                                size_t len, uint32_t *outlen)
+{
+    uint32_t n;
+    char *p;
+    if (!b) return axi_str_unescape(lexeme, len, outlen);
+    if (axi_str_decoded_length(lexeme, len, &n) != 0) return NULL;
+    p = axi_compile_malloc(b, (size_t)n + 1);
+    if (!p) return NULL;
+    if (axi_str_decode_into(lexeme, len, p, (size_t)n + 1, &n) != 0) {
+        (void)axi_compile_free(b, p);
+        return NULL;
+    }
+    if (outlen) *outlen = n;
+    return p;
 }

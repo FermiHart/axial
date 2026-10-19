@@ -3,6 +3,7 @@
 #define AXI_COMPILE_BUDGET_H
 
 #include <stddef.h>
+#include <stdint.h>
 #include "axi_mem_account.h"
 
 #define AXI_COMPILE_DEFAULT_LIMIT (256u * 1024u * 1024u)
@@ -48,6 +49,8 @@ void *axi_compile_calloc(axi_compile_budget *b, size_t count, size_t size);
 void *axi_compile_realloc(axi_compile_budget *b, void *ptr, size_t size);
 char *axi_compile_strdup(axi_compile_budget *b, const char *s);
 int axi_compile_free(axi_compile_budget *b, void *ptr);
+char *axi_compile_str_unescape(axi_compile_budget *b, const char *lexeme,
+                                size_t len, uint32_t *outlen);
 
 /* An internal backend account forwards both allocations and fixed reservations
  * to the same compiler budget. Its host storage stays owned by b. */
