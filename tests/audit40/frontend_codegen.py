@@ -67,3 +67,60 @@ with tempfile.TemporaryDirectory(prefix="axi-frontend-") as td:
             for b in ("false", "true"):
                 expect_value(artifact, "branch", [a, b], "u64 77")
         print("frontend W02: PASS (branch relocation widths and nested paths)")
+
+    if GROUP in ("all", "calls"):
+        source = """cell add : fn(a: u64, b: u64) -> u64
+  fuel 1000
+  pure
+{ ret a + b }
+cell retain : fn() -> u64
+  fuel 10000
+  pure
+{
+  let keep = 99
+  add(1, 2)
+  ret keep
+}
+cell builtin_retain : fn() -> u64
+  fuel 10000
+  pure
+{
+  let keep = 99
+  math.add_checked(1, 2)
+  ret keep
+}
+cell nested : fn() -> u64
+  fuel 10000
+  pure
+{
+  let keep = 100
+  ret add(add(1, 2), add(3, 4)) + keep
+}
+cell noargs : fn() -> u64
+  fuel 1000
+  pure
+{ ret 7 }
+cell twice : fn() -> u64
+  fuel 10000
+  pure
+{ ret noargs() + noargs() }
+"""
+        artifact = compile_source("call_windows", source)
+        for cell, value in (("retain", 99), ("builtin_retain", 99),
+                            ("nested", 110), ("twice", 14)):
+            expect_value(artifact, cell, [], "u64 " + str(value))
+        repeated = ("cell repeat : fn() -> u64\n  fuel 100000\n  pure\n{\n"
+                    "  let keep = 99\n" + "  math.add_checked(1, 2)\n" * 100
+                    + "  ret keep\n}\n")
+        artifact = compile_source("temporary_lifetime", repeated)
+        expect_value(artifact, "repeat", [], "u64 99")
+        # Sixteen live arguments must be copied into a genuinely free window.
+        params = ", ".join(f"a{i}: u64" for i in range(16))
+        source = (f"cell wide : fn({params}) -> u64\n  fuel 1000\n  pure\n"
+                  "{ ret a0 + a15 }\ncell test : fn() -> u64\n"
+                  "  fuel 10000\n  pure\n{\n  let keep = 99\n"
+                  "  let sum = wide(" + ", ".join(str(i) for i in range(16))
+                  + ")\n  ret keep + sum\n}\n")
+        artifact = compile_source("sixteen_arguments", source)
+        expect_value(artifact, "test", [], "u64 114")
+        print("frontend W03: PASS (live bindings, nesting, zero/16 args, reuse)")

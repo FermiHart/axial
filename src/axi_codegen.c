@@ -152,6 +152,25 @@ static int alloc_reg(cg *c)
     return 0;
 }
 
+/* A call window is contiguous and exclusively owned before evaluating any
+ * arguments. Picking its first hole and reserving unrelated holes later can
+ * overwrite a live binding located in the middle of the supposed window. */
+static int alloc_window(cg *c, int argc)
+{
+    int count = argc > 0 ? argc : 1;
+    if (count > MAX_REG) { c->err = 1; return 0; }
+    for (int base = 0; base <= MAX_REG - count; base++) {
+        int i;
+        for (i = 0; i < count && !c->reg_used[base + i]; i++) {}
+        if (i != count) { base += i; continue; }
+        for (i = 0; i < count; i++) c->reg_used[base + i] = 1;
+        if (base + count - 1 > c->max_reg) c->max_reg = base + count - 1;
+        return base;
+    }
+    c->err = 1;
+    return 0;
+}
+
 static int alloc_unit_reg(cg *c)
 {
     if (c->unit_reg >= 0) return c->unit_reg;
@@ -545,8 +564,7 @@ static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent)
         if (name[0] && is_builtin_name(name)) {
             int bidx = add_builtin(c, name);
             if (c->oom || c->err) return 0;
-            /* args in consecutive regs starting at base */
-            int base = alloc_reg(c);
+            int base;
             const axi_node *args[16];
             int arg_regs[16] = {0};
             int argc = 0;
@@ -557,16 +575,18 @@ static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent)
                 if (argc >= 16) { c->err = 1; return 0; }
                 args[argc++] = arg;
             }
+            base = alloc_window(c, argc);
+            if (c->err) return 0;
             for (int i = 0; i < argc; i++)
                 arg_regs[i] = gen_expr(c, o, args[i], indent);
+            if (c->err || c->oom) return 0;
             emit_arg_moves(c, o, indent, base, argc, arg_regs);
-            /* reserve regs for args beyond base */
-            for (int i = 1; i < argc; i++) (void)alloc_reg(c);
+            for (int i = 0; i < argc; i++) free_reg(c, arg_regs[i]);
             int rd = alloc_reg(c);
             if (c->err || c->oom) return 0;
             ob_indent(o, indent);
             ob_printf(o, "builtin r%d @%s r%d\n", rd, c->builtins[bidx], base);
-            for (int i = 0; i < argc; i++) free_reg(c, base + i);
+            for (int i = 0; i < (argc ? argc : 1); i++) free_reg(c, base + i);
             /* INV-321 / AXI-INV-103: rd stays live — the caller frees it
              * after the last use, never before. */
             return rd;
@@ -574,7 +594,7 @@ static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent)
         /* Cell call */
         if (n->a && n->a->kind == N_ID && n->a->lex) {
             const axi_node *callee = n->a;
-            int base = alloc_reg(c);
+            int base;
             const axi_node *args[16];
             int arg_regs[16] = {0};
             int argc = 0;
@@ -582,10 +602,13 @@ static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent)
                 if (argc >= 16) { c->err = 1; return 0; }  /* INV-321 */
                 args[argc++] = arg;
             }
+            base = alloc_window(c, argc);
+            if (c->err) return 0;
             for (int i = 0; i < argc; i++)
                 arg_regs[i] = gen_expr(c, o, args[i], indent);
+            if (c->err || c->oom) return 0;
             emit_arg_moves(c, o, indent, base, argc, arg_regs);
-            for (int i = 1; i < argc; i++) (void)alloc_reg(c);
+            for (int i = 0; i < argc; i++) free_reg(c, arg_regs[i]);
             int rd = base; /* VM places callee return value at the base reg. */
             if (c->err || c->oom) return 0;
             ob_indent(o, indent);

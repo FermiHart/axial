@@ -45,3 +45,20 @@ from the later byte offset to the earlier one.
 checks signed artifacts on the real VM across both paths, displacement
 widths through four digits, and nested conditionals. The baseline fails the
 1,001-statement case with `AXI-R008`; the corrected compiler returns `u64 77`.
+
+## W03 — owned contiguous call windows
+
+**Problem.** Codegen allocated the first free register as a call base,
+evaluated arguments, then reserved unrelated free registers. A live local
+could lie inside the actual argument window. The program
+`let keep = 99; add(1, 2); ret keep` returned `u64 2` on the baseline,
+without any trap. Argument temporaries also leaked from the register pool,
+eventually refusing repeated calls in otherwise small cells.
+
+**Change.** Reserve the entire contiguous window before evaluating arguments;
+preserve the return slot; release the argument temporaries after copying.
+Nested calls reserve independent windows. The VM call ABI is unchanged.
+
+**Validation.** `python3 tests/audit40/frontend_codegen.py build/axi calls`
+covers user cells and builtins, preserved locals, nested and zero-argument
+calls, sixteen arguments, and 100 repeated calls without register leakage.
