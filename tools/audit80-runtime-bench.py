@@ -28,12 +28,30 @@ def run(command, **kwargs):
     return subprocess.run([str(x) for x in command], check=True, **kwargs)
 
 
-def build(source, output, cc, flags, names):
+def compiler_command(cc):
+    command = shlex.split(cc)
+    if not command:
+        raise ValueError("compiler command must not be empty")
+    return command
+
+
+def toolchain_metadata(args):
+    command = compiler_command(args.cc)
+    return {"compiler": run([*command, "--version"], capture_output=True, text=True).stdout.splitlines()[0],
+            "compiler_command": command, "cppflags": shlex.split(args.cppflags),
+            "ldflags": shlex.split(args.ldflags)}
+
+
+def build(source, output, cc, flags, names, cppflags=(), ldflags=()):
     output.mkdir(parents=True, exist_ok=True)
+    command = compiler_command(cc)
     headers = sorted(p for part in ("src", "include", "vendor")
                      for p in (source / part).rglob("*") if p.suffix in (".h", ".inc", ".def"))
     headers += sorted((ROOT / "tests/audit80").glob("runtime*.h"))
-    config = hashlib.sha256((cc + "\0" + repr(flags) + str(source)).encode())
+    settings = {"schema": "axial.audit80.build.v2", "compiler": command,
+                "cppflags": list(cppflags), "cflags": list(flags),
+                "ldflags": list(ldflags), "pthread": True, "source": str(source)}
+    config = hashlib.sha256(json.dumps(settings, sort_keys=True).encode())
     for path in headers:
         config.update(str(path).encode()); config.update(path.read_bytes())
     includes = ["-I" + str(source / part) for part in ("src", "include", "vendor")]
@@ -43,23 +61,36 @@ def build(source, output, cc, flags, names):
     sources = [p for p in sources if p.name not in ("axi_main.c", "axi_dossier_main.c")]
     sources += [source / "vendor/ed25519.c", ROOT / "tests/audit80/runtime_fixture.c"]
 
-    def compile_one(path, extra_flags=(), name=None):
-        obj = output / ((name or path.stem) + ".o")
+    def compile_one(path, extra_flags=(), name=None, directory=output):
+        directory.mkdir(parents=True, exist_ok=True)
+        obj = directory / ((name or path.stem) + ".o")
         stamp = obj.with_suffix(".key")
         digest = hashlib.sha256((key + str(path) + repr(extra_flags)).encode() + path.read_bytes()).hexdigest()
         if not obj.exists() or not stamp.exists() or stamp.read_text() != digest:
-            run([cc, *flags, *extra_flags, *includes, "-c", path, "-o", obj], capture_output=True)
+            run([*command, *cppflags, *flags, *extra_flags, *includes,
+                 "-pthread", "-c", path, "-o", obj], capture_output=True)
             stamp.write_text(digest)
         return obj
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
-        objects = list(pool.map(compile_one, sources))
+    profiles = {"runtime_concurrency_uncached": ("sha-nocache", "-DSHA256NI_NO_CACHE=1"),
+                "runtime_concurrency_nocache": ("sha-nocache", "-DSHA256NI_NO_CACHE=1"),
+                "runtime_concurrency_software": ("sha-software", "-DSHA256NI_FORCE_SOFTWARE=1")}
+    objects_by_profile = {}
     for name in names:
-        defines = {"runtime_concurrency_uncached": "-DSHA256NI_NO_CACHE=1",
-                   "runtime_concurrency_software": "-DSHA256NI_FORCE_SOFTWARE=1"}
-        src_name = "runtime_concurrency" if name in defines else name
+        profile, define = profiles.get(name, ("default", None))
+        profile_flags = (define,) if define else ()
+        directory = output if profile == "default" else output / "profiles" / profile
+        if profile not in objects_by_profile:
+            # Every product object uses the selected SHA profile and the same
+            # instrumentation flags; a test-only define cannot cover it.
+            def compile_core(path):
+                return compile_one(path, profile_flags, directory=directory)
+            with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
+                objects_by_profile[profile] = list(pool.map(compile_core, sources))
+        objects = objects_by_profile[profile]
+        src_name = "runtime_concurrency" if name in profiles else name
         obj = compile_one(ROOT / "tests/audit80" / (src_name + ".c"),
-                          [defines[name]] if name in defines else (), name)
+                          profile_flags, name, directory)
         extra = []
         linked_objects = objects
         if name in ("runtime_lifecycle", "runtime_memory"):
@@ -75,7 +106,8 @@ def build(source, output, cc, flags, names):
             linked_objects = [path for path in objects if path.name != "axi_local_attempt_v1.o"]
             extra = [wrapped, compile_one(ROOT / "tests/audit80/runtime_store.c"),
                      compile_one(ROOT / "tests/audit80/runtime_store_io.c")]
-        run([cc, *flags, obj, *linked_objects, *extra, "-lm", "-pthread", "-o", output / name], capture_output=True)
+        run([*command, *flags, *ldflags, obj, *linked_objects, *extra,
+             "-lm", "-pthread", "-o", output / name], capture_output=True)
     return output
 
 
@@ -149,7 +181,8 @@ def measure(args, candidate):
     if args.mode == "compare":
         baseline, revisions["baseline"] = baseline_snapshot(args.output.resolve(), args.baseline_revision)
         variants["baseline"] = build(baseline, baseline.parent / "bin", args.cc,
-                                      shlex.split(args.cflags), ["runtime_bench"])
+                                      shlex.split(args.cflags), ["runtime_bench"],
+                                      shlex.split(args.cppflags), shlex.split(args.ldflags))
         digests["baseline"] = source_digest(baseline)
     available = sorted(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else []
     configurations = [("mixed", ["latency", args.iterations], 1)]
@@ -184,7 +217,7 @@ def measure(args, candidate):
         fixture_hash.update(name.encode() + b"\0" + (ROOT / "tests/audit80" / name).read_bytes())
     report = {"schema": "axial.audit80.latency.v1", "measured_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
               "revisions": revisions, "source_sha256": digests, "fixture_sha256": fixture_hash.hexdigest(),
-              "compiler": run([args.cc, "--version"], capture_output=True, text=True).stdout.splitlines()[0],
+              **toolchain_metadata(args),
               "flags": shlex.split(args.cflags), "host": platform.platform(), "available_cpus": available,
               "cpu_max": quota.read_text().strip() if quota.exists() else None,
               "rounds": args.samples, "iterations_per_workload_per_round": args.iterations,
@@ -211,7 +244,7 @@ def measure(args, candidate):
         print(json.dumps(report, indent=2))
 
 
-def context_identity(source, binaries, cc, flags):
+def context_identity(source, binaries, cc, flags, cppflags=(), ldflags=()):
     """GNU/ELF diagnostic evidence; generated helper never edits product source."""
     source_file = binaries / "runtime_context_identity.c"
     source_file.write_text('#include "runtime_fixture.h"\n#include <stdio.h>\n'
@@ -221,9 +254,13 @@ def context_identity(source, binaries, cc, flags):
                if path.name not in ("axi_main.c", "axi_dossier_main.c")]
     objects += [binaries / "ed25519.o", binaries / "runtime_fixture.o"]
     executable = binaries / "runtime_context_identity"
+    identity_object = binaries / "runtime_context_identity.o"
     includes = ["-I" + str(source / part) for part in ("src", "include", "vendor")]
-    run([cc, *flags, *includes, "-I" + str(ROOT / "tests/audit80"), source_file,
-         *objects, "-lm", "-pthread", "-o", executable], capture_output=True)
+    command = compiler_command(cc)
+    run([*command, *cppflags, *flags, *includes, "-I" + str(ROOT / "tests/audit80"),
+         "-pthread", "-c", source_file, "-o", identity_object], capture_output=True)
+    run([*command, *flags, *ldflags, identity_object, *objects,
+         "-lm", "-pthread", "-o", executable], capture_output=True)
     module = run([executable], capture_output=True).stdout
     section = binaries / "ed25519.text.bin"
     run(["objcopy", "-O", "binary", "--only-section=.text", binaries / "ed25519.o", section], capture_output=True)
@@ -242,11 +279,13 @@ def context_identity(source, binaries, cc, flags):
 def context_diagnose(args, candidate):
     """Keep cryptographic work fixed while controlling compiler/link placement."""
     flags = shlex.split(args.cflags)
+    cppflags, ldflags = shlex.split(args.cppflags), shlex.split(args.ldflags)
+    command = compiler_command(args.cc)
     release_flags = ["-O2" if flag.startswith("-O") else flag for flag in flags]
     if not any(flag.startswith("-O") for flag in flags): release_flags.append("-O2")
     base, revision = baseline_snapshot(args.output.resolve(), args.baseline_revision)
     baseline = build(base, base.parent / "bin", args.cc, flags,
-                     ["runtime_bench", "runtime_context_profile"])
+                     ["runtime_bench", "runtime_context_profile"], cppflags, ldflags)
     variants = {}
     for label, source, binaries in (("baseline", base, baseline),
                                     ("candidate", args.source.resolve(), candidate)):
@@ -258,14 +297,14 @@ def context_diagnose(args, candidate):
         for name in ("runtime_bench", "runtime_context_profile"):
             binary = binaries / (name + "_crypto_first")
             extra = ["-Wl,--wrap=axi_sha256,--wrap=ed25519_verify"] if name == "runtime_context_profile" else []
-            run([args.cc, *flags, binaries / (name + ".o"), *objects, *extra, "-lm", "-pthread", "-o", binary],
+            run([*command, *flags, *ldflags, binaries / (name + ".o"), *objects, *extra, "-lm", "-pthread", "-o", binary],
                 capture_output=True)
             fixed.append(binary)
         variants[label + "_crypto_first"] = tuple(fixed)
         release_output = (base.parent / "bin-o2" if label == "baseline" else
                           args.output.resolve().with_name(args.output.name + "-o2"))
         release = build(source, release_output, args.cc, release_flags,
-                        ["runtime_bench", "runtime_context_profile"])
+                        ["runtime_bench", "runtime_context_profile"], cppflags, ldflags)
         variants[label + "_release"] = (release / "runtime_bench", release / "runtime_context_profile")
     available = sorted(os.sched_getaffinity(0)) if hasattr(os, "sched_getaffinity") else []
     raw, summary = {}, {}
@@ -304,7 +343,7 @@ def context_diagnose(args, candidate):
                                          capture_output=True, text=True).stdout.strip(),
               "source_sha256": {"baseline": source_digest(base), "candidate": source_digest(args.source.resolve())},
               "selected_flags": flags, "release_flags": release_flags,
-              "compiler": run([args.cc, "--version"], capture_output=True, text=True).stdout.splitlines()[0],
+              **toolchain_metadata(args),
               "cpu_affinity": available[:1], "rounds": args.samples,
               "contexts_per_configuration_per_round": args.context_iterations,
               "limits": ["Creation only; no production arrival process or SLA.",
@@ -314,8 +353,8 @@ def context_diagnose(args, candidate):
                          "The CPU is pinned but shared, with uncontrolled frequency and other tenants. No outlier removal."],
               "results": summary, "raw_samples": raw}
     report["artifact_identity"] = {
-        "baseline": context_identity(base, baseline, args.cc, flags),
-        "candidate": context_identity(args.source.resolve(), candidate, args.cc, flags)}
+        "baseline": context_identity(base, baseline, args.cc, flags, cppflags, ldflags),
+        "candidate": context_identity(args.source.resolve(), candidate, args.cc, flags, cppflags, ldflags)}
     data = json.dumps(report, indent=2) + "\n"
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True); args.report.write_text(data)
@@ -326,9 +365,11 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("mode", choices=("check", "build", "context", "latency", "compare", "diagnose-context"), nargs="?", default="check")
     parser.add_argument("--source", type=Path, default=ROOT)
-    parser.add_argument("--output", type=Path, default=ROOT / "build/audit80-runtime")
-    parser.add_argument("--cc", default=os.environ.get("CC", "cc"))
-    parser.add_argument("--cflags", default=os.environ.get("AXI_AUDIT_CFLAGS", FLAGS))
+    parser.add_argument("--output", "--out-dir", dest="output", type=Path, default=ROOT / "build/audit80-runtime")
+    parser.add_argument("--cc", default=os.environ.get("HOSTCC", os.environ.get("CC", "cc")))
+    parser.add_argument("--cppflags", default=os.environ.get("CPPFLAGS", ""), help="preprocessor flags, compile only")
+    parser.add_argument("--cflags", default=os.environ.get("CFLAGS", os.environ.get("AXI_AUDIT_CFLAGS", FLAGS)))
+    parser.add_argument("--ldflags", default=os.environ.get("LDFLAGS", ""), help="linker flags, link only")
     parser.add_argument("--samples", type=int, default=5)
     parser.add_argument("--iterations", type=int, default=2000)
     parser.add_argument("--context-iterations", type=int, default=100)
@@ -344,12 +385,13 @@ def main():
                  "runtime_concurrency_uncached", "runtime_concurrency_software", "runtime_io_faults", "runtime_recovery",
                  "runtime_bench", "runtime_context_profile"]
         if args.only:
-            if set(args.only) - set(names): parser.error("unknown fixture in --only")
+            if set(args.only) - (set(names) | {"runtime_concurrency_nocache"}): parser.error("unknown fixture in --only")
             names = args.only
         if args.mode in ("context", "latency", "compare"): names = ["runtime_bench"]
         if args.mode == "diagnose-context": names = ["runtime_bench", "runtime_context_profile"]
         binaries = build(args.source.resolve(), args.output.resolve(), args.cc,
-                         shlex.split(args.cflags), names)
+                         shlex.split(args.cflags), names,
+                         shlex.split(args.cppflags), shlex.split(args.ldflags))
         if args.mode == "check":
             for name in names:
                 if name not in ("runtime_bench", "runtime_context_profile"): run([binaries / name], timeout=60)
@@ -373,7 +415,7 @@ def main():
                     "median_destroy_ns_per_context": statistics.median(s["destroy_ns"] / s["iterations"] for s in samples)})
             report = {"schema": "axial.audit80.context.v1", "measured_at_utc": datetime.datetime.now(datetime.timezone.utc).isoformat(),
                 "revision": run(["git", "-C", args.source, "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip(),
-                "compiler": run([args.cc, "--version"], capture_output=True, text=True).stdout.splitlines()[0],
+                **toolchain_metadata(args),
                 "flags": shlex.split(args.cflags), "cpu_affinity": cpu,
                 "limits": ["Synthetic modules, no production traffic supplied.", "Pinned CPU is shared; frequency and other tenants uncontrolled.",
                            "Each context is new; process/crypto/OS caches are warmed. Parsing/signing fixture setup excluded.",

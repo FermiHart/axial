@@ -12,6 +12,7 @@
 #include "axi.h"
 #include "axi_alloc.h"
 #include "axi_ast.h"
+#include "axi_numeric.h"
 #include "axi_policy_lint.h"
 #include "axi_hash.h"
 #include "axi_iface.h"
@@ -1156,7 +1157,9 @@ int main(int argc, char **argv)
     /* This is a reservation for the bounded CLI diagnostic and lexical
      * workspaces, not a promise to cap all C stack or process RSS. */
     const size_t workspace = sizeof budget + 2 * sizeof(axi_diags)
-                            + sizeof(axi_lexer) + sizeof(axi_token);
+                            + sizeof(axi_lexer) + sizeof(axi_token)
+                            + (compile && !strcmp(argv[1], "lex")
+                               ? AXI_NUMERIC_SCRATCH_BYTES : 0);
     if (compile_options(&argc, argv, compile, &limit, &report, &json) != 0) {
         fprintf(AXI_ERR, "AXI-X005 invalid or repeated compiler memory option\n");
         return 2;

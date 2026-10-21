@@ -12,6 +12,7 @@
  */
 #include "axi_ast.h"
 #include "axi_alloc.h"
+#include "axi_numeric.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -747,11 +748,14 @@ axi_node *axi_parse_unit_budget(const char *src, size_t len, const char *path,
                                 axi_diags *diags, axi_compile_budget *budget)
 {
     parser p;
+    /* The lexer may borrow one fixed decimal workspace at any advance.
+     * It is never nested, and is covered for the parser's whole lifetime. */
+    const size_t workspace = sizeof p + AXI_NUMERIC_SCRATCH_BYTES;
     /* W16: even the unit's position is a token's, not a literal — byte 0,
      * line 1, col 1, all from one place (AXI-INV-027). */
     axi_token u0;
     axi_node *unit;
-    if (!src || !diags || !axi_compile_reserve(budget, sizeof p)) {
+    if (!src || !diags || !axi_compile_reserve(budget, workspace)) {
         if (diags) axi_diag_add(diags, axi_compile_failure_code(budget),
             0, 0, 0, "parser workspace unavailable", "increase the compiler budget");
         return NULL;
@@ -795,10 +799,10 @@ axi_node *axi_parse_unit_budget(const char *src, size_t len, const char *path,
         axi_diag_add(diags, budget ? axi_compile_failure_code(budget) : "AXI-D999", 0, 0, 0,
                      "parser allocation failed; no tree was published",
                      "retry with enough memory to parse the source");
-        (void)axi_compile_release(budget, sizeof p);
+        (void)axi_compile_release(budget, workspace);
         return NULL;
     }
-    (void)axi_compile_release(budget, sizeof p);
+    (void)axi_compile_release(budget, workspace);
     return unit;
 }
 

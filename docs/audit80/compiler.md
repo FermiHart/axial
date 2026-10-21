@@ -102,4 +102,25 @@ The two exact runtime memory goldens were recalculated from observed execution: 
 
 An independent CLI cross-review found that the initial option extractor also examined runtime arguments after `--` and values of other options. W62 now leaves noncompiler commands untouched and skips required source positions and compiler option values. Real signed `echo(str)` regressions cover both new option names as literal runtime arguments and as public-key file names; compiler regressions cover those same names as source files, both interface-diff inputs, output files, and signing-seed values.
 
+## W77 — integração do workspace numérico
+
+O núcleo decimal W63–W68 usa um único `axi_numeric_workspace` de 2.372
+bytes nesta ABI. A reserva da fase de parsing agora inclui esse workspace;
+a CLI `lex` o reserva diretamente. Na renderização, a coleta de comentários
+reserva lexer, token, diagnósticos locais e workspace decimal e libera essa
+reserva antes de começar a emitir expressões. Cada conversão de float
+reserva seu workspace até copiar o texto emprestado ao builder. Assim,
+as APIs de expressão, tipo e unidade também participam da cota, sem
+contabilizar dois workspaces numéricos simultâneos quando as fases não
+se sobrepõem.
+
+Uma cota que cabia antes pode passar a recusar: a reserva descreve agora
+esse armazenamento temporário real. Os bytes da saída e o contrato de
+ownership não mudam. As reservas continuam sendo uma definição explícita
+de armazenamento solicitado; não representam toda a pilha C ou o RSS.
+`compiler_numeric.c` cobre o pico e o limite um byte abaixo dele nas
+entradas de parser, expressão isolada e unidade canônica; inclui limpeza
+após recusa semântica do formatador. O gate CLI existente repete o mesmo
+limite exato no comando `lex` e nos demais comandos.
+
 The same `gate-compiler` passed with every product object and the injected CLI instrumented by AddressSanitizer and UndefinedBehaviorSanitizer (`-fno-sanitize-recover=all`). LeakSanitizer is unavailable under the host's process tracing, so that run explicitly used `ASAN_OPTIONS=detect_leaks=0`; zero-budget-balance assertions provide scoped cleanup evidence and are not presented as an independent heap leak scan. The 67 existing goldens and 23 driver assertions also pass with the documented internal-size updates.

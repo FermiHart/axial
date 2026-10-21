@@ -122,12 +122,19 @@ static void sb_float(sb *b, const axi_node *n)
     uint64_t bits;
     const char *text;
     size_t len;
-    memcpy(&bits, &n->fval, sizeof bits);
-    if (axi_f64_to_decimal(bits, &workspace, &text, &len) != AXI_DECIMAL_OK) {
+    if (b->failed) return;
+    if (!axi_compile_reserve(b->budget, sizeof workspace)) {
         b->failed = 1;
         return;
     }
-    sb_put(b, text, len);
+    memcpy(&bits, &n->fval, sizeof bits);
+    if (axi_f64_to_decimal(bits, &workspace, &text, &len) != AXI_DECIMAL_OK) {
+        b->failed = 1;
+    } else {
+        /* text borrows workspace until its bytes are copied to the builder. */
+        sb_put(b, text, len);
+    }
+    (void)axi_compile_release(b->budget, sizeof workspace);
 }
 
 /* ---- trivia (comments) --------------------------------------------------- */
@@ -139,11 +146,15 @@ typedef struct {
 } triv_ctx;
 
 /* Re-lex purely to harvest comments; parse already validated the stream. */
-static void triv_collect(triv_ctx *tc, const char *src, size_t len)
+static int triv_collect(triv_ctx *tc, const char *src, size_t len,
+                        axi_compile_budget *budget)
 {
     axi_lexer lx;
     axi_diags scratch;
     axi_token t;
+    const size_t workspace = sizeof lx + sizeof scratch + sizeof t
+                            + AXI_NUMERIC_SCRATCH_BYTES;
+    if (!axi_compile_reserve(budget, workspace)) return 0;
     axi_diags_init(&scratch);
     axi_lex_init(&lx, src, len, &scratch);
     lx.triv = tc->tv;
@@ -152,6 +163,8 @@ static void triv_collect(triv_ctx *tc, const char *src, size_t len)
     tc->n = lx.triv_n;
     tc->i = 0;
     tc->dropped = lx.triv_dropped;
+    (void)axi_compile_release(budget, workspace);
+    return 1;
 }
 
 /* Emit every comment that lives strictly before `line`, one per line,
@@ -535,7 +548,10 @@ char *axi_canon_render(const char *src, size_t len, const axi_node *unit)
 
     b.budget = unit ? unit->budget : NULL;
     if (!unit || !axi_compile_reserve(b.budget, sizeof tc)) return NULL;
-    triv_collect(&tc, src, len);
+    if (!triv_collect(&tc, src, len, b.budget)) {
+        (void)axi_compile_release(b.budget, sizeof tc);
+        return NULL;
+    }
     sb_grow(&b, 1); /* guarantee a buffer even for the empty unit */
 
     for (c = unit->list; c; c = c->next) {
