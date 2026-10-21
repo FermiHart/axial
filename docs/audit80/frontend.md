@@ -310,7 +310,9 @@ shown, and establish no end-to-end speedup or production latency promise.
 Workspace is unchanged at 2,372 bytes. Raw warmups/pairs, compiler identity,
 flags and source/binary hashes are emitted by `numeric_bench.py` to the
 requested JSON path; the audit's final run is
-`build/numeric80-final-benchmark.json` for final evidence integration.
+preserved byte-for-byte in
+[evidence/numeric-benchmark.json](evidence/numeric-benchmark.json), copied
+from `build/numeric80-final-benchmark.json` during W79 evidence integration.
 
 ### Reproduction and integration
 
@@ -342,8 +344,9 @@ sh tests/audit80/frontend.sh build-numeric-san/axi
 Standalone lexer tests link `axi_numeric.c`; `numeric_limits.c` additionally
 links `-lm` for the test's fenv operations. The numeric implementation itself
 has no libm dependency. Both the numeric reader and renderer take an explicit
-workspace; the lexer and canonical builder must reserve
-`AXI_NUMERIC_SCRATCH_BYTES` through the root compiler quota integration.
+workspace. W77 implements the `AXI_NUMERIC_SCRATCH_BYTES` reservation in
+the parser, standalone CLI lexical pass and canonical builder through the
+explicit compiler budget, including canonical trivia scanning.
 The numeric helpers are not recursive and retain no additional arrays.
 
 Limits: this is mathematical reasoning with bounded arithmetic, independent

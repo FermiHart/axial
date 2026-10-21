@@ -1,5 +1,10 @@
 # Auditoria integral do Axial — 40 waves
 
+> **Atualização W41–W80:** este relatório preserva os resultados e as pendências
+> da entrega histórica W01–W40. O estado posterior dessas pendências está no
+> [relatório Audit80](../audit80/REPORT.md) e nas
+> [notas de migração](../audit80/migration.md).
+
 **Data:** 19 de outubro de 2026. **Escopo:** compilador, VM, bytecode, efeitos, replay, evidências, armazenamento local, API de embedding, build e validação do projeto Axial.
 
 **Revisão original:** `2d6752255ffcc92e0b103c97609daf205a5a39de`. As 39 etapas de

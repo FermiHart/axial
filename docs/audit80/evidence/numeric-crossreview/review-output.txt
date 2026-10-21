@@ -1,0 +1,2 @@
+probe: 495 parses, 3178 formats, four modes; workspace=2372, canaries/fenv unchanged
+cross-review PASS: 33 exact boundaries x 15 variants = 495 reader probes; 3178 decimal-decade formatter probes; longest exact boundary significand=768; independent CPython conversion/repr cross-check; four fenv modes; ASan/UBSan and canaries

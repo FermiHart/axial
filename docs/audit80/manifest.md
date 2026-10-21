@@ -99,9 +99,58 @@ explícitas, não RSS. Outras etapas ainda contribuem para o crescimento do
 tempo total; remover o fator repetido da projeção não torna todo o pipeline
 linear.
 
-## Reprodução e gates locais
+## Reprodução após um clone e gates locais
 
-Na raiz do repositório, sem modificar Makefile:
+Os identificadores Git acima pertencem ao histórico local da medição. A
+publicação pode recriar commits com outros metadados, e o produto integrado
+também inclui mudanças de outras waves e nova identidade gerada do checker.
+Por isso, a reprodução preservada usa os snapshots exatos em
+[manifest-sources/](evidence/manifest-sources/README.md), disponíveis no
+próprio repositório. Cada archive contém os 124 arquivos de
+`src/include/vendor`; todos os caminhos e hashes foram confrontados com
+`source_sha256` no JSON original. Ambos são tar/gzip determinísticos,
+compostos exclusivamente de arquivos regulares e diretórios.
+
+Na raiz do clone, extraia em um diretório novo. O extractor confere o hash
+de cada bundle e de cada arquivo, recusa links e caminhos externos e não
+substitui diretórios de saída existentes:
+
+```sh
+python3 docs/audit80/evidence/manifest-sources/extract.py \
+  --output build/manifest80-snapshots
+python3 tests/audit80/manifest_bench.py \
+  --before-source build/manifest80-snapshots/before \
+  --after-source build/manifest80-snapshots/after \
+  --build build/manifest80-reproduced --build-only \
+  --output build/manifest80-build-verification.json
+```
+
+`--build-only` compila ambos os conjuntos e compara a fixture rica uma vez,
+sem warmups ou amostras de tempo. A verificação documental W79 executou esse
+caminho e preserva seu resultado em
+[build-verification.json](evidence/manifest-sources/build-verification.json).
+Ela confirmou novamente os 969 bytes e o hash da fixture; as medições
+originais não foram repetidas nem substituídas. No modo de diretórios,
+revisões e árvore Git ficam `null`: a identificação dos snapshots deriva
+dos hashes dos arquivos, sem atribuí-los ao HEAD do checkout.
+
+Para repetir também a medição, execute explicitamente sem `--build-only`:
+
+```sh
+python3 tests/audit80/manifest_bench.py \
+  --before-source build/manifest80-snapshots/before \
+  --after-source build/manifest80-snapshots/after \
+  --build build/manifest80-reproduced \
+  --output build/manifest-benchmark-reproduced.json
+```
+
+O runner mantém `--base REV` como alternativa para um histórico Git local
+disponível e um checkout candidato apropriado. Nos dois modos, exige
+exatamente os três arquivos de produto diferentes da W78; a nova identidade
+gerada do produto integrado não é ignorada para contornar essa verificação.
+Use os snapshots para reproduzir esta medição histórica depois do clone.
+
+Os gates funcionais continuam disponíveis no produto integrado:
 
 ```sh
 make -j2 gate-fast gate-compiler
@@ -109,16 +158,11 @@ make -j2 BUILD=build-manifest-fail CPPFLAGS=-DAXI_ALLOC_FAILPOINT \
   build-manifest-fail/audit80/compiler_manifest
 python3 tests/audit80/manifest_faults.py \
   build-manifest-fail/audit80/compiler_manifest
-python3 tests/audit80/manifest_bench.py \
-  --base 731e63476af8f9b15e316bcfe7d91af7a0e27fea \
-  --output build/manifest-benchmark-reproduced.json
 ```
 
 O teste `compiler_manifest.c` entra no wildcard já existente de
-`gate-compiler`. O benchmark extrai a base via Git local, compila ambos os
-conjuntos de fontes com o mesmo driver e exige que apenas os três arquivos
-de produto da W78 tenham mudado. Para repetir sobre outro histórico de
-integração, informe a revisão imediatamente anterior à aplicação da W78.
+`gate-compiler`. Os números a seguir pertencem à validação local original
+da W78; alterações de integração podem mudar contagens e picos posteriores.
 
 Gates locais realizados: **67/67 goldens**, **370 asserções C** do conjunto de
 quota/compilador, incluindo as 169 novas, e **3.212 asserções CLI**, que incluem
