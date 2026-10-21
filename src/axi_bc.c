@@ -7,6 +7,7 @@
  */
 #include "axi_bc.h"
 #include "axi.h"   /* axi_str_unescape: the one string decoder door */
+#include "axi_string.h"
 #include "axi_alloc.h"
 #include "axi_arena.h"
 #include "axi_builtin.h"
@@ -92,15 +93,26 @@ int axb_mod_builtin_index(const axb_mod *m, const char *name) {
  * Two lifetimes, both live (owner rule):
  *   builder modules (cmd_asm) — malloc'd piecemeal, axb_mod_free;
  *   loaded modules (run/dis)  — arena-backed (W11), freed wholesale.  */
+static int account_free_preserve_failure(axi_mem_account *account, void *ptr);
+
 void axb_mod_free(axb_mod *m) {
+    axi_mem_account *account;
+    if (!m) return;
+    account = m->builder_account;
     for (uint32_t i = 0; i < m->n; i++) {
         axb_cell *c = &m->cells[i];
-        for (uint32_t j = 0; j < c->nk; j++) free(c->k[j].s);
-        free(c->name); free(c->k); free(c->code);
+        for (uint32_t j = 0; j < c->nk; j++)
+            (void)account_free_preserve_failure(account, c->k[j].s);
+        (void)account_free_preserve_failure(account, c->name);
+        (void)account_free_preserve_failure(account, c->k);
+        (void)account_free_preserve_failure(account, c->code);
     }
-    for (uint32_t i = 0; i < m->neff; i++) free(m->eff[i]);
-    for (uint32_t i = 0; i < m->nbuiltin; i++) free(m->builtin[i]);
-    free(m->cells);
+    for (uint32_t i = 0; i < m->neff; i++)
+        (void)account_free_preserve_failure(account, m->eff[i]);
+    for (uint32_t i = 0; i < m->nbuiltin; i++)
+        (void)account_free_preserve_failure(account, m->builtin[i]);
+    (void)account_free_preserve_failure(account, m->cells);
+    memset(m, 0, sizeof *m);
 }
 
 /* ---- deterministic little-endian writer ---------------------------- */
@@ -1389,26 +1401,37 @@ int axb_contract_v7_encode_signed(const axb_contract_mod *m,
                                   const uint8_t seed[32],
                                   uint8_t **out, size_t *out_len)
 {
+    return axb_contract_v7_encode_signed_accounted(m, seed, out, out_len, NULL);
+}
+
+int axb_contract_v7_encode_signed_accounted(const axb_contract_mod *m,
+    const uint8_t seed[32], uint8_t **out, size_t *out_len, axi_mem_account *account)
+{
     uint8_t *body = NULL, *framed = NULL;
     size_t body_len = 0, framed_len;
     axi_sig sig;
     if (!m || !seed || !out || !out_len) return 1;
-    if (axb_contract_v7_encode(m, &body, &body_len) != 0) return 1;
+    if (axb_contract_v7_encode_profile_accounted(m, 1, !m->seal.present, &body, &body_len, account) != 0) return 1;
     if (body_len > AXB_CONTRACT_MAX_BYTES
             || body_len > (size_t)-1 - AXBS_TRAILER) goto bad;
     framed_len = body_len + AXBS_TRAILER;
-    if (axi_sig_make(body, body_len, seed, &sig) != 0) goto bad;
-    framed = axi_malloc(framed_len);
+    if (account && !axi_mem_reserve(account, AXI_ED25519_MESSAGE_SCRATCH_BYTES)) goto bad;
+    {
+        int signed_rc = axi_sig_make(body, body_len, seed, &sig);
+        if (!account_release_preserve_failure(account, AXI_ED25519_MESSAGE_SCRATCH_BYTES)
+                || signed_rc != 0) goto bad;
+    }
+    framed = account ? axi_mem_alloc(account, framed_len) : axi_malloc(framed_len);
     if (!framed) goto bad;
     memcpy(framed, body, body_len);
     axi_sig_write(&sig, framed + body_len);
-    free(body);
+    (void)account_free_preserve_failure(account, body);
     *out = framed;
     *out_len = framed_len;
     return 0;
 bad:
-    free(framed);
-    free(body);
+    (void)account_free_preserve_failure(account, framed);
+    (void)account_free_preserve_failure(account, body);
     return 1;
 }
 
@@ -1593,7 +1616,33 @@ typedef struct {
     int         errs;
     char      **cellnames;   /* prescan: forward refs in `call @name` */
     uint32_t    ncells;
+    axi_mem_account *account;
 } asm_st;
+
+static void *asm_realloc(asm_st *a, void *p, size_t size)
+{ return a->account ? axi_mem_realloc(a->account, p, size) : axi_realloc(p, size); }
+static void *asm_malloc(asm_st *a, size_t size)
+{ return a->account ? axi_mem_alloc(a->account, size) : axi_malloc(size); }
+static char *asm_strdup(asm_st *a, const char *s)
+{
+    size_t n = strlen(s) + 1;
+    char *p = asm_malloc(a, n);
+    if (p) memcpy(p, s, n);
+    return p;
+}
+static char *asm_unescape(asm_st *a, const char *s, size_t len, uint32_t *outlen)
+{
+    char *p;
+    uint32_t n;
+    if (axi_str_decoded_length(s, len, &n) != 0) return NULL;
+    p = asm_malloc(a, (size_t)n + 1);
+    if (!p) return NULL;
+    if (axi_str_decode_into(s, len, p, (size_t)n + 1, &n) != 0) {
+        (void)account_free_preserve_failure(a->account, p); return NULL;
+    }
+    *outlen = n;
+    return p;
+}
 
 static void aerr(asm_st *a, const char *code, const char *msg, const char *fix);
 
@@ -1616,7 +1665,7 @@ static void prescan_cells(asm_st *a) {
             e = b;
             while (e < a->len && a->src[e] != ' ' && a->src[e] != '\t'
                     && a->src[e] != '\n') e++;
-            char **names = axi_realloc(
+            char **names = asm_realloc(a,
                 a->cellnames, (a->ncells + 1) * sizeof(char *));
             char *nm;
             if (!names) {
@@ -1625,7 +1674,7 @@ static void prescan_cells(asm_st *a) {
                 return;
             }
             a->cellnames = names;
-            nm = axi_malloc(e - b + 1);
+            nm = asm_malloc(a, e - b + 1);
             if (!nm) {
                 fprintf(AXI_ERR, "AXI-D999 %s: out of memory\n", a->path);
                 a->errs++;
@@ -1717,7 +1766,7 @@ static void *asm_array_grow(asm_st *a, void *array, size_t *capacity,
         if (grown > max / 2) { grown = count; break; }
         grown *= 2;
     }
-    storage = axi_realloc(array, grown * element);
+    storage = asm_realloc(a, array, grown * element);
     if (!storage) {
         aerr(a, "AXI-D999", "out of memory", "retry with enough host memory");
         return NULL;
@@ -1859,7 +1908,7 @@ static int asm_module(asm_st *a, axb_mod *m) {
             if (argc != 2) { aerr(a, "AXI-B018", "malformed effect declaration", "spell it: .eff <Name.Verb>"); continue; }
             if (m->neff >= AXB_MAX_EFF) { aerr(a, "AXI-B020", "too many declared effects", "authority a reviewer cannot read is not authority"); continue; }
             if (axb_mod_eff_index(m, argv[1]) >= 0) { aerr(a, "AXI-B018", "effect declared twice", "one line per authority"); continue; }
-            m->eff[m->neff] = axi_strdup(argv[1]);
+            m->eff[m->neff] = asm_strdup(a, argv[1]);
             if (!m->eff[m->neff]) {
                 aerr(a, "AXI-D999", "out of memory", "retry with enough host memory");
                 return 1;
@@ -1877,7 +1926,7 @@ static int asm_module(asm_st *a, axb_mod *m) {
             if (argc != 2) { aerr(a, "AXI-B018", "malformed builtin declaration", "spell it: .builtin <Name>"); continue; }
             if (m->nbuiltin >= AXB_MAX_BUILTIN) { aerr(a, "AXI-B020", "too many declared builtins", "a reviewer cannot read an endless list"); continue; }
             if (axb_mod_builtin_index(m, argv[1]) >= 0) { aerr(a, "AXI-B018", "builtin declared twice", "one line per builtin"); continue; }
-            m->builtin[m->nbuiltin] = axi_strdup(argv[1]);
+            m->builtin[m->nbuiltin] = asm_strdup(a, argv[1]);
             if (!m->builtin[m->nbuiltin]) {
                 aerr(a, "AXI-D999", "out of memory", "retry with enough host memory");
                 return 1;
@@ -1893,7 +1942,7 @@ static int asm_module(asm_st *a, axb_mod *m) {
             uint64_t nr;
             if (!parse_uint(a, argv[2] + 6, 10, AXB_MAX_REGS,
                             "AXI-B005", &nr)) continue;
-            axb_cell *cells = axi_realloc(
+            axb_cell *cells = asm_realloc(a,
                 m->cells, (m->n + 1) * sizeof(axb_cell));
             if (!cells) {
                 aerr(a, "AXI-D999", "out of memory", "retry with enough host memory");
@@ -1903,7 +1952,7 @@ static int asm_module(asm_st *a, axb_mod *m) {
             c = &m->cells[m->n++];
             memset(c, 0, sizeof *c);
             konst_capacity = code_capacity = 0;
-            c->name = axi_strdup(argv[1]);
+            c->name = asm_strdup(a, argv[1]);
             if (!c->name) {
                 aerr(a, "AXI-D999", "out of memory", "retry with enough host memory");
                 return 1;
@@ -1955,7 +2004,7 @@ static int asm_module(asm_st *a, axb_mod *m) {
                 }
                 /* INV-323 / AXI-INV-105: one decoder, one meaning — the
                  * assembler uses the same door as the codegen. */
-                char *buf = axi_str_unescape(s, sl, &k->slen);
+                char *buf = asm_unescape(a, s, sl, &k->slen);
                 if (!buf) {
                     aerr(a, "AXI-D999", "out of memory or malformed string",
                          "kN str \"bytes\" with the source string grammar");
@@ -2087,20 +2136,20 @@ static void ts_ch(text_sink *s, int ch)
     if (!s->failed) { s->p[s->len++] = (char)ch; s->p[s->len] = '\0'; }
 }
 
-/* INV-386 / AXI-INV-125: bounded contract AXS has no spelling for controls;
- * both string tags use declared length without changing legacy v5 output. */
+/* Text-string contract v1: both tags preserve declared byte lengths and
+ * spell supported controls with the same escapes consumed by the lexer. */
 static void ts_quoted(text_sink *s, const char *p, uint32_t len)
 {
     uint32_t i;
     ts_ch(s, '"');
     for (i = 0; i < len && !s->failed; i++) {
         unsigned char ch = (unsigned char)p[i];
-        if (s->strict_strings && (ch < 0x20 || ch == 0x7f)) {
-            s->failed = 1;
-            break;
-        }
-        if (ch == '"' || ch == '\\') ts_ch(s, '\\');
-        ts_ch(s, ch);
+        char escaped[2];
+        int count = axi_string_escape_byte(ch, escaped);
+        if (!count) {
+            if (s->strict_strings) { s->failed = 1; break; }
+            ts_ch(s, ch);
+        } else for (int j = 0; j < count; j++) ts_ch(s, escaped[j]);
     }
     ts_ch(s, '"');
 }
@@ -2128,13 +2177,9 @@ static void render_module(const axb_mod *m, text_sink *out) {
                 break;
             }
             case AXB_KERR:
-                if (out->strict_strings) {
-                    ts_printf(out, "  k%u err ", j);
-                    ts_quoted(out, k->s, k->slen);
-                    ts_ch(out, '\n');
-                } else {
-                    ts_printf(out, "  k%u err \"%s\"\n", j, k->s);
-                }
+                ts_printf(out, "  k%u err ", j);
+                ts_quoted(out, k->s, k->slen);
+                ts_ch(out, '\n');
                 break;
             }
         }
@@ -2257,18 +2302,30 @@ static int src_bind_hash(const char *src, size_t n, const char *path,
 
 /* W12: the one door from .axs text to a module. The seal runner and
  * cmd_asm both enter here — a second assembler would be a second truth. */
-int axb_asm_text(const char *src, size_t n, const char *path, axb_mod *m) {
+int axb_asm_text(const char *src, size_t n, const char *path, axb_mod *m)
+{
+    return axb_asm_text_accounted(src, n, path, m, NULL);
+}
+
+int axb_asm_text_accounted(const char *src, size_t n, const char *path,
+                            axb_mod *m, axi_mem_account *account)
+{
     asm_st a = { .path = path ? path : "<assembly>",
-                 .src = src ? src : "", .len = n };
+                 .src = src ? src : "", .len = n, .account = account };
     int rc;
-    if (!m || (!src && n)) return 1;
-    /* W14: bind the module to the exact text it derives from — computed
-     * here, at the one door, so seal and asm can never disagree on it. */
-    if (src_bind_hash(a.src, n, a.path, m->src_hash) != 0) return 1;
+    if (!m || (!src && n) || m->cells || m->n || m->neff || m->nbuiltin) return 1;
+    if (account && !axi_mem_reserve(account, sizeof a + 512)) return 1;
+    m->builder_account = account;
+    if (src_bind_hash(a.src, n, a.path, m->src_hash) != 0) {
+        (void)account_release_preserve_failure(account, sizeof a + 512);
+        return 1;
+    }
     prescan_cells(&a);
     rc = a.errs ? 1 : asm_module(&a, m);
-    for (uint32_t i = 0; i < a.ncells; i++) free(a.cellnames[i]);
-    free(a.cellnames);
+    for (uint32_t i = 0; i < a.ncells; i++)
+        (void)account_free_preserve_failure(account, a.cellnames[i]);
+    (void)account_free_preserve_failure(account, a.cellnames);
+    (void)account_release_preserve_failure(account, sizeof a + 512);
     return rc;
 }
 
@@ -2529,13 +2586,19 @@ int axb_mod_write(const axb_mod *m, const char *out_path) {
 int axb_contract_v7_write_signed(const axb_contract_mod *m,
                                  const uint8_t seed[32], const char *out_path)
 {
+    return axb_contract_v7_write_signed_accounted(m, seed, out_path, NULL);
+}
+
+int axb_contract_v7_write_signed_accounted(const axb_contract_mod *m,
+    const uint8_t seed[32], const char *out_path, axi_mem_account *account)
+{
     uint8_t *bytes = NULL;
     size_t len = 0;
     int rc;
     if (!m || !seed || !out_path || !*out_path) return 1;
-    if (axb_contract_v7_encode_signed(m, seed, &bytes, &len) != 0) return 1;
-    rc = axb_atomic_publish_bytes(bytes, len, out_path);
-    free(bytes);
+    if (axb_contract_v7_encode_signed_accounted(m, seed, &bytes, &len, account) != 0) return 1;
+    rc = axb_atomic_publish_bytes_accounted(bytes, len, out_path, account);
+    (void)account_free_preserve_failure(account, bytes);
     return rc;
 }
 

@@ -1,0 +1,183 @@
+{
+  "schema": "axial.audit80.context.v1",
+  "measured_at_utc": "2026-10-19T19:48:32.495603+00:00",
+  "revision": "464aef87eb185d63a96402826e284520644dc2b4",
+  "compiler": "cc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0",
+  "flags": [
+    "-std=c99",
+    "-O1",
+    "-g",
+    "-Wall",
+    "-Wextra",
+    "-Werror",
+    "-D_POSIX_C_SOURCE=200809L"
+  ],
+  "cpu_affinity": 0,
+  "limits": [
+    "Synthetic modules, no production traffic supplied.",
+    "Pinned CPU is shared; frequency and other tenants uncontrolled.",
+    "Each context is new; process/crypto/OS caches are warmed. Parsing/signing fixture setup excluded.",
+    "Timing binary has no allocation wrappers; lifecycle allocation counts are a separate lane."
+  ],
+  "results": [
+    {
+      "cells": 13,
+      "laws": 0,
+      "samples": [
+        {
+          "case": "context",
+          "cells": 13,
+          "laws": 0,
+          "iterations": 20,
+          "module_bytes": 2269,
+          "create_ns": 58722746,
+          "destroy_ns": 4136
+        },
+        {
+          "case": "context",
+          "cells": 13,
+          "laws": 0,
+          "iterations": 20,
+          "module_bytes": 2269,
+          "create_ns": 58759199,
+          "destroy_ns": 3862
+        },
+        {
+          "case": "context",
+          "cells": 13,
+          "laws": 0,
+          "iterations": 20,
+          "module_bytes": 2269,
+          "create_ns": 56841072,
+          "destroy_ns": 3856
+        },
+        {
+          "case": "context",
+          "cells": 13,
+          "laws": 0,
+          "iterations": 20,
+          "module_bytes": 2269,
+          "create_ns": 57037913,
+          "destroy_ns": 3323
+        },
+        {
+          "case": "context",
+          "cells": 13,
+          "laws": 0,
+          "iterations": 20,
+          "module_bytes": 2269,
+          "create_ns": 59883165,
+          "destroy_ns": 4400
+        }
+      ],
+      "median_create_ns_per_context": 2936137.3,
+      "median_destroy_ns_per_context": 193.1
+    },
+    {
+      "cells": 64,
+      "laws": 16,
+      "samples": [
+        {
+          "case": "context",
+          "cells": 64,
+          "laws": 16,
+          "iterations": 20,
+          "module_bytes": 11644,
+          "create_ns": 72461905,
+          "destroy_ns": 187728
+        },
+        {
+          "case": "context",
+          "cells": 64,
+          "laws": 16,
+          "iterations": 20,
+          "module_bytes": 11644,
+          "create_ns": 70519747,
+          "destroy_ns": 19961
+        },
+        {
+          "case": "context",
+          "cells": 64,
+          "laws": 16,
+          "iterations": 20,
+          "module_bytes": 11644,
+          "create_ns": 69053299,
+          "destroy_ns": 21454
+        },
+        {
+          "case": "context",
+          "cells": 64,
+          "laws": 16,
+          "iterations": 20,
+          "module_bytes": 11644,
+          "create_ns": 70037184,
+          "destroy_ns": 22764
+        },
+        {
+          "case": "context",
+          "cells": 64,
+          "laws": 16,
+          "iterations": 20,
+          "module_bytes": 11644,
+          "create_ns": 86454902,
+          "destroy_ns": 24766
+        }
+      ],
+      "median_create_ns_per_context": 3525987.35,
+      "median_destroy_ns_per_context": 1138.2
+    },
+    {
+      "cells": 256,
+      "laws": 64,
+      "samples": [
+        {
+          "case": "context",
+          "cells": 256,
+          "laws": 64,
+          "iterations": 20,
+          "module_bytes": 45196,
+          "create_ns": 121729268,
+          "destroy_ns": 40699
+        },
+        {
+          "case": "context",
+          "cells": 256,
+          "laws": 64,
+          "iterations": 20,
+          "module_bytes": 45196,
+          "create_ns": 125130360,
+          "destroy_ns": 30296
+        },
+        {
+          "case": "context",
+          "cells": 256,
+          "laws": 64,
+          "iterations": 20,
+          "module_bytes": 45196,
+          "create_ns": 130154737,
+          "destroy_ns": 34042
+        },
+        {
+          "case": "context",
+          "cells": 256,
+          "laws": 64,
+          "iterations": 20,
+          "module_bytes": 45196,
+          "create_ns": 114546231,
+          "destroy_ns": 35262
+        },
+        {
+          "case": "context",
+          "cells": 256,
+          "laws": 64,
+          "iterations": 20,
+          "module_bytes": 45196,
+          "create_ns": 119388395,
+          "destroy_ns": 37585
+        }
+      ],
+      "median_create_ns_per_context": 6086463.4,
+      "median_destroy_ns_per_context": 1763.1
+    }
+  ]
+}

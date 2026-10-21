@@ -41,6 +41,12 @@ typedef struct axi_mem_account {
     axi_mem_host_allocator host;
     struct axi_mem_allocation_header *active;
     size_t active_count;
+    /* Optional parent reservation hooks. Configure only on a fresh account;
+     * they must not re-enter it. Heap storage is forwarded by host callbacks.
+     * NULL preserves the standalone v1 accounting behavior. */
+    void *reservation_context;
+    int (*reserve_external)(void *context, size_t size);
+    int (*release_external)(void *context, size_t size);
 } axi_mem_account;
 
 /* Host callbacks must have malloc/realloc/free semantics, return storage aligned

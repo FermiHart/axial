@@ -3,8 +3,12 @@
 set -eu
 cd "$(dirname "$0")/../.."
 AXI=${1:-build/axi}
-HOSTCC=${HOSTCC:-cc}
-CFLAGS=${CFLAGS:--std=c99 -O1 -Wall -Wextra -Werror}
+HOSTCC=${HOSTCC:-${CC:-cc}}
+CPPFLAGS=${CPPFLAGS-}
+CFLAGS=${CFLAGS--std=c99 -O1 -Wall -Wextra -Werror}
+LDFLAGS=${LDFLAGS-}
+LDLIBS=${LDLIBS--lm}
+PYTHON=${PYTHON:-python3}
 TEST_BUILD=${AXI_TEST_BUILD:-build/audit40-frontend}
 mkdir -p "$TEST_BUILD"
 SAN_FLAGS=
@@ -13,24 +17,27 @@ if [ "${SANITIZE:-0}" = 1 ]; then
 fi
 
 # Intentional flag splitting; no eval and no shell execution from source data.
-"$HOSTCC" $CFLAGS $SAN_FLAGS -Isrc -Iinclude -Ivendor \
-    tests/audit40/frontend_diag.c src/axi_lex.c src/axi_diag.c src/axi_alloc.c \
-    -o "$TEST_BUILD/diag"
+$HOSTCC $CPPFLAGS $CFLAGS $SAN_FLAGS -Isrc -Iinclude -Ivendor \
+    tests/audit40/frontend_diag.c src/axi_lex.c src/axi_numeric.c src/axi_diag.c src/axi_alloc.c \
+    src/axi_compile_budget.c src/axi_mem_account.c \
+    $LDFLAGS -o "$TEST_BUILD/diag" $LDLIBS
 "$TEST_BUILD/diag"
-"$HOSTCC" $CFLAGS $SAN_FLAGS -Isrc \
-    tests/audit40/frontend_json.c src/axi_json.c -o "$TEST_BUILD/json"
+$HOSTCC $CPPFLAGS $CFLAGS $SAN_FLAGS -Isrc \
+    tests/audit40/frontend_json.c src/axi_json.c $LDFLAGS -o "$TEST_BUILD/json" $LDLIBS
 "$TEST_BUILD/json"
-"$HOSTCC" $CFLAGS $SAN_FLAGS -DAXI_ALLOC_FAILPOINT -DAXI_TEST_ALLOCATION_TRACKING \
+$HOSTCC $CPPFLAGS $CFLAGS $SAN_FLAGS -DAXI_ALLOC_FAILPOINT -DAXI_TEST_ALLOCATION_TRACKING \
     -ffunction-sections -fdata-sections -Isrc -Iinclude -Ivendor \
-    tests/audit40/frontend_parser.c src/axi_parse.c src/axi_lex.c src/axi_diag.c \
-    src/axi_alloc.c src/axi_cap_table.c -Wl,--gc-sections \
-    -Wl,--wrap=calloc -Wl,--wrap=free -o "$TEST_BUILD/parser"
-python3 tests/audit40/frontend_parser.py "$TEST_BUILD/parser"
-"$HOSTCC" $CFLAGS $SAN_FLAGS -fshort-enums \
+    tests/audit40/frontend_parser.c src/axi_parse.c src/axi_lex.c src/axi_numeric.c src/axi_diag.c \
+    src/axi_alloc.c src/axi_compile_budget.c src/axi_mem_account.c \
+    src/axi_cap_table.c -Wl,--gc-sections \
+    -Wl,--wrap=calloc -Wl,--wrap=free $LDFLAGS -o "$TEST_BUILD/parser" $LDLIBS
+$PYTHON tests/audit40/frontend_parser.py "$TEST_BUILD/parser"
+$HOSTCC $CPPFLAGS $CFLAGS $SAN_FLAGS -fshort-enums \
     -DAXI_ALLOC_FAILPOINT -DAXI_TEST_ALLOCATION_TRACKING \
     -ffunction-sections -fdata-sections -Isrc -Iinclude -Ivendor \
-    tests/audit40/frontend_parser.c src/axi_parse.c src/axi_lex.c src/axi_diag.c \
-    src/axi_alloc.c src/axi_cap_table.c -Wl,--gc-sections \
-    -Wl,--wrap=calloc -Wl,--wrap=free -o "$TEST_BUILD/parser-short-enums"
-python3 tests/audit40/frontend_parser.py "$TEST_BUILD/parser-short-enums"
-python3 tests/audit40/frontend_codegen.py "$AXI" all
+    tests/audit40/frontend_parser.c src/axi_parse.c src/axi_lex.c src/axi_numeric.c src/axi_diag.c \
+    src/axi_alloc.c src/axi_compile_budget.c src/axi_mem_account.c \
+    src/axi_cap_table.c -Wl,--gc-sections \
+    -Wl,--wrap=calloc -Wl,--wrap=free $LDFLAGS -o "$TEST_BUILD/parser-short-enums" $LDLIBS
+$PYTHON tests/audit40/frontend_parser.py "$TEST_BUILD/parser-short-enums"
+$PYTHON tests/audit40/frontend_codegen.py "$AXI" all

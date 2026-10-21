@@ -24,16 +24,16 @@ typedef struct {
     size_t n, cap;
     int failed;
     axi_mem_account *account;
+    axi_compile_budget *budget;
 } sb;
 
-static int iface_free_owned(axi_mem_account *account, void *ptr)
+static int iface_free_owned(axi_mem_account *account, axi_compile_budget *budget, void *ptr)
 {
     axi_mem_failure_cause failure;
     size_t failed_request;
     int freed;
     if (!account) {
-        free(ptr);
-        return 1;
+        return axi_compile_free(budget, ptr);
     }
     failure = account->failure;
     failed_request = account->failed_request;
@@ -68,7 +68,7 @@ static void sb_grow(sb *b, size_t need)
         cap *= 2;
     }
     p = b->account ? (char *)axi_mem_realloc(b->account, b->p, cap)
-                   : (char *)axi_realloc(b->p, cap);
+                   : (char *)axi_compile_realloc(b->budget, b->p, cap);
     if (!p) { b->failed = 1; return; }
     b->p = p;
     b->cap = cap;
@@ -148,34 +148,36 @@ typedef struct {
     char       hash[65];
     uint8_t    hash_bytes[32];
     axi_mem_account *account;
+    axi_compile_budget *budget;
 } ifc_cell;
 
 typedef struct {
     ifc_cell *cells;
     size_t    n;
+    axi_compile_budget *budget;
 } ifc;
 
-static void free_strv(axi_mem_account *account, char **v, size_t n)
+static void free_strv(axi_mem_account *account, axi_compile_budget *budget, char **v, size_t n)
 {
     size_t i;
-    for (i = 0; i < n; i++) (void)iface_free_owned(account, v[i]);
-    (void)iface_free_owned(account, v);
+    for (i = 0; i < n; i++) (void)iface_free_owned(account, budget, v[i]);
+    (void)iface_free_owned(account, budget, v);
 }
 
 static void ifc_cell_free(ifc_cell *c)
 {
     size_t j;
     if (!c) return;
-    (void)iface_free_owned(c->account, c->name);
+    (void)iface_free_owned(c->account, c->budget, c->name);
     for (j = 0; j < c->nparams; j++) {
-        (void)iface_free_owned(c->account, c->params[j].name);
-        (void)iface_free_owned(c->account, c->params[j].type);
+        (void)iface_free_owned(c->account, c->budget, c->params[j].name);
+        (void)iface_free_owned(c->account, c->budget, c->params[j].type);
     }
-    (void)iface_free_owned(c->account, c->params);
-    free_strv(c->account, c->rets, c->nrets);
-    free_strv(c->account, c->errs, c->nerrs);
-    free_strv(c->account, c->caps, c->ncaps);
-    free_strv(c->account, c->laws, c->nlaws);
+    (void)iface_free_owned(c->account, c->budget, c->params);
+    free_strv(c->account, c->budget, c->rets, c->nrets);
+    free_strv(c->account, c->budget, c->errs, c->nerrs);
+    free_strv(c->account, c->budget, c->caps, c->ncaps);
+    free_strv(c->account, c->budget, c->laws, c->nlaws);
     memset(c, 0, sizeof *c);
 }
 
@@ -186,7 +188,7 @@ static void ifc_free(ifc *f)
     size_t i;
     if (!f) return;
     for (i = 0; i < f->n; i++) ifc_cell_free(&f->cells[i]);
-    free(f->cells);
+    (void)axi_compile_free(f->budget, f->cells);
     f->cells = NULL;
     f->n = 0;
 }
@@ -207,15 +209,21 @@ static char *dupn_accounted(const char *s, size_t n,
     return d;
 }
 
-static char *dupn(const char *s, size_t n)
+static char *dupn(const char *s, size_t n, axi_compile_budget *budget)
 {
-    return dupn_accounted(s, n, NULL);
+    char *p;
+    if (n == (size_t)-1) {
+        axi_compile_fail(budget, AXI_COMPILE_OVERFLOW, n); return NULL;
+    }
+    p = axi_compile_malloc(budget, n + 1);
+    if (p) { memcpy(p, s, n); p[n] = '\0'; }
+    return p;
 }
 
-static char *lex_of(const axi_node *n)
+static char *lex_of(const axi_node *n, axi_compile_budget *budget)
 {
-    if (!n || !n->lex) return dupn("?", 1);
-    return dupn(n->lex, n->lexlen);
+    if (!n || !n->lex) return dupn("?", 1, budget);
+    return dupn(n->lex, n->lexlen, budget);
 }
 
 static int cmp_str(const void *a, const void *b)
@@ -235,38 +243,47 @@ static int push_str_accounted(char ***v, size_t *n, char *s,
     if (!s) return 0;
     if (*n == (size_t)-1 || *n + 1 > (size_t)-1 / sizeof **v) {
         if (account) (void)axi_mem_realloc(account, *v, (size_t)-1);
-        (void)iface_free_owned(account, s);
+        (void)iface_free_owned(account, NULL, s);
         return 0;
     }
     nv = account
         ? (char **)axi_mem_realloc(account, *v, (*n + 1) * sizeof **v)
         : (char **)axi_realloc(*v, (*n + 1) * sizeof **v);
-    if (!nv) { (void)iface_free_owned(account, s); return 0; }
+    if (!nv) { (void)iface_free_owned(account, NULL, s); return 0; }
     *v = nv;
     (*v)[(*n)++] = s;
     return 1;
 }
 
-static int push_str(char ***v, size_t *n, char *s)
+static int push_str(char ***v, size_t *n, char *s, axi_compile_budget *budget)
 {
-    return push_str_accounted(v, n, s, NULL);
+    char **nv;
+    if (!s) return 0;
+    if (*n >= (size_t)-1 / sizeof **v) {
+        axi_compile_fail(budget, AXI_COMPILE_OVERFLOW, *n);
+        (void)axi_compile_free(budget, s); return 0;
+    }
+    nv = axi_compile_realloc(budget, *v, (*n + 1) * sizeof **v);
+    if (!nv) { (void)axi_compile_free(budget, s); return 0; }
+    *v = nv; (*v)[(*n)++] = s;
+    return 1;
 }
 
-static int push_unique_str(char ***v, size_t *n, char *s)
+static int push_unique_str(char ***v, size_t *n, char *s, axi_compile_budget *budget)
 {
     size_t i;
     if (!s) return 0;
     for (i = 0; i < *n; i++)
-        if (strcmp((*v)[i], s) == 0) { free(s); return 1; }
-    return push_str(v, n, s);
+        if (strcmp((*v)[i], s) == 0) { (void)axi_compile_free(budget, s); return 1; }
+    return push_str(v, n, s, budget);
 }
 
-static char *type_text(const axi_node *t)
+static char *type_text(const axi_node *t, axi_compile_budget *budget)
 {
     char *s;
-    if (!t || !t->lex) return dupn("?", 1);
-    if (t->ival != 1) return dupn(t->lex, t->lexlen);
-    s = axi_malloc((size_t)t->lexlen + 5);
+    if (!t || !t->lex) return dupn("?", 1, budget);
+    if (t->ival != 1) return dupn(t->lex, t->lexlen, budget);
+    s = axi_compile_malloc(budget, (size_t)t->lexlen + 5);
     if (!s) return NULL;
     memcpy(s, "cap ", 4);
     memcpy(s + 4, t->lex, t->lexlen);
@@ -308,38 +325,40 @@ static int project_cell(const axi_node *cell, ifc_cell *o)
     sb cb = {0};
 
     memset(o, 0, sizeof *o);
-    o->name = lex_of(cell);
+    o->budget = cell->budget;
+    cb.budget = cell->budget;
+    o->name = lex_of(cell, o->budget);
     if (!o->name) return 1;
     o->policy = cell->kind == N_POLICY;
 
     if (sig) {
         for (k = sig->list; k; k = k->next) {
-            char *ty = type_text(k->a);
-            ifc_param *params = (ifc_param *)axi_realloc(
+            char *ty = type_text(k->a, o->budget);
+            ifc_param *params = (ifc_param *)axi_compile_realloc(o->budget,
                 o->params, (o->nparams + 1) * sizeof *o->params);
-            if (!params) { free(ty); goto bad; }
+            if (!params) { (void)axi_compile_free(o->budget, ty); goto bad; }
             o->params = params;
             memset(&o->params[o->nparams], 0, sizeof *o->params);
-            o->params[o->nparams].name = lex_of(k);
+            o->params[o->nparams].name = lex_of(k, o->budget);
             o->params[o->nparams].type = ty;
             o->nparams++;
             if (!o->params[o->nparams - 1].name || !ty) goto bad;
             /* G4: caps live in signatures only — the cap SET is therefore
              * fully known here, without looking at one line of body. */
             if (k->a && k->a->ival == 1
-                    && !push_unique_str(&o->caps, &o->ncaps, lex_of(k->a))) goto bad;
+                    && !push_unique_str(&o->caps, &o->ncaps, lex_of(k->a, o->budget), o->budget)) goto bad;
         }
         if (sig->b) {
             for (k = sig->b->list; k; k = k->next) {
                 switch (k->kind) {
                 case N_OKT:
-                    if (!push_str(&o->rets, &o->nrets, dupn("ok", 2))) goto bad;
+                    if (!push_str(&o->rets, &o->nrets, dupn("ok", 2, o->budget), o->budget)) goto bad;
                     break;
                 case N_ERRT:
-                    if (!push_str(&o->errs, &o->nerrs, lex_of(k))) goto bad;
+                    if (!push_str(&o->errs, &o->nerrs, lex_of(k, o->budget), o->budget)) goto bad;
                     break;
                 default:
-                    if (!push_str(&o->rets, &o->nrets, type_text(k))) goto bad;
+                    if (!push_str(&o->rets, &o->nrets, type_text(k, o->budget), o->budget)) goto bad;
                     break;
                 }
             }
@@ -360,7 +379,7 @@ static int project_cell(const axi_node *cell, ifc_cell *o)
         if (!present)
             if (!push_str(&o->caps, &o->ncaps,
                           dupn(axi_cap_name((axi_cap_kind)kind),
-                               strlen(axi_cap_name((axi_cap_kind)kind)))))
+                               strlen(axi_cap_name((axi_cap_kind)kind)), o->budget), o->budget))
                 goto bad;
     }
 
@@ -369,7 +388,7 @@ static int project_cell(const axi_node *cell, ifc_cell *o)
     if (cell->c) {
         for (m = cell->c->list; m; m = m->next)
             if (m->a && !push_str(&o->laws, &o->nlaws,
-                                   axi_canon_expr_str_fallible(m->a))) goto bad;
+                                   axi_canon_expr_str_fallible(m->a), o->budget)) goto bad;
     }
 
     if (o->nrets > 1) qsort(o->rets, o->nrets, sizeof *o->rets, cmp_str);
@@ -382,10 +401,10 @@ static int project_cell(const axi_node *cell, ifc_cell *o)
     if (cb.failed) goto bad;
     axi_sha256(cb.p, cb.n, o->hash_bytes);
     axi_hash_hex(o->hash_bytes, o->hash);
-    free(cb.p);
+    (void)axi_compile_free(cb.budget, cb.p);
     return 0;
 bad:
-    free(cb.p);
+    (void)axi_compile_free(cb.budget, cb.p);
     return 1;
 }
 
@@ -395,9 +414,11 @@ static int project(const axi_node *unit, ifc *out)
     size_t i = 0, n = 0;
 
     memset(out, 0, sizeof *out);
+    if (!unit) return 1;
+    out->budget = unit->budget;
     for (c = unit->list; c; c = c->next)
         if (c->kind == N_CELL || c->kind == N_POLICY) n++;
-    out->cells = n ? (ifc_cell *)axi_calloc(n, sizeof *out->cells) : NULL;
+    out->cells = n ? (ifc_cell *)axi_compile_calloc(out->budget, n, sizeof *out->cells) : NULL;
     if (n && !out->cells) return 1;
     out->n = n;
     for (c = unit->list; c; c = c->next)
@@ -417,6 +438,7 @@ char *axi_iface_render(const axi_node *unit)
     size_t i;
     char uh[65];
 
+    b.budget = unit ? unit->budget : NULL;
     if (project(unit, &f) != 0) goto oom;
     sb_grow(&b, 1);
     sb_str(&b, "axi-iface 1\n");
@@ -433,7 +455,7 @@ char *axi_iface_render(const axi_node *unit)
 oom:
     fprintf(AXI_ERR, "AXI-D999 iface: out of memory\n");
     ifc_free(&f);
-    free(b.p);
+    (void)iface_free_owned(b.account, b.budget, b.p);
     return NULL;
 }
 
@@ -441,9 +463,11 @@ char *axi_iface_json(const axi_node *unit)
 {
     ifc f;
     sb b = {0}, body = {0};
+    body.budget = unit ? unit->budget : NULL;
     size_t i, j;
     char uh[65];
 
+    b.budget = unit ? unit->budget : NULL;
     if (project(unit, &f) != 0) goto oom;
     /* the hash in JSON is the hash of the TEXT projection: one contract,
      * one identity, regardless of which face you asked for */
@@ -452,7 +476,7 @@ char *axi_iface_json(const axi_node *unit)
     for (i = 0; i < f.n; i++) render_cell_block(&body, &f.cells[i]);
     if (body.failed) goto oom;
     hash_text(body.p, uh);
-    free(body.p);
+    (void)iface_free_owned(body.account, body.budget, body.p);
     body.p = NULL;
 
     sb_grow(&b, 1);
@@ -493,8 +517,8 @@ char *axi_iface_json(const axi_node *unit)
 oom:
     fprintf(AXI_ERR, "AXI-D999 iface: out of memory\n");
     ifc_free(&f);
-    free(body.p);
-    free(b.p);
+    (void)iface_free_owned(body.account, body.budget, body.p);
+    (void)iface_free_owned(b.account, b.budget, b.p);
     return NULL;
 }
 
@@ -514,16 +538,18 @@ typedef struct {
 typedef struct {
     chg   *v;
     size_t n;
+    axi_compile_budget *budget;
+    int failed;
 } chgs;
 
 static void chgs_free(chgs *cs)
 {
     size_t i;
     for (i = 0; i < cs->n; i++) {
-        free(cs->v[i].cell);
-        free(cs->v[i].what);
+        (void)axi_compile_free(cs->budget, cs->v[i].cell);
+        (void)axi_compile_free(cs->budget, cs->v[i].what);
     }
-    free(cs->v);
+    (void)axi_compile_free(cs->budget, cs->v);
     cs->v = NULL;
     cs->n = 0;
 }
@@ -533,12 +559,19 @@ static void chgs_free(chgs *cs)
  * tools grow a format-string bug). */
 static void chg_add(chgs *cs, int breaking, const char *cell, const char *what)
 {
-    chg *v = (chg *)axi_realloc(cs->v, (cs->n + 1) * sizeof *cs->v);
-    if (!v) { fprintf(AXI_ERR, "AXI-D999 iface: out of memory\n"); exit(2); }
+    chg *v;
+    if (cs->failed) return;
+    if (cs->n >= (size_t)-1 / sizeof *cs->v) {
+        axi_compile_fail(cs->budget, AXI_COMPILE_OVERFLOW, cs->n);
+        cs->failed = 1; return;
+    }
+    v = axi_compile_realloc(cs->budget, cs->v, (cs->n + 1) * sizeof *cs->v);
+    if (!v) { cs->failed = 1; return; }
     cs->v = v;
     cs->v[cs->n].breaking = breaking;
-    cs->v[cs->n].cell = dupn(cell, strlen(cell));
-    cs->v[cs->n].what = dupn(what, strlen(what));
+    cs->v[cs->n].cell = dupn(cell, strlen(cell), cs->budget);
+    cs->v[cs->n].what = dupn(what, strlen(what), cs->budget);
+    if (!cs->v[cs->n].cell || !cs->v[cs->n].what) cs->failed = 1;
     cs->n++;
 }
 
@@ -558,12 +591,20 @@ static const ifc_cell *find_cell(const ifc *f, const char *name)
 
 static const ifc_cell *find_cell_n(const ifc *f, const char *name, size_t len)
 {
-    size_t i;
+    size_t lo = 0, hi = f->n;
     if (!name) return NULL;
-    for (i = 0; i < f->n; i++)
-        if (strlen(f->cells[i].name) == len
-                && memcmp(f->cells[i].name, name, len) == 0)
-            return &f->cells[i];
+    /* project() sorts cell names. A length-delimited query need not have a
+     * trailing NUL; compare its common prefix before comparing lengths. */
+    while (lo < hi) {
+        size_t mid = lo + (hi - lo) / 2;
+        const ifc_cell *c = &f->cells[mid];
+        size_t n = strlen(c->name);
+        int order = memcmp(c->name, name, n < len ? n : len);
+        if (!order) order = n < len ? -1 : n > len ? 1 : 0;
+        if (order < 0) lo = mid + 1;
+        else if (order > 0) hi = mid;
+        else return c;
+    }
     return NULL;
 }
 
@@ -688,7 +729,7 @@ int axi_manifest_iface_hash_v1_accounted(const char *cell_name,
     render_cell_block(&b, &c);
     if (b.failed) goto bad;
     axi_sha256(b.p, b.n, hash);
-    if (!iface_free_owned(account, b.p)) goto bad_cell;
+    if (!iface_free_owned(account, NULL, b.p)) goto bad_cell;
     b.p = NULL;
     ifc_cell_free(&c);
     memcpy(out, hash, sizeof hash);
@@ -696,7 +737,7 @@ int axi_manifest_iface_hash_v1_accounted(const char *cell_name,
 bad_cell:
     b.p = NULL;
 bad:
-    (void)iface_free_owned(account, b.p);
+    (void)iface_free_owned(account, NULL, b.p);
     ifc_cell_free(&c);
     return 1;
 }
@@ -710,30 +751,21 @@ int axi_manifest_iface_hash_v1(const char *cell_name,
         cell_name, manifest, out, NULL);
 }
 
-/* INV-382 / AXI-INV-122: one source projection feeds both the legacy iface
- * identity and manifest facts. body_hash is deliberately not a source fact. */
-int axi_iface_manifest_v1(const axi_node *unit,
-                          const char *cell_name, size_t cell_name_len,
-                          axb_manifest *out, struct axi_arena *arena)
+/* Both producer APIs use the identical per-cell conversion. In particular,
+ * return wire tags are sorted separately from the text projection's atoms. */
+static int cell_manifest_v1(const ifc_cell *cell, axb_manifest *out,
+                            struct axi_arena *arena)
 {
-    ifc model;
-    const ifc_cell *cell;
     axb_manifest m;
     size_t i, j;
-    if (!out) return 1;
     memset(out, 0, sizeof *out);
-    if (!unit || !unit->contract_checked || !arena) return 1;
-    if (project(unit, &model) != 0) return 1;
-    cell = find_cell_n(&model, cell_name, cell_name_len);
     if (!cell || !cell->has_fuel
             || cell->nparams > AXB_MANIFEST_MAX_PARAMS
             || cell->nrets > AXB_MANIFEST_MAX_RETURNS
             || cell->nerrs > AXB_MANIFEST_MAX_ERRORS
             || cell->ncaps > AXB_MANIFEST_MAX_CAPS
-            || cell->nlaws > AXB_MANIFEST_MAX_LAWS) {
-        ifc_free(&model);
+            || cell->nlaws > AXB_MANIFEST_MAX_LAWS)
         return 1;
-    }
     memset(&m, 0, sizeof m);
     m.version = AXB_MANIFEST_VERSION;
     m.flags = (cell->pure ? AXB_MANIFEST_FLAG_PURE : 0u)
@@ -770,11 +802,51 @@ int axi_iface_manifest_v1(const axi_node *unit,
     memcpy(m.iface_hash, cell->hash_bytes, sizeof m.iface_hash);
     if (axb_manifest_v1_verify(&m) != 0) goto bad;
     *out = m;
-    ifc_free(&model);
     return 0;
 bad:
-    ifc_free(&model);
     return 1;
+}
+
+/* INV-382 / AXI-INV-122: one source projection feeds both the legacy iface
+ * identity and manifest facts. body_hash is deliberately not a source fact. */
+int axi_iface_manifest_v1(const axi_node *unit,
+                          const char *cell_name, size_t cell_name_len,
+                          axb_manifest *out, struct axi_arena *arena)
+{
+    ifc model;
+    int rc;
+    if (!out) return 1;
+    memset(out, 0, sizeof *out);
+    if (!unit || !unit->contract_checked || !arena) return 1;
+    if (project(unit, &model) != 0) return 1;
+    rc = cell_manifest_v1(find_cell_n(&model, cell_name, cell_name_len),
+                         out, arena);
+    ifc_free(&model);
+    return rc;
+}
+
+int axi_iface_manifests_v1(const axi_node *unit, const axb_mod *body,
+                           axb_manifest *out, struct axi_arena *arena)
+{
+    ifc model;
+    size_t i, bytes;
+    int rc = 1;
+    if (!out || !body || !body->n
+            || sizeof *out > (size_t)-1 / body->n) return 1;
+    bytes = (size_t)body->n * sizeof *out;
+    memset(out, 0, bytes);
+    if (!unit || !unit->contract_checked || !arena || !body->cells) return 1;
+    if (project(unit, &model) != 0) return 1;
+    for (i = 0; i < body->n; i++) {
+        const char *name = body->cells[i].name;
+        if (!name || cell_manifest_v1(find_cell_n(&model, name, strlen(name)),
+                                      &out[i], arena) != 0) goto done;
+    }
+    rc = 0;
+done:
+    ifc_free(&model);
+    if (rc) memset(out, 0, bytes);
+    return rc;
 }
 
 static void diff_cell(const ifc_cell *o, const ifc_cell *n, chgs *cs)
@@ -871,7 +943,8 @@ static void diff_cell(const ifc_cell *o, const ifc_cell *n, chgs *cs)
 int axi_iface_diff(const axi_node *old, const axi_node *nw, FILE *out, int json)
 {
     ifc a, b;
-    chgs cs = {NULL, 0};
+    chgs cs = {0};
+    cs.budget = old ? old->budget : NULL;
     size_t i;
     int worst = 0; /* 0 identical, 1 compatible, 2 breaking */
 
@@ -894,6 +967,7 @@ int axi_iface_diff(const axi_node *old, const axi_node *nw, FILE *out, int json)
         else    diff_cell(o, &b.cells[i], &cs);
     }
 
+    if (cs.failed) { worst = 2; goto done; }
     for (i = 0; i < cs.n; i++) {
         int lev = cs.v[i].breaking ? 2 : 1;
         if (lev > worst) worst = lev;
@@ -901,6 +975,7 @@ int axi_iface_diff(const axi_node *old, const axi_node *nw, FILE *out, int json)
 
     if (json) {
         sb e = {0};
+        e.budget = cs.budget;
         sb_grow(&e, 1);
         sb_str(&e, "{\"verdict\":\"");
         sb_str(&e, worst == 2 ? "breaking" : worst == 1 ? "compatible" : "identical");
@@ -918,12 +993,12 @@ int axi_iface_diff(const axi_node *old, const axi_node *nw, FILE *out, int json)
         sb_str(&e, "]}\n");
         if (e.failed) {
             fprintf(AXI_ERR, "AXI-D999 iface: out of memory\n");
-            free(e.p);
+            (void)axi_compile_free(e.budget, e.p);
             worst = 2;
             goto done;
         }
         fputs(e.p, out);
-        free(e.p);
+        (void)axi_compile_free(e.budget, e.p);
     } else {
         for (i = 0; i < cs.n; i++)
             fprintf(out, "%-10s %s: %s\n",

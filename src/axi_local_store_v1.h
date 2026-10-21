@@ -62,4 +62,13 @@ bad:
     return -1;
 }
 
+/* Activation never falls back to caller-supplied legacy observations. Even
+ * incomplete or malformed control state closes the legacy mutation door. */
+static inline int axi_local_store_legacy_allowed(int dirfd)
+{
+    struct stat st;
+    if (fstatat(dirfd, "authority_v1", &st, AT_SYMLINK_NOFOLLOW) == 0) return 0;
+    return errno == ENOENT;
+}
+
 #endif

@@ -1,0 +1,35 @@
+{
+  "schema": "axial.audit80.validation-profile.v1",
+  "profile": "sanitizers",
+  "revision_at_start": "fa02a2255bc9cee67a61aa35c79e0e2962495cf8",
+  "product_sha256": "59dccaab79e2ab1e5dc4f32fc2a7f2d802f134579c4efd61fa6fc4fcff51a269",
+  "command": [
+    "make",
+    "-j2",
+    "BUILD=build-final-sanitizers-w80",
+    "AUTHORITY_RUNNER=direct",
+    "HOSTCC=cc",
+    "CPPFLAGS=",
+    "CFLAGS=-std=c99 -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie",
+    "LDFLAGS=-fsanitize=address,undefined -fno-sanitize-recover=all -no-pie",
+    "LDLIBS=-lm",
+    "PYTHON=python3",
+    "gate"
+  ],
+  "compiler": "cc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0",
+  "environment": {
+    "ASAN_OPTIONS": "detect_leaks=0:abort_on_error=1",
+    "UBSAN_OPTIONS": "halt_on_error=1",
+    "TSAN_OPTIONS": "halt_on_error=1:exitcode=66",
+    "LC_ALL": "C"
+  },
+  "started_utc": "2026-10-21T02:57:14.048100+00:00",
+  "scope": "Actual product and fixture execution; benchmark scripts and documentation are outside this gate.",
+  "recheck_reason": "Preserved initial EACCES failure before test execution; rebuilt all artifacts in a new build directory.",
+  "finished_utc": "2026-10-21T02:59:35.881596+00:00",
+  "elapsed_seconds": 141.83363896799983,
+  "returncode": 2,
+  "log_file": "sanitizers.log",
+  "raw_log_sha256": "cdc91b5f2475d650bd8dfe17d4d791a63868ee5f8f01a94f6bd514d7fcbc2784",
+  "product_unchanged_after_run": true
+}

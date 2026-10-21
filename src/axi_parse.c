@@ -12,6 +12,7 @@
  */
 #include "axi_ast.h"
 #include "axi_alloc.h"
+#include "axi_numeric.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -31,6 +32,7 @@ typedef struct {
     const char *last_error;
     parsed_node *allocated;
     int oom;
+    axi_compile_budget *budget;
 } parser;
 
 /* The node is the first member: ordinary axi_ast_free/free(node) still owns
@@ -52,11 +54,12 @@ static axi_node *nnew_at(parser *p, axi_nkind k, const axi_token *t)
     parsed_node *allocated;
     axi_node *n;
     if (p->oom) return NULL;
-    allocated = (parsed_node *)axi_calloc(1, sizeof *allocated);
+    allocated = (parsed_node *)axi_compile_calloc(p->budget, 1, sizeof *allocated);
     if (!allocated) { p->oom = 1; return NULL; }
     allocated->next = p->allocated;
     p->allocated = allocated;
     n = &allocated->node;
+    n->budget = p->budget;
     n->kind = k; n->line = t->line; n->col = t->col; n->pos = t->start;
     return n;
 }
@@ -738,14 +741,29 @@ static axi_node *parse_eff(parser *p)
 axi_node *axi_parse_unit(const char *src, size_t len, const char *path,
                          axi_diags *diags)
 {
+    return axi_parse_unit_budget(src, len, path, diags, NULL);
+}
+
+axi_node *axi_parse_unit_budget(const char *src, size_t len, const char *path,
+                                axi_diags *diags, axi_compile_budget *budget)
+{
     parser p;
+    /* The lexer may borrow one fixed decimal workspace at any advance.
+     * It is never nested, and is covered for the parser's whole lifetime. */
+    const size_t workspace = sizeof p + AXI_NUMERIC_SCRATCH_BYTES;
     /* W16: even the unit's position is a token's, not a literal — byte 0,
      * line 1, col 1, all from one place (AXI-INV-027). */
     axi_token u0;
     axi_node *unit;
+    if (!src || !diags || !axi_compile_reserve(budget, workspace)) {
+        if (diags) axi_diag_add(diags, axi_compile_failure_code(budget),
+            0, 0, 0, "parser workspace unavailable", "increase the compiler budget");
+        return NULL;
+    }
     memset(&u0, 0, sizeof u0);
     u0.kind = T_EOF; u0.line = 1; u0.col = 1; u0.start = src; u0.len = 0;
     memset(&p, 0, sizeof p);
+    p.budget = budget;
     unit = nnew_at(&p, N_UNIT, &u0);
     axi_node **tail = NULL;
     (void)path;
@@ -775,14 +793,16 @@ axi_node *axi_parse_unit(const char *src, size_t len, const char *path,
         parsed_node *allocated = p.allocated;
         while (allocated) {
             parsed_node *next = allocated->next;
-            free(allocated);
+            (void)axi_compile_free(budget, allocated);
             allocated = next;
         }
-        axi_diag_add(diags, "AXI-D999", 0, 0, 0,
+        axi_diag_add(diags, budget ? axi_compile_failure_code(budget) : "AXI-D999", 0, 0, 0,
                      "parser allocation failed; no tree was published",
                      "retry with enough memory to parse the source");
+        (void)axi_compile_release(budget, workspace);
         return NULL;
     }
+    (void)axi_compile_release(budget, workspace);
     return unit;
 }
 
@@ -797,7 +817,7 @@ void axi_ast_free(axi_node *n)
         axi_ast_free(n->b);
         axi_ast_free(n->c);
         axi_ast_free(n->list);
-        free(n);
+        (void)axi_compile_free(n->budget, n);
         n = next;
     }
 }

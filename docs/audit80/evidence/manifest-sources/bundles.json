@@ -1,0 +1,28 @@
+{
+  "schema": "axi.manifest.source-bundles.v1",
+  "benchmark_record": "../manifest-benchmark.json",
+  "benchmark_record_sha256": "3b368eff90c69cd12d33c5f8a08fcdf3e0c52412123f5e7266a51163982c7d0c",
+  "archive_format": "USTAR in gzip level9; sorted paths; uid/gid/mtime0; empty uname/gname; no gzip filename; git permission bits preserved; regular files/directories only",
+  "bundles": {
+    "before": {
+      "file": "manifest-before.tar.gz",
+      "sha256": "ba7426f1b35f83c8accce1857f937fbd7743eee6a3c0bbc75f513501a5d496cc",
+      "compressed_bytes": 301257,
+      "tar_bytes": 1433600,
+      "product_files": 124,
+      "original_local_revision": "731e63476af8f9b15e316bcfe7d91af7a0e27fea",
+      "original_local_tree": "50464a024466eb221b4d0f570c7d09f699dcd160",
+      "identity_match": "all file paths and SHA-256 match the original benchmark source_sha256 exactly"
+    },
+    "after": {
+      "file": "manifest-after.tar.gz",
+      "sha256": "655b90dc8d863849486ff39864980a50c9afcc3c73a04354081b2ae53de2a6d6",
+      "compressed_bytes": 301814,
+      "tar_bytes": 1433600,
+      "product_files": 124,
+      "original_local_revision": "345a340fc3d0b4c917728ca063aaecfd11fd379a",
+      "original_local_tree": "e21b69f55d1439dfc2d652f7ab7d3bfd1be2c8f8",
+      "identity_match": "all file paths and SHA-256 match the original benchmark source_sha256 exactly"
+    }
+  }
+}

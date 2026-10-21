@@ -1,0 +1,8 @@
+{
+  "path": "build-final-sanitizers-w80/audit80-runtime/runtime_recovery",
+  "previous_mode": "0o644",
+  "new_mode": "0o755",
+  "binary_sha256_before": "930a75fc6199c5aedd83c77eebe6cf6a95ea5e729f03c686270f9155f03a11ae",
+  "binary_sha256_after": "930a75fc6199c5aedd83c77eebe6cf6a95ea5e729f03c686270f9155f03a11ae",
+  "reason": "Restore executable mode on this locally generated test ELF; no source or binary byte modification."
+}

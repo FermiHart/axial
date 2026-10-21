@@ -65,6 +65,9 @@ typedef struct {
     uint64_t len;
     uint8_t  buf[64];
     int      nbuf;
+#ifdef SHA256NI_X86
+    int      accelerated; /* private to this initialized hash context */
+#endif
 } SHA256NI_CTX_TYPE;
 
 static const uint32_t SHA256NI_FN(K)[64] = {
@@ -321,8 +324,6 @@ static void SHA256NI_FN(process_x86)(uint32_t state[8], const uint8_t data[], ui
     _mm_storeu_si128((__m128i *)&state[4], STATE1);
 }
 
-static int SHA256NI_FN(has_sha_ni) = -1;
-
 static int SHA256NI_FN(check_sha_ni)(void) {
 #if SHA256NI_FORCE_SOFTWARE
     return 0;
@@ -333,6 +334,28 @@ static int SHA256NI_FN(check_sha_ni)(void) {
     return 0;
 #endif
 }
+
+/* This cache is shared by independent hash contexts in one translation
+ * unit. Concurrent first use must not read/write a plain static int.
+ * Relaxed atomics suffice: the cached integer publishes no other state.
+ * Compilers without these builtins use one CPUID query per hash context,
+ * never one query per compression block. NO_CACHE exercises that lane. */
+#if !defined(SHA256NI_NO_CACHE) && \
+    ((defined(__GNUC__) && (__GNUC__ * 100 + __GNUC_MINOR__ >= 407)) || defined(__clang__))
+static int SHA256NI_FN(has_sha_ni) = -1;
+static int SHA256NI_FN(use_sha_ni)(void) {
+    int available = __atomic_load_n(&SHA256NI_FN(has_sha_ni), __ATOMIC_RELAXED);
+    if (available == -1) {
+        available = SHA256NI_FN(check_sha_ni)();
+        __atomic_store_n(&SHA256NI_FN(has_sha_ni), available, __ATOMIC_RELAXED);
+    }
+    return available;
+}
+#else
+static int SHA256NI_FN(use_sha_ni)(void) {
+    return SHA256NI_FN(check_sha_ni)();
+}
+#endif
 #endif /* SHA256NI_X86 */
 
 /*──────────────────────── Public API ─────────────────────────────────────────*/
@@ -340,6 +363,9 @@ static void SHA256NI_FN(init)(SHA256NI_CTX_TYPE *c) {
     for (int i = 0; i < 8; i++) c->h[i] = SHA256NI_FN(IV)[i];
     c->len = 0;
     c->nbuf = 0;
+#ifdef SHA256NI_X86
+    c->accelerated = SHA256NI_FN(use_sha_ni)();
+#endif
 }
 
 static void SHA256NI_FN(update)(SHA256NI_CTX_TYPE *c, const void *data, size_t n) {
@@ -347,9 +373,8 @@ static void SHA256NI_FN(update)(SHA256NI_CTX_TYPE *c, const void *data, size_t n
     c->len += (uint64_t)n;
 
 #ifdef SHA256NI_X86
-    if (SHA256NI_FN(has_sha_ni) == -1)
-        SHA256NI_FN(has_sha_ni) = SHA256NI_FN(check_sha_ni)();
-    if (SHA256NI_FN(has_sha_ni) && c->nbuf == 0 && n >= 64) {
+    int accelerated = c->accelerated;
+    if (accelerated && c->nbuf == 0 && n >= 64) {
         size_t blocks = n / 64;
         SHA256NI_FN(process_x86)(c->h, p, (uint32_t)(blocks * 64));
         p += blocks * 64;
@@ -366,7 +391,7 @@ static void SHA256NI_FN(update)(SHA256NI_CTX_TYPE *c, const void *data, size_t n
         n -= (size_t)t;
         if (c->nbuf == 64) {
 #ifdef SHA256NI_X86
-            if (SHA256NI_FN(has_sha_ni))
+            if (accelerated)
                 SHA256NI_FN(process_x86)(c->h, c->buf, 64);
             else
 #endif

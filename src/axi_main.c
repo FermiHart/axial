@@ -12,6 +12,7 @@
 #include "axi.h"
 #include "axi_alloc.h"
 #include "axi_ast.h"
+#include "axi_numeric.h"
 #include "axi_policy_lint.h"
 #include "axi_hash.h"
 #include "axi_iface.h"
@@ -37,7 +38,8 @@
  * FIFOs) are refused without blocking. Parsing and hashing use these bytes. */
 #define AXI_CLI_FILE_MAX (64u * 1024u * 1024u)
 
-static char *read_file(const char *path, size_t *out_len)
+static char *read_file_budget(const char *path, size_t *out_len,
+                              axi_compile_budget *budget)
 {
     struct stat st;
     FILE *f;
@@ -60,16 +62,21 @@ static char *read_file(const char *path, size_t *out_len)
     size = (size_t)st.st_size;
     f = fdopen(fd, "rb");
     if (!f) { saved = errno; close(fd); errno = saved; return NULL; }
-    buf = (char *)axi_malloc(size + 1);
+    buf = (char *)axi_compile_malloc(budget, size + 1);
     if (!buf) { saved = errno; fclose(f); errno = saved; return NULL; }
     if ((size && fread(buf, 1, size, f) != size)
             || fgetc(f) != EOF || ferror(f)) {
-        fclose(f); free(buf); errno = EIO; return NULL;
+        fclose(f); (void)axi_compile_free(budget, buf); errno = EIO; return NULL;
     }
-    if (fclose(f) != 0) { saved = errno; free(buf); errno = saved; return NULL; }
+    if (fclose(f) != 0) { saved = errno; (void)axi_compile_free(budget, buf); errno = saved; return NULL; }
     buf[size] = '\0';
     *out_len = size;
     return buf;
+}
+
+static char *read_file(const char *path, size_t *out_len)
+{
+    return read_file_budget(path, out_len, NULL);
 }
 
 static int cmd_aer_verify(const char *path, const char *key_path)
@@ -190,16 +197,49 @@ static void print_read_error(const char *path, int json)
     }
 }
 
-static int cmd_lex(const char *path, int json)
+static const char *compile_failure_message(const axi_compile_budget *budget)
+{
+    switch (budget ? budget->failure : AXI_COMPILE_HOST_OOM) {
+    case AXI_COMPILE_QUOTA: return "compiler invocation memory quota exceeded";
+    case AXI_COMPILE_HOST_OOM: return "host could not allocate compiler memory";
+    case AXI_COMPILE_OVERFLOW: return "compiler allocation size overflow";
+    case AXI_COMPILE_OWNERSHIP: return "compiler allocation ownership failure";
+    case AXI_COMPILE_OK: return "compiler operation failed";
+    }
+    return "compiler operation failed";
+}
+
+static void print_compile_failure(const char *path, int json,
+                                  const axi_compile_budget *budget)
+{
+    axi_diags ds;
+    if (!budget || budget->failure == AXI_COMPILE_OK) return;
+    axi_diags_init(&ds);
+    axi_diag_add_at(&ds, axi_compile_failure_code(budget), 1, 1, 1, 0,
+                   compile_failure_message(budget),
+                   "adjust --compile-mem or reduce the input; the limit counts owned storage");
+    if (json) print_diags_json(&ds, path);
+    else print_diags_human(&ds, path);
+}
+
+static void print_compile_read_error(const char *path, int json,
+                                     const axi_compile_budget *budget)
+{
+    if (budget && budget->failure != AXI_COMPILE_OK)
+        print_compile_failure(path, json, budget);
+    else print_read_error(path, json);
+}
+
+static int cmd_lex(const char *path, int json, axi_compile_budget *budget)
 {
     size_t len = 0;
-    char *src = read_file(path, &len);
+    char *src = read_file_budget(path, &len, budget);
     axi_diags ds;
     axi_lexer lx;
     axi_token t;
 
     if (!src) {
-        print_read_error(path, json);
+        print_compile_read_error(path, json, budget);
         return 2;
     }
     axi_diags_init(&ds);
@@ -220,27 +260,27 @@ static int cmd_lex(const char *path, int json)
     if (json) print_diags_json(&ds, path);
     else      print_diags_human(&ds, path);
 
-    free(src);
+    (void)axi_compile_free(budget, src);
     return ds.n > 0 ? 1 : 0;
 }
 
-static int cmd_parse(const char *path, int json)
+static int cmd_parse(const char *path, int json, axi_compile_budget *budget)
 {
     size_t len = 0;
-    char *src = read_file(path, &len);
+    char *src = read_file_budget(path, &len, budget);
     axi_diags ds;
     axi_node *unit;
 
     if (!src) {
-        print_read_error(path, json);
+        print_compile_read_error(path, json, budget);
         return 2;
     }
     axi_diags_init(&ds);
-    unit = axi_parse_unit(src, len, path, &ds);
+    unit = axi_parse_unit_budget(src, len, path, &ds, budget);
     if (!unit) {
         if (json) print_diags_json(&ds, path);
         else print_diags_human(&ds, path);
-        free(src);
+        (void)axi_compile_free(budget, src);
         return 2;
     }
 
@@ -252,16 +292,16 @@ static int cmd_parse(const char *path, int json)
     }
 
     axi_ast_free(unit);
-    free(src);
+    (void)axi_compile_free(budget, src);
     return ds.n > 0 ? 1 : 0;
 }
 
 /* ---- canonical form (W05) ------------------------------------------------ */
 
-static int cmd_canon(const char *path)
+static int cmd_canon(const char *path, axi_compile_budget *budget)
 {
     size_t len = 0;
-    char *src = read_file(path, &len);
+    char *src = read_file_budget(path, &len, budget);
     axi_diags ds;
     axi_node *unit;
     char *canon;
@@ -271,27 +311,29 @@ static int cmd_canon(const char *path)
         return 2;
     }
     axi_diags_init(&ds);
-    unit = axi_parse_unit(src, len, path, &ds);
-    if (!unit) { print_diags_human(&ds, path); free(src); return 2; }
+    unit = axi_parse_unit_budget(src, len, path, &ds, budget);
+    if (!unit) { print_diags_human(&ds, path); (void)axi_compile_free(budget, src); return 2; }
     if (ds.n > 0) { /* partial tree: refusing beats emitting a wrong canon */
         print_diags_human(&ds, path);
         axi_ast_free(unit);
-        free(src);
+        (void)axi_compile_free(budget, src);
         return 1;
     }
     canon = axi_canon_render(src, len, unit);
     if (!canon) { /* INV-323 / AXI-INV-105: trivia cap overflow is a refusal */
-        fprintf(AXI_ERR, "AXI-C006 %s: input exceeds the canonical trivia cap "
+        if (budget && budget->failure != AXI_COMPILE_OK)
+            print_compile_failure(path, 0, budget);
+        else fprintf(AXI_ERR, "AXI-C006 %s: input exceeds the canonical trivia cap "
                 "(%d comments) | fix: the canon never drops a comment; "
                 "split the file\n", path, 512);
         axi_ast_free(unit);
-        free(src);
+        (void)axi_compile_free(budget, src);
         return 1;
     }
     fputs(canon, AXI_OUT);
-    free(canon);
+    (void)axi_compile_free(budget, canon);
     axi_ast_free(unit);
-    free(src);
+    (void)axi_compile_free(budget, src);
     return 0;
 }
 
@@ -345,17 +387,18 @@ static void diag_line_fix(axi_diags *ds, const char *code,
 }
 
 static void form_diags(const char *src, size_t len, const char *canon,
-                       axi_diags *ds);
+                       axi_diags *ds, axi_compile_budget *budget);
 
 /* and_types: 0 = form only (`axi form`, the gate's fixpoint law),
  *            1 = the full ladder grammar → form → types (`axi check`).
  * The ladder speaks one layer at a time: types stay silent until the
  * form is silent — an agent fixes one kind of red per pass. */
 static int cmd_check_snapshot(const char *path, int json, int and_types,
-                               char **source_out, axi_node **unit_out)
+                               char **source_out, axi_node **unit_out,
+                               axi_compile_budget *budget)
 {
     size_t len = 0;
-    char *src = read_file(path, &len);
+    char *src = read_file_budget(path, &len, budget);
     axi_diags ds;
     axi_node *unit;
     char *canon;
@@ -367,7 +410,7 @@ static int cmd_check_snapshot(const char *path, int json, int and_types,
     if (source_out) *source_out = NULL;
     if (unit_out) *unit_out = NULL;
     if (!src) {
-        print_read_error(path, json);
+        print_compile_read_error(path, json, budget);
         return 2;
     }
     axi_diags_init(&ds);
@@ -391,11 +434,11 @@ static int cmd_check_snapshot(const char *path, int json, int and_types,
         if (c == '\n') line++;
     }
 
-    unit = axi_parse_unit(src, len, path, &ds);
+    unit = axi_parse_unit_budget(src, len, path, &ds, budget);
     if (!unit) {
         if (json) print_diags_json(&ds, path);
         else print_diags_human(&ds, path);
-        free(src);
+        (void)axi_compile_free(budget, src);
         return 2;
     }
     if (ds.n > 0 && unit->list == NULL) {
@@ -403,7 +446,7 @@ static int cmd_check_snapshot(const char *path, int json, int and_types,
         if (json) print_diags_json(&ds, path);
         else      print_diags_human(&ds, path);
         axi_ast_free(unit);
-        free(src);
+        (void)axi_compile_free(budget, src);
         return 1;
     }
     {
@@ -415,33 +458,36 @@ static int cmd_check_snapshot(const char *path, int json, int and_types,
             if (json) print_diags_json(&ds, path);
             else      print_diags_human(&ds, path);
             axi_ast_free(unit);
-            free(src);
+            (void)axi_compile_free(budget, src);
             return 1;
         }
     }
 
     canon = axi_canon_render(src, len, unit);
     if (!canon) { /* INV-323 / AXI-INV-105: no canon, no verdict */
-        axi_diag_add_source(&ds, "AXI-C006", src, 0, 1,
+        if (budget && budget->failure != AXI_COMPILE_OK)
+            axi_diag_add_source(&ds, axi_compile_failure_code(budget), src, 0, 1,
+                compile_failure_message(budget), "increase --compile-mem or reduce the input");
+        else axi_diag_add_source(&ds, "AXI-C006", src, 0, 1,
                             "input exceeds the canonical trivia cap (512 comments)",
                             "the canon never drops a comment; split the file");
         if (json) print_diags_json(&ds, path);
         else      print_diags_human(&ds, path);
         axi_ast_free(unit);
-        free(src);
+        (void)axi_compile_free(budget, src);
         return 1;
     }
 
     if (strlen(canon) == (size_t)len && memcmp(canon, src, len) == 0
         && ds.n == 0) {
-        free(canon);
+        (void)axi_compile_free(budget, canon);
         if (and_types) { /* form green → the types layer speaks (W06) */
             axi_type_check(unit, &ds);
             if (ds.n > 0) {
                 if (json) print_diags_json(&ds, path);
                 else      print_diags_human(&ds, path);
                 axi_ast_free(unit);
-                free(src);
+                (void)axi_compile_free(budget, src);
                 return 1;
             }
         }
@@ -450,24 +496,25 @@ static int cmd_check_snapshot(const char *path, int json, int and_types,
             *unit_out = unit;
         } else {
             axi_ast_free(unit);
-            free(src);
+            (void)axi_compile_free(budget, src);
         }
         return 0; /* Retain the exact validated snapshot when requested. */
     }
 
-    form_diags(src, len, canon, &ds);
+    form_diags(src, len, canon, &ds, budget);
 
     if (json) print_diags_json(&ds, path);
     else      print_diags_human(&ds, path);
-    free(canon);
+    (void)axi_compile_free(budget, canon);
     axi_ast_free(unit);
-    free(src);
+    (void)axi_compile_free(budget, src);
     return ds.n > 0 ? 1 : 0;
 }
 
-static int cmd_check_impl(const char *path, int json, int and_types)
+static int cmd_check_impl(const char *path, int json, int and_types,
+                          axi_compile_budget *budget)
 {
-    return cmd_check_snapshot(path, json, and_types, NULL, NULL);
+    return cmd_check_snapshot(path, json, and_types, NULL, NULL, budget);
 }
 
 /* W16 — the form layer's diagnostics, byte-anchored and repairable. Shared
@@ -478,12 +525,24 @@ static int cmd_check_impl(const char *path, int json, int and_types)
  * then the tail, then the closing newline — because AXI-INV-025 requires a
  * diagnostic set to be applicable in a single pass. */
 static void form_diags(const char *src, size_t len, const char *canon,
-                       axi_diags *ds)
+                       axi_diags *ds, axi_compile_budget *budget)
 {
-    static const char *sl[CHECK_MAX_LINES], *cl[CHECK_MAX_LINES];
-    static uint32_t sll[CHECK_MAX_LINES], cll[CHECK_MAX_LINES];
+    struct line_workspace {
+        const char *sl[CHECK_MAX_LINES], *cl[CHECK_MAX_LINES];
+        uint32_t sll[CHECK_MAX_LINES], cll[CHECK_MAX_LINES];
+    } *workspace = axi_compile_malloc(budget, sizeof *workspace);
+    const char **sl, **cl;
+    uint32_t *sll, *cll;
     int sn, cn, i, minn;
 
+    if (!workspace) {
+        axi_diag_add_source(ds, axi_compile_failure_code(budget), src, 0, 1,
+                            "cannot reserve form comparison workspace",
+                            "increase --compile-mem or reduce the input");
+        return;
+    }
+    sl = workspace->sl; cl = workspace->cl;
+    sll = workspace->sll; cll = workspace->cll;
     sn = split_lines(src, len, sl, sll, CHECK_MAX_LINES);
     cn = split_lines(canon, strlen(canon), cl, cll, CHECK_MAX_LINES);
     /* INV-323 / AXI-INV-105: past the line cap the arrays hold only a
@@ -493,6 +552,7 @@ static void form_diags(const char *src, size_t len, const char *canon,
         axi_diag_add_source(ds, "AXI-C006", src, 0, 1,
                             "file exceeds the diagnostic line cap",
                             "split the file; the checker never compares a prefix");
+        (void)axi_compile_free(budget, workspace);
         return;
     }
     minn = sn < cn ? sn : cn;
@@ -532,27 +592,28 @@ static void form_diags(const char *src, size_t len, const char *canon,
                           "missing canonical line", cl[i], cll[i],
                           (uint32_t)len, 0, 1);
     }
+    (void)axi_compile_free(budget, workspace);
 }
 
 /* types only: parse must be green, then the checker speaks (form ignored,
  * so red-form fixtures can still exercise pure type laws in the suite). */
-static int cmd_types(const char *path, int json)
+static int cmd_types(const char *path, int json, axi_compile_budget *budget)
 {
     size_t len = 0;
-    char *src = read_file(path, &len);
+    char *src = read_file_budget(path, &len, budget);
     axi_diags ds;
     axi_node *unit;
 
     if (!src) {
-        print_read_error(path, json);
+        print_compile_read_error(path, json, budget);
         return 2;
     }
     axi_diags_init(&ds);
-    unit = axi_parse_unit(src, len, path, &ds);
+    unit = axi_parse_unit_budget(src, len, path, &ds, budget);
     if (!unit) {
         if (json) print_diags_json(&ds, path);
         else print_diags_human(&ds, path);
-        free(src);
+        (void)axi_compile_free(budget, src);
         return 2;
     }
     if (ds.n == 0) /* grammar first; a broken tree would only lie */
@@ -561,22 +622,22 @@ static int cmd_types(const char *path, int json)
         if (json) print_diags_json(&ds, path);
         else      print_diags_human(&ds, path);
         axi_ast_free(unit);
-        free(src);
+        (void)axi_compile_free(budget, src);
         return 1;
     }
     if (json) print_diags_json(&ds, path); /* empty cell list = green */
     axi_ast_free(unit);
-    free(src);
+    (void)axi_compile_free(budget, src);
     return 0;
 }
 
 /* ---- compile: axial source -> .axb (M3) ---------------------------------- */
 
 static int cmd_compile(const char *in, const char *out_path,
-                       const char *signing_key_path)
+                       const char *signing_key_path, axi_compile_budget *budget)
 {
     size_t n = 0;
-    char *src = read_file(in, &n);
+    char *src = read_file_budget(in, &n, budget);
     axi_diags ds;
     axi_node *unit;
     size_t alen;
@@ -588,14 +649,14 @@ static int cmd_compile(const char *in, const char *out_path,
         return 2;
     }
     axi_diags_init(&ds);
-    unit = axi_parse_unit(src, n, in, &ds);
-    if (!unit) { print_diags_human(&ds, in); free(src); return 2; }
+    unit = axi_parse_unit_budget(src, n, in, &ds, budget);
+    if (!unit) { print_diags_human(&ds, in); (void)axi_compile_free(budget, src); return 2; }
     if (ds.n == 0)
         axi_type_check(unit, &ds);
     if (ds.n > 0) {
         print_diags_human(&ds, in);
         axi_ast_free(unit);
-        free(src);
+        (void)axi_compile_free(budget, src);
         return 1;
     }
 
@@ -603,15 +664,19 @@ static int cmd_compile(const char *in, const char *out_path,
     if (!axs) {
         fprintf(AXI_ERR, "AXI-X002 %s: codegen failed\n", in);
         axi_ast_free(unit);
-        free(src);
+        (void)axi_compile_free(budget, src);
         return 2;
     }
 
-    rc = axb_contract_v1_write_signed_text(axs, alen, in, out_path,
-                                            signing_key_path);
-    free(axs);
+    {
+        axi_mem_account account;
+        axi_compile_account_init(&account, budget);
+        rc = axb_contract_v1_write_signed_text_accounted(axs, alen, in, out_path,
+                                            signing_key_path, &account);
+    }
+    (void)axi_compile_free(budget, axs);
     axi_ast_free(unit);
-    free(src);
+    (void)axi_compile_free(budget, src);
     return rc;
 }
 
@@ -624,31 +689,33 @@ static int cmd_compile(const char *in, const char *out_path,
  * `axi check` would refuse a file while `axi iface` hashed and published it,
  * and the published contract would describe a program that cannot exist.
  * A lying interface is worse than no interface at all. */
-static axi_node *load_unit_or_null(const char *path, char **src_out, int json)
+static axi_node *load_unit_or_null(const char *path, char **src_out, int json,
+                                   axi_compile_budget *budget)
 {
     axi_node *unit = NULL;
-    if (cmd_check_snapshot(path, json, 1, src_out, &unit) != 0)
+    if (cmd_check_snapshot(path, json, 1, src_out, &unit, budget) != 0)
         return NULL;
     return unit;
 }
 
-static int cmd_iface(const char *path, int json)
+static int cmd_iface(const char *path, int json, axi_compile_budget *budget)
 {
     char *src = NULL;
-    axi_node *unit = load_unit_or_null(path, &src, json);
+    axi_node *unit = load_unit_or_null(path, &src, json, budget);
     char *text;
 
     if (!unit) return 2;
     text = json ? axi_iface_json(unit) : axi_iface_render(unit);
     if (!text) {
+        print_compile_failure(path, json, budget);
         axi_ast_free(unit);
-        free(src);
+        (void)axi_compile_free(budget, src);
         return 2;
     }
     fputs(text, AXI_OUT);
-    free(text);
+    (void)axi_compile_free(budget, text);
     axi_ast_free(unit);
-    free(src);
+    (void)axi_compile_free(budget, src);
     return 0;
 }
 
@@ -672,26 +739,27 @@ static int cmd_caps(int json)
     return 0;
 }
 
-static int cmd_iface_diff(const char *op, const char *np, int json)
+static int cmd_iface_diff(const char *op, const char *np, int json,
+                          axi_compile_budget *budget)
 {
     char *osrc = NULL, *nsrc = NULL;
     axi_node *ou, *nu;
     int verdict;
 
-    ou = load_unit_or_null(op, &osrc, json);
+    ou = load_unit_or_null(op, &osrc, json, budget);
     if (!ou) return 2;
-    nu = load_unit_or_null(np, &nsrc, json);
+    nu = load_unit_or_null(np, &nsrc, json, budget);
     if (!nu) {
         axi_ast_free(ou);
-        free(osrc);
+        (void)axi_compile_free(budget, osrc);
         return 2;
     }
 
     verdict = axi_iface_diff(ou, nu, AXI_OUT, json);
     axi_ast_free(ou);
     axi_ast_free(nu);
-    free(osrc);
-    free(nsrc);
+    (void)axi_compile_free(budget, osrc);
+    (void)axi_compile_free(budget, nsrc);
     /* 0 = identical or compatible: the change is safe for existing callers.
      * 1 = breaking: red, on purpose — this is the check a release runs. */
     return verdict == 2 ? 1 : 0;
@@ -745,29 +813,45 @@ static int cmd_compat(const char *path, int json)
 
 /* Opt-in lint has an explicit status contract: 0=no matched pattern,
  * 1=advisory warnings, 2=invalid source/read failure. Never means authorized. */
-static int cmd_lint_safe(const char *path, int json)
+static int cmd_lint_safe(const char *path, int json, axi_compile_budget *budget)
 {
     size_t len=0;
-    char *src=read_file(path,&len);
+    char *src=read_file_budget(path,&len,budget);
     axi_diags ds;
     axi_node *unit;
     int rc;
-    if (!src) { print_read_error(path,json); return 2; }
+    if (!src) { print_compile_read_error(path,json,budget); return 2; }
     axi_diags_init(&ds);
-    unit=axi_parse_unit(src,len,path,&ds);
+    unit=axi_parse_unit_budget(src,len,path,&ds,budget);
     if (unit && !ds.n && !ds.dropped) axi_type_check(unit,&ds);
     if (!unit || ds.n || ds.dropped) rc=2;
     else { axi_policy_lint(unit,&ds); rc=(ds.n || ds.dropped) ? 1 : 0; }
     if (json) print_diags_json(&ds,path); else print_diags_human(&ds,path);
-    axi_ast_free(unit); free(src);
+    axi_ast_free(unit); (void)axi_compile_free(budget, src);
     return rc;
 }
 
-static int dispatch(int argc, char **argv)
+static int cmd_asm_budget(const char *in, const char *out_path,
+                           const char *signing_key_path,
+                           axi_compile_budget *budget)
+{
+    size_t len = 0;
+    char *src = read_file_budget(in, &len, budget);
+    axi_mem_account account;
+    int rc;
+    if (!src) { print_compile_read_error(in, 0, budget); return 2; }
+    axi_compile_account_init(&account, budget);
+    rc = axb_contract_v1_write_signed_text_accounted(src, len, in, out_path,
+                                                    signing_key_path, &account);
+    (void)axi_compile_free(budget, src);
+    return rc;
+}
+
+static int dispatch(int argc, char **argv, axi_compile_budget *budget)
 {
     if ((argc == 3 || (argc == 4 && strcmp(argv[3], "--json") == 0))
             && strcmp(argv[1], "lint-safe") == 0)
-        return cmd_lint_safe(argv[2], argc == 4);
+        return cmd_lint_safe(argv[2], argc == 4, budget);
     if (argc == 2 && strcmp(argv[1], "version") == 0) {
         printf("axial %s (axi) — Bear Core\n", AXI_VERSION);
         return 0;
@@ -788,45 +872,45 @@ static int dispatch(int argc, char **argv)
     if ((argc == 3 || (argc == 4 && strcmp(argv[3], "--json") == 0))
             && strcmp(argv[1], "lex") == 0) {
         int json = (argc >= 4 && strcmp(argv[3], "--json") == 0);
-        return cmd_lex(argv[2], json);
+        return cmd_lex(argv[2], json, budget);
     }
     if ((argc == 3 || (argc == 4 && strcmp(argv[3], "--json") == 0))
             && strcmp(argv[1], "parse") == 0) {
         int json = (argc >= 4 && strcmp(argv[3], "--json") == 0);
-        return cmd_parse(argv[2], json);
+        return cmd_parse(argv[2], json, budget);
     }
     if (argc == 3 && strcmp(argv[1], "canon") == 0) {
-        return cmd_canon(argv[2]);
+        return cmd_canon(argv[2], budget);
     }
     if ((argc == 3 || (argc == 4 && strcmp(argv[3], "--json") == 0))
             && strcmp(argv[1], "check") == 0) {
         int json = (argc >= 4 && strcmp(argv[3], "--json") == 0);
-        return cmd_check_impl(argv[2], json, 1);
+        return cmd_check_impl(argv[2], json, 1, budget);
     }
     if ((argc == 3 || (argc == 4 && strcmp(argv[3], "--json") == 0))
             && strcmp(argv[1], "form") == 0) {
         int json = (argc >= 4 && strcmp(argv[3], "--json") == 0);
-        return cmd_check_impl(argv[2], json, 0);
+        return cmd_check_impl(argv[2], json, 0, budget);
     }
     if ((argc == 3 || (argc == 4 && strcmp(argv[3], "--json") == 0))
             && strcmp(argv[1], "types") == 0) {
         int json = (argc >= 4 && strcmp(argv[3], "--json") == 0);
-        return cmd_types(argv[2], json);
+        return cmd_types(argv[2], json, budget);
     }
     if (argc == 7 && strcmp(argv[1], "compile") == 0
             && strcmp(argv[3], "-o") == 0
             && strcmp(argv[5], "--signing-key") == 0) {
-        return cmd_compile(argv[2], argv[4], argv[6]);
+        return cmd_compile(argv[2], argv[4], argv[6], budget);
     }
     if ((argc == 3 || (argc == 4 && strcmp(argv[3], "--json") == 0))
             && strcmp(argv[1], "iface") == 0) {
         int json = (argc >= 4 && strcmp(argv[3], "--json") == 0);
-        return cmd_iface(argv[2], json);
+        return cmd_iface(argv[2], json, budget);
     }
     if ((argc == 4 || (argc == 5 && strcmp(argv[4], "--json") == 0))
             && strcmp(argv[1], "iface-diff") == 0) {
         int json = (argc >= 5 && strcmp(argv[4], "--json") == 0);
-        return cmd_iface_diff(argv[2], argv[3], json);
+        return cmd_iface_diff(argv[2], argv[3], json, budget);
     }
     if ((argc == 3 || (argc == 4 && strcmp(argv[3], "--json") == 0))
             && strcmp(argv[1], "compat") == 0) {
@@ -836,7 +920,7 @@ static int dispatch(int argc, char **argv)
     if (argc == 7 && strcmp(argv[1], "asm") == 0
             && strcmp(argv[3], "-o") == 0
             && strcmp(argv[5], "--signing-key") == 0) {
-        return cmd_asm_contract_signed(argv[2], argv[4], argv[6]);
+        return cmd_asm_budget(argv[2], argv[4], argv[6], budget);
     }
     if (argc == 8 && strcmp(argv[1], "migrate") == 0
             && strcmp(argv[4], "-o") == 0
@@ -970,6 +1054,8 @@ static int dispatch(int argc, char **argv)
         "       axi types FILE [--json] type laws only (AXI-T0xx)\n"
         "       axi check FILE [--json] the door: grammar + form + types\n"
         "       axi compile FILE.axi -o FILE.axb --signing-key SEED\n"
+        "                 --compile-mem BYTES --compile-mem-report\n"
+        "                 shared by lex/parse/canon/form/types/check/iface/iface-diff/lint-safe/asm\n"
         "       axi iface FILE [--json]        the contract, derived + hashed\n"
         "       axi iface-diff OLD NEW [--json]  may NEW replace OLD? "
         "(1 = breaking)\n"
@@ -1008,9 +1094,100 @@ static int dispatch(int argc, char **argv)
 
 /* A successful computation is not a published result until stdio flushes.
  * Preserve normal semantic exit codes; publication failure is a CLI error. */
+static int is_compiler_command(const char *command)
+{
+    static const char *const commands[] = {
+        "lex", "parse", "canon", "form", "types", "check", "compile",
+        "iface", "iface-diff", "lint-safe", "asm"
+    };
+    for (size_t i = 0; i < sizeof commands / sizeof commands[0]; i++)
+        if (!strcmp(command, commands[i])) return 1;
+    return 0;
+}
+
+static int compile_options(int *argc, char **argv, int enabled,
+                           size_t *limit, int *report, int *json)
+{
+    int set_limit = 0, output, first_option;
+    *limit = AXI_COMPILE_DEFAULT_LIMIT;
+    *report = 0;
+    *json = 0;
+    /* Runtime commands own their complete argv, including values and the
+     * `--` positional boundary. Compiler options follow the required FILE
+     * arguments; a file or an option value may itself have an option name. */
+    if (!enabled) return 0;
+    first_option = !strcmp(argv[1], "iface-diff") ? 4 : 3;
+    output = *argc < first_option ? *argc : first_option;
+    for (int i = output; i < *argc; i++) {
+        if (!strcmp(argv[i], "-o") || !strcmp(argv[i], "--signing-key")) {
+            argv[output++] = argv[i];
+            if (i + 1 < *argc) argv[output++] = argv[++i];
+        } else if (!strcmp(argv[i], "--compile-mem")) {
+            const char *p;
+            size_t value = 0;
+            if (set_limit || ++i == *argc || !*argv[i]) return 1;
+            p = argv[i];
+            while (*p >= '0' && *p <= '9') {
+                size_t digit = (size_t)(*p++ - '0');
+                if (value > (SIZE_MAX - digit) / 10) return 1;
+                value = value * 10 + digit;
+            }
+            if (*p) return 1;
+            *limit = value;
+            set_limit = 1;
+        } else if (!strcmp(argv[i], "--compile-mem-report")) {
+            if (*report) return 1;
+            *report = 1;
+        } else {
+            if (!strcmp(argv[i], "--json")) *json = 1;
+            argv[output++] = argv[i];
+        }
+    }
+    *argc = output;
+    argv[output] = NULL;
+    return 0;
+}
+
 int main(int argc, char **argv)
 {
-    int rc = dispatch(argc, argv);
+    axi_compile_budget budget;
+    int compile = argc > 1 && is_compiler_command(argv[1]);
+    int report, json, rc;
+    size_t limit;
+    /* This is a reservation for the bounded CLI diagnostic and lexical
+     * workspaces, not a promise to cap all C stack or process RSS. */
+    const size_t workspace = sizeof budget + 2 * sizeof(axi_diags)
+                            + sizeof(axi_lexer) + sizeof(axi_token)
+                            + (compile && !strcmp(argv[1], "lex")
+                               ? AXI_NUMERIC_SCRATCH_BYTES : 0);
+    if (compile_options(&argc, argv, compile, &limit, &report, &json) != 0) {
+        fprintf(AXI_ERR, "AXI-X005 invalid or repeated compiler memory option\n");
+        return 2;
+    }
+    if (compile) {
+        axi_compile_budget_init(&budget, limit);
+        if (axi_compile_reserve(&budget, workspace)) {
+            rc = dispatch(argc, argv, &budget);
+            (void)axi_compile_release(&budget, workspace);
+        } else {
+            print_compile_failure(argc > 2 ? argv[2] : "<compiler>", json, &budget);
+            rc = 2;
+        }
+        if (budget.live != 0)
+            axi_compile_fail(&budget, AXI_COMPILE_OWNERSHIP, budget.live);
+        if (budget.failure != AXI_COMPILE_OK) {
+            fprintf(AXI_ERR, "%s %s (limit=%zu, peak=%zu, requested=%zu)\n",
+                    axi_compile_failure_code(&budget), compile_failure_message(&budget),
+                    budget.limit, budget.peak, budget.failed_request);
+            rc = 2;
+        }
+        if (report)
+            fprintf(AXI_ERR, "{\"schema\":\"axi.compiler-memory.v1\",\"limit\":%zu,"
+                "\"peak\":%zu,\"live\":%zu,\"allocations\":%zu,\"fixed\":%zu,"
+                "\"failure\":\"%s\"}\n", budget.limit, budget.peak, budget.live,
+                budget.allocations, budget.fixed, axi_compile_failure_code(&budget));
+        axi_compile_budget_destroy(&budget);
+    } else rc = dispatch(argc, argv, NULL);
     if (fflush(AXI_OUT) != 0 || ferror(AXI_OUT)) {
         fprintf(AXI_ERR, "AXI-X004 cannot publish CLI output\n");
         return 2;

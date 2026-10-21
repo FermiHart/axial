@@ -4,6 +4,7 @@
  */
 #include "axi_codegen.h"
 #include "axi_alloc.h"
+#include "axi_string.h"
 #include "axi_ast.h"
 #include "axi_cap_table.h"
 #include "axi.h"
@@ -23,6 +24,7 @@ typedef struct {
     char *buf;
     size_t len, cap;
     int failed;
+    axi_compile_budget *budget;
 } outbuf;
 
 typedef struct {
@@ -35,7 +37,7 @@ typedef struct {
 } bind;
 
 typedef struct {
-    int tag; /* 0=u64, 1=str, 2=i64, 3=f64 */
+    int tag; /* 0=u64, 1=str, 2=i64, 3=f64, 4=error atom */
     uint64_t u;
     char *s;
     uint32_t slen;
@@ -55,13 +57,14 @@ typedef struct {
     int unit_reg;
     int err;
     int oom;
+    axi_compile_budget *budget;
 } cg;
 
 static void clear_consts(cg *c)
 {
     int i;
     for (i = 0; i < c->nk; i++) {
-        if (c->k[i].tag == 1) free(c->k[i].s);
+        if (c->k[i].tag == 1 || c->k[i].tag == 4) (void)axi_compile_free(c->budget, c->k[i].s);
         c->k[i].s = NULL;
         c->k[i].slen = 0;
     }
@@ -74,13 +77,14 @@ static void cg_free(cg *c)
 {
     int i;
     clear_consts(c);
-    for (i = 0; i < c->nbuiltins; i++) free(c->builtins[i]);
-    for (i = 0; i < c->neffs; i++) free(c->effs[i]);
+    for (i = 0; i < c->nbuiltins; i++) (void)axi_compile_free(c->budget, c->builtins[i]);
+    for (i = 0; i < c->neffs; i++) (void)axi_compile_free(c->budget, c->effs[i]);
 }
 
-static void ob_init(outbuf *o)
+static void ob_init(outbuf *o, axi_compile_budget *budget)
 {
-    o->buf = axi_malloc(256);
+    o->budget = budget;
+    o->buf = axi_compile_malloc(budget, 256);
     o->len = 0;
     o->cap = o->buf ? 256 : 0;
     o->failed = o->buf == NULL;
@@ -97,7 +101,7 @@ static void ob_grow(outbuf *o, size_t need)
         if (o->cap > (size_t)-1 / 2) { o->failed = 1; return; }
         o->cap *= 2;
     }
-    buf = axi_realloc(o->buf, o->cap);
+    buf = axi_compile_realloc(o->budget, o->buf, o->cap);
     if (!buf) { o->failed = 1; return; }
     o->buf = buf;
 }
@@ -237,28 +241,48 @@ static int add_k_num(cg *c, int tag, uint64_t bits)
 
 /* Strip surrounding quotes and undo the escapes the axial lexer accepts
  * for " and \, so the constant stores the semantic string value. */
-static char *unquote_str(const char *s, uint32_t len, uint32_t *outlen)
+static char *unquote_str(axi_compile_budget *budget, const char *s, uint32_t len, uint32_t *outlen)
 {
     /* INV-323 / AXI-INV-105: one decoder, one meaning — shared with the
      * assembler through axi_str_unescape. */
-    return axi_str_unescape(s, len, outlen);
+    return axi_compile_str_unescape(budget, s, len, outlen);
 }
 
 static int add_k_str(cg *c, const char *s, uint32_t len)
 {
     uint32_t vlen;
-    char *v = unquote_str(s, len, &vlen);
+    char *v = unquote_str(c->budget, s, len, &vlen);
     if (!v) { c->oom = 1; return 0; }
     for (int i = 0; i < c->nk; i++)
         if (c->k[i].tag == 1 && c->k[i].slen == vlen && memcmp(c->k[i].s, v, vlen) == 0) {
-            free(v);
+            (void)axi_compile_free(c->budget, v);
             return i;
         }
-    if (c->nk >= MAX_CONST) { free(v); c->err = 1; return 0; }
+    if (c->nk >= MAX_CONST) { (void)axi_compile_free(c->budget, v); c->err = 1; return 0; }
     c->k[c->nk].tag = 1;
     c->k[c->nk].u = 0;
     c->k[c->nk].s = v;
     c->k[c->nk].slen = vlen;
+    return c->nk++;
+}
+
+/* Source errors carry a named atom and no payload. Keep their constant
+ * namespace disjoint from strings, even when their bytes are identical. */
+static int add_k_err(cg *c, const char *s, uint32_t len)
+{
+    char *copy;
+    if (!s || !len || len > 63) { c->err = 1; return 0; }
+    for (int i = 0; i < c->nk; i++)
+        if (c->k[i].tag == 4 && c->k[i].slen == len
+                && memcmp(c->k[i].s, s, len) == 0) return i;
+    if (c->nk >= MAX_CONST) { c->err = 1; return 0; }
+    copy = axi_compile_malloc(c->budget, (size_t)len + 1);
+    if (!copy) { c->oom = 1; return 0; }
+    memcpy(copy, s, len); copy[len] = '\0';
+    c->k[c->nk].tag = 4;
+    c->k[c->nk].s = copy;
+    c->k[c->nk].slen = len;
+    c->k[c->nk].u = 0;
     return c->nk++;
 }
 
@@ -267,7 +291,7 @@ static int add_builtin(cg *c, const char *name)
     for (int i = 0; i < c->nbuiltins; i++)
         if (strcmp(c->builtins[i], name) == 0) return i;
     if (c->nbuiltins >= MAX_BUILTIN) { c->err = 1; return 0; }
-    c->builtins[c->nbuiltins] = axi_strdup(name);
+    c->builtins[c->nbuiltins] = axi_compile_strdup(c->budget, name);
     if (!c->builtins[c->nbuiltins]) { c->oom = 1; return 0; }
     return c->nbuiltins++;
 }
@@ -277,7 +301,7 @@ static int add_eff(cg *c, const char *name)
     for (int i = 0; i < c->neffs; i++)
         if (strcmp(c->effs[i], name) == 0) return i;
     if (c->neffs >= MAX_EFF) { c->err = 1; return 0; }
-    c->effs[c->neffs] = axi_strdup(name);
+    c->effs[c->neffs] = axi_compile_strdup(c->budget, name);
     if (!c->effs[c->neffs]) { c->oom = 1; return 0; }
     return c->neffs++;
 }
@@ -286,6 +310,21 @@ static int add_eff(cg *c, const char *name)
 static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent);
 static void gen_stmt(cg *c, outbuf *o, const axi_node *n, int indent);
 static void gen_block(cg *c, outbuf *o, const axi_node *blk, int indent);
+
+static void emit_return(cg *c, outbuf *o, int value, uint8_t note, int indent)
+{
+    int tagged = -1;
+    if (note == AXI_RET_SOME || note == AXI_RET_NONE) {
+        int tag = alloc_reg(c);
+        int k = add_k_u64(c, note == AXI_RET_NONE ? 1 : 0);
+        tagged = alloc_reg(c);
+        ob_indent(o, indent); ob_printf(o, "ldk r%d k%d\n", tag, k);
+        ob_indent(o, indent); ob_printf(o, "umake r%d r%d r%d\n", tagged, tag, value);
+        free_reg(c, tag);
+    } else if (note != AXI_RET_PLAIN) { c->err = 1; return; }
+    ob_indent(o, indent); ob_printf(o, "ret r%d\n", tagged >= 0 ? tagged : value);
+    free_reg(c, tagged);
+}
 
 /* Move evaluated arguments into their consecutive call slots.
  * If an argument currently lives inside another argument's slot, copy it to
@@ -417,6 +456,13 @@ static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent)
         ob_printf(o, "ldk r%d k%d\n", r, k);
         return r;
     }
+    case N_ERRT: {
+        int k = add_k_err(c, n->lex, n->lexlen);
+        int r = alloc_reg(c);
+        ob_indent(o, indent);
+        ob_printf(o, "ldk r%d k%d\n", r, k);
+        return r;
+    }
     case N_FLOAT: {
         /* f64 constants travel as raw bits; the assembler reads them back as
          * hex, the same spelling the disassembler prints (one round trip). */
@@ -474,6 +520,51 @@ static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent)
         c->err = 1;
         return 0;
     }
+    case N_TRY: {
+        const axi_node *type;
+        int has_ok = 0, has_payload = 0;
+        int r;
+        if (!n->result_type) { c->err = 1; return 0; }
+        r = gen_expr(c, o, n->a, indent);
+        for (type = n->result_type->list; type; type = type->next) {
+            if (type->kind == N_OKT) has_ok = 1;
+            else if (type->kind != N_ERRT) has_payload = 1;
+            else {
+                int atom = alloc_reg(c), predicate = alloc_reg(c);
+                int k = add_k_err(c, type->lex, type->lexlen);
+                /* Closed source errors are payloadless atoms. A different
+                 * scalar kind or a tagged success never equals this KERR. */
+                ob_indent(o, indent); ob_printf(o, "ldk r%d k%d\n", atom, k);
+                ob_indent(o, indent); ob_printf(o, "eq r%d r%d r%d\n", predicate, r, atom);
+                ob_indent(o, indent); ob_printf(o, "jf r%d +2\n", predicate);
+                emit_return(c, o, r, AXI_RET_PLAIN, indent);
+                free_reg(c, atom); free_reg(c, predicate);
+            }
+        }
+        if (has_ok && has_payload) {
+            int tag = alloc_reg(c), predicate = alloc_reg(c);
+            int none = alloc_unit_reg(c), k = add_k_u64(c, 1);
+            ob_indent(o, indent); ob_printf(o, "utag r%d r%d\n", tag, r);
+            ob_indent(o, indent); ob_printf(o, "ldk r%d k%d\n", predicate, k);
+            ob_indent(o, indent); ob_printf(o, "eq r%d r%d r%d\n", predicate, tag, predicate);
+            /* The source payload is arm 0; ok is arm 1. Reconstruct the
+             * caller's own ok representation, which may be plain UNIT.
+             * UCHK would incorrectly preserve a callee-specific wrapper. */
+            ob_indent(o, indent); ob_printf(o, "jf r%d +%d\n", predicate,
+                n->tyann == AXI_RET_NONE ? 4 : 2);
+            emit_return(c, o, none, n->tyann, indent);
+            ob_indent(o, indent); ob_printf(o, "upay r%d r%d\n", r, r);
+            free_reg(c, tag); free_reg(c, predicate);
+        }
+        if (!has_ok && !has_payload) {
+            /* An error-only callee has no continuing path. Do not turn an
+             * impossible result into a successful UNIT return. */
+            ob_indent(o, indent); ob_puts(o, "halt\n");
+            free_reg(c, r);
+            return alloc_unit_reg(c);
+        }
+        return r;
+    }
     case N_BIN: {
         int rl = gen_expr(c, o, n->a, indent);
         int rr = gen_expr(c, o, n->b, indent);
@@ -500,6 +591,22 @@ static int gen_expr(cg *c, outbuf *o, const axi_node *n, int indent)
         return rd;
     }
     case N_UN: {
+        if (n->op == T_MINUS && n->a && n->a->kind == N_FLOAT && n->tyann == 2) {
+            uint64_t bits;
+            int k, rd;
+            /* Literal negation is exact sign-bit inversion. Keep its raw
+             * representation in the pool without host arithmetic or a
+             * load/load/sub sequence. The frozen VM still canonicalizes
+             * negative zero to positive zero when it loads a constant. */
+            memcpy(&bits, &n->a->fval, sizeof bits);
+            bits ^= UINT64_C(0x8000000000000000);
+            k = add_k_num(c, 3, bits);
+            rd = alloc_reg(c);
+            if (c->err || c->oom) return 0;
+            ob_indent(o, indent);
+            ob_printf(o, "ldk r%d k%d\n", rd, k);
+            return rd;
+        }
         if (n->op == T_MINUS && n->a && n->a->kind == N_INT) {
             int k, rd;
             if (n->a->ival > (UINT64_C(1) << 63)) { c->err = 1; return 0; }
@@ -696,8 +803,7 @@ static void gen_stmt(cg *c, outbuf *o, const axi_node *n, int indent)
         /* The checker defines bare ret as ok, not integer zero. A dedicated
          * never-written UNIT register gives both spellings the same value. */
         int r = n->a ? gen_expr(c, o, n->a, indent) : alloc_unit_reg(c);
-        ob_indent(o, indent);
-        ob_printf(o, "ret r%d\n", r);
+        emit_return(c, o, r, n->tyann, indent);
         /* There is no successor on this path. A later branch can reuse this
          * temporary without consuming one permanent register per early ret. */
         free_reg(c, r);
@@ -772,7 +878,7 @@ static void gen_cell(cg *c, outbuf *o, const axi_node *cell)
 
     /* Generate body first so we know constants and reg usage. */
     outbuf body;
-    ob_init(&body);
+    ob_init(&body, c->budget);
     if (body.failed) c->oom = 1;
     gen_block(c, &body, cell->b, 1);
     if (body.failed) c->oom = 1;
@@ -790,10 +896,12 @@ static void gen_cell(cg *c, outbuf *o, const axi_node *cell)
         } else if (c->k[i].tag == 3) {
             ob_printf(o, "  k%d f64 %llx\n", i, (unsigned long long)c->k[i].u);
         } else {
-            ob_printf(o, "  k%d str \"", i);
+            ob_printf(o, "  k%d %s \"", i, c->k[i].tag == 4 ? "err" : "str");
             for (uint32_t j = 0; j < c->k[i].slen; j++) {
-                if (c->k[i].s[j] == '"' || c->k[i].s[j] == '\\') ob_puts(o, "\\");
-                ob_putc(o, (unsigned char)c->k[i].s[j]);
+                char escaped[2];
+                int len = axi_string_escape_byte((unsigned char)c->k[i].s[j], escaped);
+                if (!len) { c->err = 1; break; }
+                for (int k = 0; k < len; k++) ob_putc(o, escaped[k]);
             }
             ob_puts(o, "\"\n");
         }
@@ -806,7 +914,7 @@ static void gen_cell(cg *c, outbuf *o, const axi_node *cell)
         o->len += body.len;
         o->buf[o->len] = '\0';
     }
-    free(body.buf);
+    (void)axi_compile_free(body.budget, body.buf);
 
     ob_indent(o, 0);
     ob_puts(o, "end\n");
@@ -817,8 +925,11 @@ char *axi_codegen(const axi_node *unit, size_t *out_len)
 {
     outbuf o;
     cg c;
+    if (out_len) *out_len = 0;
+    if (!unit || !axi_compile_reserve(unit->budget, sizeof c)) return NULL;
     memset(&c, 0, sizeof c);
-    ob_init(&o);
+    c.budget = unit->budget;
+    ob_init(&o, c.budget);
 
     /* k0 is always 0 (unit / false) */
     c.k[0].tag = 0; c.k[0].u = 0; c.nk = 1;
@@ -851,12 +962,14 @@ char *axi_codegen(const axi_node *unit, size_t *out_len)
      * opcode. c->err covers register exhaustion, unbound names, unknown
      * nodes and every saturated table — none of them may reach publish. */
     if (o.failed || c.oom || c.err) {
-        free(o.buf);
+        (void)axi_compile_free(o.budget, o.buf);
         cg_free(&c);
+        (void)axi_compile_release(c.budget, sizeof c);
         if (out_len) *out_len = 0;
         return NULL;
     }
     if (out_len) *out_len = o.len;
     cg_free(&c);
+    (void)axi_compile_release(c.budget, sizeof c);
     return o.buf;
 }

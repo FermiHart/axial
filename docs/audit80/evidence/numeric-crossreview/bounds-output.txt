@@ -1,0 +1,5 @@
+max retained numerator bits: 2658
+max denominator*boundary bits: 2662
+max decimal boundary significand digits: 768
+axi_numeric.c 2f70e896cf45d1edb3cb3208bf3171fcac1ced5b6067680c33296c7b8fc0402a
+axi_numeric.h dbc5c129e0740baefdf8a830f9b1d802d3a1aeb680dbd0ac2ef5298482719e0a

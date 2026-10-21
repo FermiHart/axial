@@ -10,9 +10,17 @@
  */
 #include "axi.h"
 #include "axi_alloc.h"
+#include "axi_string.h"
+#include "axi_numeric.h"
+#include <float.h>
 #include <string.h>
 #include <stdio.h>
 #include <stdlib.h>
+
+#if FLT_RADIX != 2 || DBL_MANT_DIG != 53 || DBL_MAX_EXP != 1024 || DBL_MIN_EXP != -1021
+#error "Axial source f64 requires an IEEE binary64 host double"
+#endif
+typedef char axi_f64_storage_is_64_bits[sizeof(double) == sizeof(uint64_t) ? 1 : -1];
 
 /* ---- keyword table ------------------------------------------------------- */
 
@@ -141,7 +149,7 @@ static void lex_number(axi_lexer *lx, axi_token *t,
 {
     uint64_t v = 0;
     int is_float = 0;
-    double f = 0.0, scale = 0.1;
+    uint64_t fbits = 0;
     int overflow = 0;
 
     while (is_digit(peek(lx)) || peek(lx) == '_') {
@@ -158,13 +166,21 @@ static void lex_number(axi_lexer *lx, axi_token *t,
     }
     if (peek(lx) == '.' && is_digit(peek2(lx))) {
         is_float = 1;
-        f = (double)v;
         advance(lx); /* '.' */
         while (is_digit(peek(lx)) || peek(lx) == '_') {
-            char c = advance(lx);
-            if (c == '_') continue;
-            f += (double)(c - '0') * scale;
-            scale *= 0.1;
+            advance(lx);
+        }
+        {
+            axi_numeric_workspace workspace;
+            int status = axi_f64_from_decimal(start,
+                (size_t)((lx->src + lx->pos) - start), &fbits, &workspace);
+            if (status != AXI_DECIMAL_OK) {
+                axi_diag_add_source(lx->diags, "AXI-L006", lx->src,
+                                    (uint32_t)(start - lx->src),
+                                    (uint32_t)((lx->src + lx->pos) - start),
+                                    "float literal rounds outside finite binary64",
+                                    "use a finite decimal f64 value; the maximum is about 1.7976931348623157 times 10^308");
+            }
         }
     }
     /* trailing junk like 123abc is one diagnostic, consumed (progress law) */
@@ -176,7 +192,7 @@ static void lex_number(axi_lexer *lx, axi_token *t,
                             "letters directly after a number literal",
                             "separate the number and the identifier with a space");
     }
-    if (overflow) {
+    if (overflow && !is_float) {
         axi_diag_add_source(lx->diags, "AXI-L005", lx->src,
                             (uint32_t)(start - lx->src),
                             (uint32_t)((lx->src + lx->pos) - start),
@@ -185,7 +201,8 @@ static void lex_number(axi_lexer *lx, axi_token *t,
     }
     tok_fill(t, is_float ? T_FLOAT : T_INT, line, col,
              start, (size_t)((lx->src + lx->pos) - start));
-    if (is_float) t->fval = f; else t->ival = v;
+    if (is_float) memcpy(&t->fval, &fbits, sizeof fbits);
+    else t->ival = v;
 }
 
 static void lex_string(axi_lexer *lx, axi_token *t,
@@ -206,7 +223,8 @@ static void lex_string(axi_lexer *lx, axi_token *t,
         if (c == '"') break;
         if (c == '\\') {
             char e = peek(lx);
-            if (e == 'n' || e == 't' || e == '\\' || e == '"' || e == '0') {
+            unsigned char decoded;
+            if (axi_string_unescape_byte((unsigned char)e, &decoded)) {
                 advance(lx);
             } else {
                 axi_diag_add_source(lx->diags, "AXI-L003", lx->src,
@@ -215,6 +233,11 @@ static void lex_string(axi_lexer *lx, axi_token *t,
                                     "valid escapes: \\n \\t \\\\ \\\" \\0");
                 if (!at_end(lx) && e != '\n') advance(lx);
             }
+        } else if (((unsigned char)c < 0x20 && c != '\t') || (unsigned char)c == 0x7f) {
+            axi_diag_add_source(lx->diags, "AXI-L003", lx->src,
+                                (uint32_t)lx->pos - 1, 1,
+                                "unescaped control byte in string literal",
+                                "use \\n, \\t or \\0; other controls have no source spelling");
         }
     }
     tok_fill(t, T_STR, line, col, start,
@@ -312,27 +335,58 @@ void axi_lex_next(axi_lexer *lx, axi_token *t)
     lx->last_tok_line = t->line;
 }
 
-/* INV-323 / AXI-INV-105: the one string decoder. The v0 grammar has exactly
- * two escapes; anything else after a backslash is passed through literally
- * (the same answer the assembler and the codegen must give). */
-char *axi_str_unescape(const char *lexeme, size_t len, uint32_t *outlen)
+int axi_str_decoded_length(const char *lexeme, size_t len, uint32_t *outlen)
 {
-    char *dst;
     size_t j = 0;
-    if (!lexeme || len < 2 || lexeme[0] != '"' || lexeme[len - 1] != '"')
-        return NULL;
-    dst = (char *)axi_malloc(len - 1);
-    if (!dst) return NULL;
+    if (!lexeme || !outlen || len < 2 || len - 2 > UINT32_MAX
+            || lexeme[0] != '"' || lexeme[len - 1] != '"') return 1;
     for (size_t i = 1; i + 1 < len; i++) {
-        if (lexeme[i] == '\\' && i + 2 < len && lexeme[i + 1] == '"') {
-            dst[j++] = '"'; i++;
-        } else if (lexeme[i] == '\\' && i + 2 < len && lexeme[i + 1] == '\\') {
-            dst[j++] = '\\'; i++;
-        } else {
-            dst[j++] = lexeme[i];
+        unsigned char ch = (unsigned char)lexeme[i];
+        if (ch == '\\') {
+            if (i + 2 >= len
+                    || !axi_string_unescape_byte((unsigned char)lexeme[++i], &ch)) return 1;
+        } else if (ch == '"' || (ch < 0x20 && ch != '\t') || ch == 0x7f) {
+            return 1;
         }
+        j++;
+    }
+    *outlen = (uint32_t)j;
+    return 0;
+}
+
+static void str_decode_validated(const char *lexeme, size_t len, char *dst)
+{
+    size_t j = 0;
+    for (size_t i = 1; i + 1 < len; i++) {
+        unsigned char ch = (unsigned char)lexeme[i];
+        if (ch == '\\') (void)axi_string_unescape_byte((unsigned char)lexeme[++i], &ch);
+        dst[j++] = (char)ch;
     }
     dst[j] = '\0';
-    if (outlen) *outlen = (uint32_t)j;
+}
+
+int axi_str_decode_into(const char *lexeme, size_t len, char *dst,
+                         size_t capacity, uint32_t *outlen)
+{
+    uint32_t n;
+    uintptr_t src_at = (uintptr_t)lexeme, dst_at = (uintptr_t)dst;
+    if (!dst || !outlen || axi_str_decoded_length(lexeme, len, &n)
+            || capacity <= n || len > UINTPTR_MAX - src_at
+            || (size_t)n + 1 > UINTPTR_MAX - dst_at
+            || (dst_at < src_at + len && src_at < dst_at + (size_t)n + 1)) return 1;
+    str_decode_validated(lexeme, len, dst);
+    *outlen = n;
+    return 0;
+}
+
+char *axi_str_unescape(const char *lexeme, size_t len, uint32_t *outlen)
+{
+    uint32_t n;
+    char *dst;
+    if (axi_str_decoded_length(lexeme, len, &n)) return NULL;
+    dst = (char *)axi_malloc((size_t)n + 1);
+    if (!dst) return NULL;
+    str_decode_validated(lexeme, len, dst);
+    if (outlen) *outlen = n;
     return dst;
 }

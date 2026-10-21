@@ -11,7 +11,7 @@
  *    body braces in column 1; body indent 2; nested indent +2.
  *  - one space around binary ops; none before , : ? ( [ ; one after , : .
  *  - integers: `_` every 3 digits iff ≥ 5 digits; forbidden below (G1).
- *  - floats: shortest round-trip decimal; always with '.' or exponent.
+ *  - floats: unique shortest round-trip decimal; always '.', no exponent.
  *  - one stmt per line; single-stmt else-less `if` is inline (the blessed
  *    exemplar form); zero blank lines inside bodies; exactly one blank
  *    line between cells; comments live on their own line, at the indent
@@ -21,6 +21,8 @@
 #include "axi.h"
 #include "axi_ast.h"
 #include "axi_alloc.h"
+#include "axi_string.h"
+#include "axi_numeric.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,6 +35,7 @@ typedef struct {
     char  *p;
     size_t n, cap;
     int failed;
+    axi_compile_budget *budget;
 } sb;
 
 static void sb_grow(sb *b, size_t need)
@@ -40,14 +43,20 @@ static void sb_grow(sb *b, size_t need)
     size_t cap;
     char *p;
     if (b->failed) return;
-    if (need > (size_t)-1 - b->n - 1) { b->failed = 1; return; }
+    if (need > (size_t)-1 - b->n - 1) {
+        axi_compile_fail(b->budget, AXI_COMPILE_OVERFLOW, need);
+        b->failed = 1; return;
+    }
     if (b->n + need + 1 <= b->cap) return;
     cap = b->cap ? b->cap : 1024;
     while (b->n + need + 1 > cap) {
-        if (cap > (size_t)-1 / 2) { b->failed = 1; return; }
+        if (cap > (size_t)-1 / 2) {
+            axi_compile_fail(b->budget, AXI_COMPILE_OVERFLOW, cap);
+            b->failed = 1; return;
+        }
         cap *= 2;
     }
-    p = (char *)axi_realloc(b->p, cap);
+    p = (char *)axi_compile_realloc(b->budget, b->p, cap);
     if (!p) { b->failed = 1; return; }
     b->p = p;
     b->cap = cap;
@@ -92,7 +101,7 @@ void axi_canon_int_str(uint64_t v, char *out, size_t cap)
     sb b;
     if (!out || cap == 0) return;
     if (cap < 32) { out[0] = '\0'; return; }
-    b.p = out; b.n = 0; b.cap = cap; b.failed = 0;
+    b.p = out; b.n = 0; b.cap = cap; b.failed = 0; b.budget = NULL;
     sb_int(&b, v);
     if (b.failed) out[0] = '\0';
 }
@@ -107,92 +116,25 @@ void axi_canon_int_json(uint64_t v, char *out, size_t cap)
     if (snprintf(out, cap, "%llu", (unsigned long long)v) < 0) out[0] = '\0';
 }
 
-/* Expand libc's compact candidate into the decimal-only source grammar.
- * Neither exponent syntax nor a process-locale decimal separator is added
- * to the language by its own formatter. */
-static int float_decimal(const char *candidate, char out[384])
-{
-    char digits[64];
-    size_t nd = 0, i = 0, w = 0;
-    int point = -1, exponent = 0, negative = 0;
-    while (candidate[i] && candidate[i] != 'e' && candidate[i] != 'E') {
-        if (candidate[i] == '.' && point < 0) point = (int)nd;
-        else if (candidate[i] >= '0' && candidate[i] <= '9' && nd < sizeof digits)
-            digits[nd++] = candidate[i];
-        else return 0;
-        i++;
-    }
-    if (!nd) return 0;
-    if (point < 0) point = (int)nd;
-    if (candidate[i]) {
-        i++;
-        if (candidate[i] == '-' || candidate[i] == '+') negative = candidate[i++] == '-';
-        if (!candidate[i]) return 0;
-        for (; candidate[i]; i++) {
-            if (candidate[i] < '0' || candidate[i] > '9' || exponent > 384) return 0;
-            exponent = exponent * 10 + candidate[i] - '0';
-        }
-    }
-    point += negative ? -exponent : exponent;
-    if (point < -350 || point > 350) return 0;
-    if (point <= 0) {
-        out[w++] = '0'; out[w++] = '.';
-        for (int z = 0; z < -point; z++) out[w++] = '0';
-        if (nd >= 384 - w) return 0;
-        memcpy(out + w, digits, nd); w += nd;
-    } else {
-        for (int d = 0; d < point; d++) out[w++] = (size_t)d < nd ? digits[d] : '0';
-        out[w++] = '.';
-        if ((size_t)point < nd) {
-            if (nd - (size_t)point >= 384 - w) return 0;
-            memcpy(out + w, digits + point, nd - (size_t)point);
-            w += nd - (size_t)point;
-        } else out[w++] = '0';
-    }
-    out[w] = '\0';
-    return 1;
-}
-
-static int float_roundtrips(const char *candidate, double f)
-{
-    axi_lexer lx;
-    axi_token token;
-    axi_diags ds;
-    size_t len = strlen(candidate);
-    axi_diags_init(&ds);
-    axi_lex_init(&lx, candidate, len, &ds);
-    axi_lex_next(&lx, &token);
-    return ds.n == 0 && token.kind == T_FLOAT && token.len == len
-        && memcmp(&token.fval, &f, sizeof f) == 0;
-}
-
 static void sb_float(sb *b, const axi_node *n)
 {
-    char compact[64], decimal[384];
-    size_t dot, begin, end;
-    for (int prec = 1; prec <= 17; prec++) {
-        snprintf(compact, sizeof compact, "%.*g", prec, n->fval);
-        if (float_decimal(compact, decimal) && float_roundtrips(decimal, n->fval)) {
-            sb_str(b, decimal);
-            return;
-        }
+    axi_numeric_workspace workspace;
+    uint64_t bits;
+    const char *text;
+    size_t len;
+    if (b->failed) return;
+    if (!axi_compile_reserve(b->budget, sizeof workspace)) {
+        b->failed = 1;
+        return;
     }
-    /* The v0 lexer accumulates decimal fractions, so strtod equality alone
-     * is not a proof of source round-trip. Preserve its already-accepted bits
-     * when no compact candidate works: remove separators and redundant zeroes
-     * from the original decimal. Re-canonicalization is then a fixed point. */
-    if (!n->lex || !n->lexlen) { b->failed = 1; return; }
-    for (dot = 0; dot < n->lexlen && n->lex[dot] != '.'; dot++) {}
-    if (dot == n->lexlen) { b->failed = 1; return; }
-    begin = 0;
-    while (begin < dot && (n->lex[begin] == '0' || n->lex[begin] == '_')) begin++;
-    if (begin == dot) sb_ch(b, '0');
-    for (size_t i = begin; i < dot; i++) if (n->lex[i] != '_') sb_ch(b, n->lex[i]);
-    sb_ch(b, '.');
-    end = n->lexlen;
-    while (end > dot + 1 && (n->lex[end - 1] == '0' || n->lex[end - 1] == '_')) end--;
-    if (end == dot + 1) sb_ch(b, '0');
-    for (size_t i = dot + 1; i < end; i++) if (n->lex[i] != '_') sb_ch(b, n->lex[i]);
+    memcpy(&bits, &n->fval, sizeof bits);
+    if (axi_f64_to_decimal(bits, &workspace, &text, &len) != AXI_DECIMAL_OK) {
+        b->failed = 1;
+    } else {
+        /* text borrows workspace until its bytes are copied to the builder. */
+        sb_put(b, text, len);
+    }
+    (void)axi_compile_release(b->budget, sizeof workspace);
 }
 
 /* ---- trivia (comments) --------------------------------------------------- */
@@ -204,11 +146,15 @@ typedef struct {
 } triv_ctx;
 
 /* Re-lex purely to harvest comments; parse already validated the stream. */
-static void triv_collect(triv_ctx *tc, const char *src, size_t len)
+static int triv_collect(triv_ctx *tc, const char *src, size_t len,
+                        axi_compile_budget *budget)
 {
     axi_lexer lx;
     axi_diags scratch;
     axi_token t;
+    const size_t workspace = sizeof lx + sizeof scratch + sizeof t
+                            + AXI_NUMERIC_SCRATCH_BYTES;
+    if (!axi_compile_reserve(budget, workspace)) return 0;
     axi_diags_init(&scratch);
     axi_lex_init(&lx, src, len, &scratch);
     lx.triv = tc->tv;
@@ -217,6 +163,8 @@ static void triv_collect(triv_ctx *tc, const char *src, size_t len)
     tc->n = lx.triv_n;
     tc->i = 0;
     tc->dropped = lx.triv_dropped;
+    (void)axi_compile_release(budget, workspace);
+    return 1;
 }
 
 /* Emit every comment that lives strictly before `line`, one per line,
@@ -288,7 +236,25 @@ static void render_expr_naked(sb *b, const axi_node *n)
     switch (n->kind) {
     case N_INT:   sb_int(b, n->ival); return;
     case N_FLOAT: sb_float(b, n); return;
-    case N_STR:   render_lex(b, n); return; /* slice keeps quotes+escapes */
+    case N_STR: {
+        uint32_t decoded;
+        if (axi_str_decoded_length(n->lex, n->lexlen, &decoded) != 0) {
+            b->failed = 1; return;
+        }
+        (void)decoded;
+        sb_ch(b, '"');
+        for (size_t i = 1; i + 1 < n->lexlen; i++) {
+            unsigned char ch = (unsigned char)n->lex[i];
+            char escaped[2];
+            int count;
+            if (ch == '\\')
+                (void)axi_string_unescape_byte((unsigned char)n->lex[++i], &ch);
+            count = axi_string_escape_byte(ch, escaped);
+            if (!count) { b->failed = 1; return; }
+            for (int j = 0; j < count; j++) sb_ch(b, escaped[j]);
+        }
+        sb_ch(b, '"'); return;
+    }
     case N_TRUE:  sb_str(b, "true");  return;
     case N_FALSE: sb_str(b, "false"); return;
     case N_OK:    sb_str(b, "ok");    return;
@@ -548,43 +514,44 @@ static void render_cell(sb *b, triv_ctx *tc, const axi_node *cell)
 char *axi_canon_expr_str_fallible(const axi_node *e)
 {
     /* INV-383 / AXI-INV-123: library projection refuses OOM; it never exits. */
-    sb b = {0, 0, 0, 0};
+    sb b = {0};
+    b.budget = e ? e->budget : NULL;
     sb_grow(&b, 1);
     render_expr(&b, e, 0);
-    if (b.failed) { free(b.p); return NULL; }
+    if (b.failed) { (void)axi_compile_free(b.budget, b.p); return NULL; }
     return b.p;
 }
 
 char *axi_canon_expr_str(const axi_node *e)
 {
-    char *s = axi_canon_expr_str_fallible(e);
-    if (!s) {
-        fprintf(AXI_ERR, "AXI-D999 canon: out of memory\n");
-        exit(2);
-    }
-    return s;
+    return axi_canon_expr_str_fallible(e);
 }
 
 char *axi_canon_type_str(const axi_node *t)
 {
-    sb b = {0, 0, 0, 0};
+    sb b = {0};
+    b.budget = t ? t->budget : NULL;
     sb_grow(&b, 1);
     render_type(&b, t);
     if (b.failed) {
-        free(b.p);
-        fprintf(AXI_ERR, "AXI-D999 canon: out of memory\n");
-        exit(2);
+        (void)axi_compile_free(b.budget, b.p);
+        return NULL;
     }
     return b.p;
 }
 
 char *axi_canon_render(const char *src, size_t len, const axi_node *unit)
 {
-    sb b = {0, 0, 0, 0};
+    sb b = {0};
     triv_ctx tc;
     const axi_node *c;
 
-    triv_collect(&tc, src, len);
+    b.budget = unit ? unit->budget : NULL;
+    if (!unit || !axi_compile_reserve(b.budget, sizeof tc)) return NULL;
+    if (!triv_collect(&tc, src, len, b.budget)) {
+        (void)axi_compile_release(b.budget, sizeof tc);
+        return NULL;
+    }
     sb_grow(&b, 1); /* guarantee a buffer even for the empty unit */
 
     for (c = unit->list; c; c = c->next) {
@@ -607,15 +574,15 @@ char *axi_canon_render(const char *src, size_t len, const axi_node *unit)
     }
     /* file-trailing comments */
     triv_flush(&b, &tc, 0xFFFFFFFFu, 0);
+    (void)axi_compile_release(b.budget, sizeof tc);
     if (b.failed) {
-        free(b.p);
-        fprintf(AXI_ERR, "AXI-D999 canon: out of memory\n");
-        exit(2);
+        (void)axi_compile_free(b.budget, b.p);
+        return NULL;
     }
     /* INV-323 / AXI-INV-105: trivia beyond the cap is a refusal, never a
      * silent drop — the canonical form may not lose a single comment. */
     if (tc.dropped > 0) {
-        free(b.p);
+        (void)axi_compile_free(b.budget, b.p);
         return NULL;
     }
     return b.p;

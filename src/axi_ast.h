@@ -10,6 +10,7 @@
 #define AXI_AST_H
 
 #include "axi.h"
+#include "axi_compile_budget.h"
 
 typedef enum {
     N_UNIT, N_CELL, N_POLICY, N_SIG, N_PARAM, N_TYPE, N_ERRT, N_OKT,
@@ -20,6 +21,12 @@ typedef enum {
 } axi_nkind;
 
 typedef struct axi_node axi_node;
+/* Private checker -> codegen return notes. Source admits one payload plus
+ * optional ok. Frozen manifest tags sort every payload before OK (tag 9). */
+enum {
+    AXI_RET_UNCHECKED = 0, AXI_RET_PLAIN = 1,
+    AXI_RET_SOME = 2, AXI_RET_NONE = 3
+};
 struct axi_node {
     axi_nkind    kind;
     uint32_t     line, col;      /* 1-based span start (G3) */
@@ -38,8 +45,12 @@ struct axi_node {
     uint32_t     inferred_caps_mask; /* AXI-INV-078: unit call-graph fixpoint */
     uint8_t      tyann;          /* AXI-INV-101: typechecker -> codegen note.
                                   * N_UN minus: 1 = i64, 2 = f64, 0 = unset.
+                                  * N_RET: AXI_RET_* representation note.
                                   * The codegen never re-infers a type. */
     uint8_t      contract_checked; /* AXI-INV-122: unit passed type/cap closure */
+    /* Borrowed shape established by check_try; not an owned AST child. */
+    const axi_node *result_type;
+    axi_compile_budget *budget; /* Private owner; NULL is the legacy API. */
 };
 
 /* Parse a whole unit. Syntax errors return a partial tree and AXI-P0xx
@@ -47,6 +58,10 @@ struct axi_node {
  * partial node and returns NULL with AXI-D999; the process is not terminated. */
 axi_node *axi_parse_unit(const char *src, size_t len, const char *path,
                          axi_diags *diags);
+/* The caller keeps budget and source alive through axi_ast_free. The source
+ * is borrowed; charge/copy it in the same budget when bounding an invocation. */
+axi_node *axi_parse_unit_budget(const char *src, size_t len, const char *path,
+                                axi_diags *diags, axi_compile_budget *budget);
 
 /* Release a complete or partial tree. The source must remain alive until this
  * returns because node lexemes are borrowed slices. */

@@ -83,6 +83,9 @@ static void initialize(axi_mem_account *account, size_t limit,
     account->host = *host;
     account->active = NULL;
     account->active_count = 0;
+    account->reservation_context = NULL;
+    account->reserve_external = NULL;
+    account->release_external = NULL;
 }
 
 void axi_mem_account_init(axi_mem_account *account, size_t limit)
@@ -203,6 +206,11 @@ int axi_mem_reserve(axi_mem_account *account, size_t size)
         fail(account, AXI_MEM_SIZE_OVERFLOW, size);
         return 0;
     }
+    if (account->reserve_external
+            && !account->reserve_external(account->reservation_context, size)) {
+        fail(account, AXI_MEM_QUOTA_EXCEEDED, size);
+        return 0;
+    }
     account->fixed += size;
     account->live += size;
     if (account->live > account->peak) account->peak = account->live;
@@ -213,6 +221,11 @@ int axi_mem_release(axi_mem_account *account, size_t size)
 {
     if (!begin_operation(account)) return 0;
     if (size > account->fixed) {
+        fail(account, AXI_MEM_ACCOUNT_CORRUPTION, size);
+        return 0;
+    }
+    if (account->release_external
+            && !account->release_external(account->reservation_context, size)) {
         fail(account, AXI_MEM_ACCOUNT_CORRUPTION, size);
         return 0;
     }

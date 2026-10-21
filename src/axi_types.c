@@ -51,6 +51,8 @@ typedef struct {
 
 static ty mkty(tykind k) { ty t; t.k = k; t.lex = 0; t.lexlen = 0; t.rt = 0; return t; }
 
+static int manifest_dotted_name_ok(const axi_node *n);
+
 static const char *tyname(ty t)
 {
     switch (t.k) {
@@ -88,6 +90,7 @@ typedef struct {
     binding         env[ENV_MAX];
     int             nenv;
     int             is_pure;
+    axi_compile_budget *budget;
     int             in_proof;  /* W12: inside proof{}, laws are closed+pure */
 } ck;
 
@@ -309,7 +312,7 @@ static void collect_cap_calls(ck *c, const axi_node *n, cap_graph *g,
                     cap_call *calls;
                     /* At most 256 distinct callees for each of 256 cells. */
                     if (cap > 256u * 256u) { g->failed = 1; return; }
-                    calls = axi_realloc(g->calls, cap * sizeof *calls);
+                    calls = axi_compile_realloc(c->budget, g->calls, cap * sizeof *calls);
                     if (!calls) { g->failed = 1; return; }
                     g->calls = calls; g->cap = cap;
                 }
@@ -346,7 +349,7 @@ static void infer_unit_caps(ck *c)
             tdiag(c, "AXI-T002", c->cells[i],
                   "cannot build capability call graph under memory pressure",
                   "retry with enough memory to prove every call edge");
-            free(graph.calls);
+            (void)axi_compile_free(c->budget, graph.calls);
             return;
         }
     }
@@ -368,7 +371,7 @@ static void infer_unit_caps(ck *c)
             }
         }
     }
-    free(graph.calls);
+    (void)axi_compile_free(c->budget, graph.calls);
     for (i = 0; i < c->ncells; i++) {
         uint32_t mask = 0;
         int j;
@@ -787,6 +790,9 @@ static ty check_try(ck *c, const axi_node *n)
 
     rshape_of(c, inner.rt, &rs, 0);
     rshape_of(c, c->cell->a->b, &mine, 0);
+    ((axi_node *)n)->result_type = inner.rt;
+    ((axi_node *)n)->tyann = mine.has_ok && mine.payload
+        ? AXI_RET_NONE : AXI_RET_PLAIN;
 
     for (i = 0; i < rs.nerr; i++) {
         if (!rshape_has_err(&mine, rs.errs[i]->lex, rs.errs[i]->lexlen)) {
@@ -881,6 +887,11 @@ static ty check_expr(ck *c, const axi_node *n)
     case N_TRUE: case N_FALSE: return mkty(TY_BOOL);
     case N_OK:    return mkty(TY_UNIT);
     case N_ERRT: {
+        if (!manifest_dotted_name_ok(n)) {
+            tdiag(c, "AXI-T002", n, "error atom is outside manifest v1",
+                  "use at most two non-empty path segments and 63 ASCII bytes");
+            return mkty(TY_BAD);
+        }
         ty t = mkty(TY_ERR);
         t.lex = n->lex; t.lexlen = n->lexlen;
         return t;
@@ -939,8 +950,8 @@ static ty check_expr(ck *c, const axi_node *n)
                   "negate numbers only");
             return mkty(TY_BAD);
         }
-        /* AXI-INV-101: the codegen expands -x as 0 - x and must not guess
-         * which zero; the checker annotates the exact kind it proved. */
+        /* AXI-INV-101: nonliteral -x uses typed 0 - x; literals can emit a
+         * signed constant directly. Codegen consumes the proved kind. */
         ((axi_node *)n)->tyann = v.k == TY_I64 ? 1 : 2;
         return v;
     }
@@ -992,6 +1003,8 @@ static void check_ret(ck *c, const axi_node *n, const rshape *mine)
     ty v;
 
     if (!n->a) { /* bare ret = ok */
+        ((axi_node *)n)->tyann = mine->has_ok && mine->payload
+            ? AXI_RET_NONE : AXI_RET_PLAIN;
         if (!mine->has_ok)
             tdiag(c, "AXI-T016", n, "bare `ret` returns ok, "
                   "but the rettype has no ok member",
@@ -999,6 +1012,8 @@ static void check_ret(ck *c, const axi_node *n, const rshape *mine)
         return;
     }
     v = check_expr(c, n->a);
+    ((axi_node *)n)->tyann = mine->has_ok && mine->payload && v.k != TY_ERR
+        ? (v.k == TY_UNIT ? AXI_RET_NONE : AXI_RET_SOME) : AXI_RET_PLAIN;
     switch (v.k) {
     case TY_BAD: return;
     case TY_UNION: (void)union_leak(c, n->a); return;
@@ -1185,7 +1200,7 @@ static void check_manifest_domain(ck *c, const axi_node *cell)
                   "keep one copy of each law");
         if (!manifest_wire_add(&wire, 4 + len)) oversized = 1;
         if (nlaws < (int)AXB_MANIFEST_MAX_LAWS) laws[nlaws++] = law;
-        else { oversized = 1; free(law); }
+        else { oversized = 1; (void)axi_compile_free(c->budget, law); }
     }
     if (!manifest_wire_add(&wire, 64)) oversized = 1;
 
@@ -1195,7 +1210,7 @@ static void check_manifest_domain(ck *c, const axi_node *cell)
     if (oversized)
         tdiag(c, "AXI-T002", cell, "contract exceeds the 16 KiB manifest v1 bound",
               "shrink names or split the contract into smaller cells");
-    for (int i = 0; i < nlaws; i++) free(laws[i]);
+    for (int i = 0; i < nlaws; i++) (void)axi_compile_free(c->budget, laws[i]);
 }
 
 static void check_cell(ck *c, const axi_node *cell)
@@ -1360,32 +1375,43 @@ static void check_policy(ck *c, const axi_node *cell)
 
 void axi_type_check(const axi_node *unit, axi_diags *ds)
 {
-    ck c;
+    ck *c;
     const axi_node *n;
 
+    if (!unit || !ds) return;
     ((axi_node *)unit)->contract_checked = 0;
-    memset(&c, 0, sizeof c);
-    c.ds = ds;
-    c.src = unit->pos;
+    c = axi_compile_calloc(unit->budget, 1, sizeof *c);
+    if (!c) {
+        axi_diag_add(ds, axi_compile_failure_code(unit->budget), 0, 0, 0,
+            "typechecker workspace unavailable", "increase the compiler budget");
+        return;
+    }
+    c->budget = unit->budget;
+    c->ds = ds;
+    c->src = unit->pos;
 
     for (n = unit->list; n; n = n->next) {
         if ((n->kind != N_CELL && n->kind != N_POLICY) || n->lexlen == 0) continue;
-        if (find_cell(&c, n->lex, n->lexlen)) {
-            tdiag(&c, "AXI-T001", n, "duplicate cell name",
+        if (find_cell(c, n->lex, n->lexlen)) {
+            tdiag(c, "AXI-T001", n, "duplicate cell name",
                   "one name, one cell, one hash (W14): rename it");
             continue;
         }
-        if (c.ncells < 256) {
-            c.cells[c.ncells++] = n;
+        if (c->ncells < 256) {
+            c->cells[c->ncells++] = n;
         } else {
-            tdiag(&c, "AXI-T002", n, "unit exceeds 256 cells",
+            tdiag(c, "AXI-T002", n, "unit exceeds 256 cells",
                   "split the unit; every cell must enter capability analysis");
         }
     }
-    infer_unit_caps(&c); /* AXI-INV-078: finite monotone call-graph fixpoint. */
+    infer_unit_caps(c); /* AXI-INV-078: finite monotone call-graph fixpoint. */
     for (n = unit->list; n; n = n->next) {
-        if (n->kind == N_CELL) check_cell(&c, n);
-        else if (n->kind == N_POLICY) check_policy(&c, n);
+        if (n->kind == N_CELL) check_cell(c, n);
+        else if (n->kind == N_POLICY) check_policy(c, n);
     }
+    if (unit->budget && unit->budget->failure != AXI_COMPILE_OK)
+        axi_diag_add(ds, axi_compile_failure_code(unit->budget), 0, 0, 0,
+            "typechecker allocation refused", "increase the compiler budget");
     if (ds->n == 0) ((axi_node *)unit)->contract_checked = 1;
+    (void)axi_compile_free(unit->budget, c);
 }

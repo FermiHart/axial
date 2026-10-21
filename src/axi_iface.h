@@ -33,6 +33,13 @@ struct axi_arena;
 int axi_iface_manifest_v1(const axi_node *unit,
                           const char *cell_name, size_t cell_name_len,
                           axb_manifest *out, struct axi_arena *arena);
+/* Project a checked unit once and emit one manifest per body cell, in body
+ * order. out must hold body->n entries and must not alias body. On refusal
+ * the output entries are zeroed; arena remains caller-owned and may contain
+ * strings from an earlier entry. Temporary projection storage uses the unit's
+ * compiler budget, while result strings use arena's account, as above. */
+int axi_iface_manifests_v1(const axi_node *unit, const axb_mod *body,
+                           axb_manifest *out, struct axi_arena *arena);
 /* Rederive W15 identity from parsed manifest facts; hashes are never text. */
 int axi_manifest_iface_hash_v1(const char *cell_name,
                                const axb_manifest *manifest,

@@ -1,0 +1,7 @@
+python3 tools/audit80-runtime-bench.py check --source='/workspace/scratch/62cebbc40215/axial' --output='/workspace/scratch/62cebbc40215/axial/build-final-tsan/audit80-tsan' --cc='cc' --cppflags='' --cflags='-std=c99 -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=thread -fno-omit-frame-pointer -fno-pie' --ldflags=' -fsanitize=thread -no-pie' --only runtime_concurrency runtime_concurrency_uncached runtime_concurrency_software
+audit80 concurrency: isolated create/eval/destroy, 8 workers, 1920 evaluations, PASS
+audit80 concurrency: shared immutable context, 8 workers, 1920 evaluations, PASS
+audit80 concurrency: isolated create/eval/destroy, 8 workers, 1920 evaluations, PASS
+audit80 concurrency: shared immutable context, 8 workers, 1920 evaluations, PASS
+audit80 concurrency: isolated create/eval/destroy, 8 workers, 1920 evaluations, PASS
+audit80 concurrency: shared immutable context, 8 workers, 1920 evaluations, PASS

@@ -50,6 +50,11 @@ void axi_diag_add_source(axi_diags *ds, const char *code, const char *src,
                          const char *msg, const char *fix);
 
 int axi_diags_edits_ok(const axi_diags *ds, char *why, size_t whycap);
+struct axi_compile_budget;
+int axi_diags_apply_budget(const axi_diags *ds, const char *src, size_t len,
+                           char **out, size_t *outlen, int *napplied,
+                           struct axi_compile_budget *budget);
+
 int axi_diags_apply(const axi_diags *ds, const char *src, size_t len,
                     char **out, size_t *outlen, int *napplied);
 

@@ -15,7 +15,7 @@ concurrency:
 jobs:
   gate:
     runs-on: ubuntu-24.04
-    timeout-minutes: 15
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -27,20 +27,36 @@ jobs:
           persist-credentials: false
       - name: Normal C99 gate
         if: matrix.profile == 'normal'
-        run: make -j2 gate
+        run: make -j2 BUILD=build-normal AUTHORITY_RUNNER=sudo gate
       - name: Optimized C99 gate
         if: matrix.profile == 'release'
         run: >-
-          make -j2 BUILD=build-release
+          make -j2 BUILD=build-release AUTHORITY_RUNNER=sudo
           CFLAGS='-std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L'
           gate
       - name: Address and undefined-behavior gate
         if: matrix.profile == 'sanitizers'
         env:
-          ASAN_OPTIONS: detect_leaks=0
+          ASAN_OPTIONS: detect_leaks=0:abort_on_error=1
           UBSAN_OPTIONS: halt_on_error=1
         run: >-
-          make -j2 BUILD=build-sanitize
+          make -j2 BUILD=build-sanitize AUTHORITY_RUNNER=sudo
           CFLAGS='-std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie'
           LDFLAGS='-fsanitize=address,undefined -fno-sanitize-recover=all -no-pie'
           gate
+  threads:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - name: Check out the tested revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Record the ThreadSanitizer host
+        run: |
+          uname -sr
+          cc --version
+      - name: Cached, uncached and software product ThreadSanitizer gate
+        env:
+          TSAN_OPTIONS: halt_on_error=1
+        run: make BUILD=build-tsan gate-tsan
