@@ -1,0 +1,320 @@
+{
+  "schema": "axial.audit80.publication-map.v1",
+  "repository": "FermiHart/axial",
+  "branch": "audit/axial-80-waves-20261019",
+  "entries": [
+    {
+      "local": "f90a31f3497a48f084415c7e5b6c0c7baf76eefb",
+      "tree": "538eb3f5f11b222eee1c71649085c6ac07fee054",
+      "subject": "W41: activate explicit local authority profile and close legacy mutation door",
+      "wave": 41,
+      "remote": "f9a3ed88a17e39f87ee47811e0a0c7d27973dde5",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "592ca1d7bc3f51d457e35cf09c357ed7311b46cc",
+      "tree": "d461012b623a37555bbcfc5f89542f7fe7d042ec",
+      "subject": "W42: observe bounded previous config under the owner lock",
+      "wave": 42,
+      "remote": "c4d8277e318d51a2fea0cc57209abe2462520a26",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "4b580a177b9bb877496cbb04bc7960ea121b40a9",
+      "tree": "940b79b5d3f32ffd580c62baa694199097ca4085",
+      "subject": "W43: sample kernel identities and boot-time without caller assertions",
+      "wave": 43,
+      "remote": "b51e8158971bce3f211fcc52cb1337b0c48f1d1a",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "b1a39d0cf745c521c35c0ec24ad96e6b98f33feb",
+      "tree": "e0605f0ca5942f8098d7f5fa1b7302a2d515f10b",
+      "subject": "W44: prepare owned action snapshots against mandatory active epoch facts",
+      "wave": 44,
+      "remote": "cd6df2a308a922b0be2fa432d688346fb8c53747",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "69acf981d9e2d493d30a7f7acd416a0bdc7d6552",
+      "tree": "5601177eb0bdd1545d47664e4a5786a900cd92a4",
+      "subject": "W45: reobserve authority under the existing durable commit lock",
+      "wave": 45,
+      "remote": "543f89f201adeff046dc4d696f582d5083367571",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "aed04f0d299406ae97c3f59b939b1a5df8c56244",
+      "tree": "cec37a9e9803b063cbef3acf73fb82f13f3804af",
+      "subject": "W46: recheck live grant windows across lock wait and durable I/O",
+      "wave": 46,
+      "remote": "ef8b6a32554e27ab29b3bbc3d6d926f21d02133a",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "2c5059e04f9f82bdd40267e9f99092a2f44c00da",
+      "tree": "ae85c6ec12bb5ade766348b3c3a071f44c4726ba",
+      "subject": "W47 pin authority lock identity and serialize stale-prior races",
+      "wave": 47,
+      "remote": "55377ef8b74e5622bbf24dc015c9cd882b60be7b",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "71d2b71618559d6659e7c21608fc6d22d9bd0e29",
+      "tree": "f3359dce7fac7a3759489fce43cbc4e47c659fc0",
+      "subject": "W48 reconcile authority history through the held store descriptor",
+      "wave": 48,
+      "remote": "d08897882af9b91c94b13346d01bc1ce6581d222",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "9a348306c5adc357aa850672f806138275a24398",
+      "tree": "5f9ab62e3179787967837dd6dba54086c5ad0e51",
+      "subject": "W49 preserve uncertainty on failed spend cleanup and activation sync",
+      "wave": 49,
+      "remote": "57ad2fc2326d71a12a5ab11417e0472394bcdede",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "dfa58f2f951eeaf9c4d0de931050faa95f2dadda",
+      "tree": "82ddd71e370cbcea84275865dbe5a82b35aaee14",
+      "subject": "W50 verify authority bindings, unsupported hosts and full sanitizer gates",
+      "wave": 50,
+      "remote": "822068d448a07755218f42e5d97ef15cfdbc72c5",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "c83b8ca49d9311b09842d0a7bfa414263b233ce4",
+      "tree": "f654b01ff73cee094fe84cc7859c7e9077bbb849",
+      "subject": "W51: lower checked source error atoms without merging string identity",
+      "wave": 51,
+      "remote": "a46dde41e6de4444636d0cb6ff80a93d0b466f42",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "1f45601ca2eee3b1d5f6a51b899a2e02a5c73e93",
+      "tree": "2932bd83dfeb204b720fefde09b7ffbb52009212",
+      "subject": "W52: emit checker-annotated option return arms in canonical v7 order",
+      "wave": 52,
+      "remote": "7f5ad2b4d491267a32701b4e4139bfbdf73a988b",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "53110b0f0469339a350789e5660e79d4ee41188b",
+      "tree": "34a0b1914ba8ecd933c9ea6975fd6cf68e6f1127",
+      "subject": "W53: lower result propagation with checked error sets and early returns",
+      "wave": 53,
+      "remote": "7fe3b3fee7f89df670e2f521db5838858980eee9",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "dca1273b3bf74756b7ddb57e882ddc27c96447e9",
+      "tree": "acb24ab6603b1be2d401a0835a50de7083a2372c",
+      "subject": "W54: propagate optional ok through the caller representation and unwrap payloads",
+      "wave": 54,
+      "remote": "85fee89cd68278be5e34fd027299a435f1a79780",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "5fc1744f424767cf6020dca35e964ddbb7bc0a38",
+      "tree": "013a328e7ebe8843ef911100526d973de517457b",
+      "subject": "W55: define exact five-escape decoding across source and AXS text",
+      "wave": 55,
+      "remote": "4c7ba948693b8454d55429984da9936cbb96878a",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "881bd46db59244672881bc05546c0f1376b16753",
+      "tree": "b2eeba13818f0205295f30b03cc607f094811faf",
+      "subject": "W56: canonicalize semantic string bytes and document source error flow",
+      "wave": 56,
+      "remote": "7f65da99485975343e39e394f213b4f83ea5d002",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "8ecc189d1fde31354615c3a3b4ef5fb173764bbb",
+      "tree": "80460c3a9308ad52f01665d1292b3f9c14c79795",
+      "subject": "W57: add explicit compiler invocation budget and nested backend accounting",
+      "wave": 57,
+      "remote": "d7c475ee8ce22bb4d3cdbca7368dd2d21d2ab1d3",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "d58630f89593cdd508aaabb184d90088d075be29",
+      "tree": "a01a579578e46e94f01f3d0eece9ddbd43e93a9f",
+      "subject": "W58: account AST ownership and reclaim partial parses on compiler quota refusal",
+      "wave": 58,
+      "remote": "eaebfbae66107b35cd86757c6d917afa25ae9aca",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "822308627c7d9fcc70c1a5111b134b4dee1b2be3",
+      "tree": "009ecc1c815145e53911bb8713423510f17bc8b5",
+      "subject": "W59: bound type analysis and make canonical rendering recoverable under memory pressure",
+      "wave": 59,
+      "remote": "68e22bd1b639ce2139acd7f09b88a291fb3c0208",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "06abc34bdac7dc2c3128cf7f156a700aae92ec8a",
+      "tree": "01aa2c9b5243ff358abdfae914bf56d71c09e692",
+      "subject": "W60: account code generation and interface projections in the source invocation",
+      "wave": 60,
+      "remote": "3bdc88be0ab5f9c95bcbdff129768e4506fef8a6",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "efeea5cc41b0ea6ffbfe91bffc4b3203d47ca73a",
+      "tree": "7b0bb01728d9a44d27da4a2bca38052f0c1b571d",
+      "subject": "W61: carry compiler quota through assembly, contract verification and signed publication",
+      "wave": 61,
+      "remote": "1419f97ecd680380cd003a0b461eec297311741d",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "6cbc0a0c143afb927e86a7397b2e5fc9527bb38d",
+      "tree": "31146e3102d6712f700638108df76d18f9725786",
+      "subject": "W62: enforce compiler invocation caps in CLI and sweep quota and host allocation failures",
+      "wave": 62,
+      "remote": "e441a5b3a73c308349f91e8a2e939aa9c3882c1a",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "4bba128097f2e2f4fe57ee306a437fc4eea37c1b",
+      "tree": "dc577a57a2dc6e54eca7851486fca0a8ea01b78f",
+      "subject": "W63: round decimal literals by exact bounded integer midpoint comparisons",
+      "wave": 63,
+      "remote": "4f8ffb98e3299d1684c00370cad11e58e6419244",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "a9d68e2b3b97aef34ee4435212da01ffd359aced",
+      "tree": "03e1ca46f269ff401c75a7129d4c3586030c509c",
+      "subject": "W64: admit the full finite f64 range with exact lexer rounding and overflow refusal",
+      "wave": 64,
+      "remote": "f6c45eefc26a375328b917b4c6913bd1c8e65278",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "3c0db4ba8a885191b628d728687653895b22016c",
+      "tree": "ac023aef7bce3877443709aa871b27f1933cd8d6",
+      "subject": "W65: render one shortest decimal per finite binary64 using exact rounding intervals",
+      "wave": 65,
+      "remote": "a5a69ce402153b502d94c87cb61ee5da7e23e8b4",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "70b7b3577c6a8bcef3ce20c405d9c1a468738daa",
+      "tree": "de40a48e677165008b090fac46cf654f9e87637d",
+      "subject": "W66: derive canonical source from numeric bits and fold exact signed float literals",
+      "wave": 66,
+      "remote": "745c969c3d0507c149a95c13b9f2a0c7a18092ff",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "8415202a56c0548f1c641443ffedded084e59ca6",
+      "tree": "614581bc047404eb782b9b21bfa173357c7161bd",
+      "subject": "W67: reuse exact powers and emit nine decimal digits per bigint division",
+      "wave": 67,
+      "remote": "f8cf2b83c62f2d878a6b0709c125ae799aabef2f",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "b183b7c7f79af6e348489e0ee878bfc5b3c20fae",
+      "tree": "0c1e76c9bfced90bbc5fb8063570d641eb8929f5",
+      "subject": "W68: accelerate exact short decimals and verify long-input and floating-environment bounds",
+      "wave": 68,
+      "remote": "9ea5207b539cc55d53ed50f41655f56c784b9c46",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "3c23721c508c5d9417e0730c77161d97f0e4c372",
+      "tree": "fc569b5b0bd9947b628961d7b76da16517ada5c5",
+      "subject": "W69 add explicit mixed runtime workloads with outcome and fuel oracles",
+      "wave": 69,
+      "remote": "e31e8bd5595a57a636057cb2f539b18cc44a4136",
+      "verified_tree_equal": true
+    },
+    {
+      "local": "1ddea6cf8589a05a95956d6212ab7a95ae695d1e",
+      "tree": "b88e42e4c65ec861d0bb73c528feacaf3747daf1",
+      "subject": "W70 measure complete context lifecycle and all admission allocation refusals",
+      "wave": 70,
+      "remote": "ce37b696307ba551d1260c04792c5e7f9997be92",
+      "verified_tree_equal": true
+    },
+    {
+      "wave": 71,
+      "local": "7faf87b06abcd639c89d7b28c2997fa0142ba958",
+      "remote": "a989746420b1dce8f6848d83e97917f1b2a5cff4",
+      "tree": "df84eb59bf539fbae52df24c0e4fba488623f16a",
+      "subject": "W71 size pure VM register frames to validated usage and prevent deep-call stack overflow",
+      "verified_tree_equal": true
+    },
+    {
+      "wave": 72,
+      "local": "d94022a8c27a5337e6447a64b3552d5677df20f5",
+      "remote": "4ad006fa6103feaf08eee7d90b12337ca85ade9d",
+      "tree": "cdce6dd43a0f7ea6e78e5b69b168ef58177c8d13",
+      "subject": "W72 validate concurrent context lifetimes and fix first-use SHA cache race",
+      "verified_tree_equal": true
+    },
+    {
+      "wave": 73,
+      "local": "89083ba05fc04e92a6afdb31edd978332cb11689",
+      "remote": "31d12b2a4232fa81434c735590d46a0268295c4a",
+      "tree": "7008dc49fb75f3ff5bae49910841aa48c7f4f87c",
+      "subject": "W73 verify bounded JSON and retained-context high-water memory without leaks",
+      "verified_tree_equal": true
+    },
+    {
+      "wave": 74,
+      "local": "b556a26877ab3088a39b87cbe6959ecf3e13088c",
+      "remote": "be53779ca7d5f845dbf87b30490775cfc8f3ca9d",
+      "tree": "23cf51352ab02a4065dae8b8093c4d7ec1fc01d4",
+      "subject": "W74 measure workload tails and validated throughput with reproducible W40 comparisons",
+      "verified_tree_equal": true
+    },
+    {
+      "wave": 75,
+      "local": "3fccb3e244ab8772511d92c4ec0abcca0d6b2cec",
+      "remote": "a2398c370d3e3266a83c82a3b9a89354f1381095",
+      "tree": "88129fca2347700140d0cec96933d1bfb329295a",
+      "subject": "W75 isolate context admission cost from SHA cache and executable placement effects",
+      "verified_tree_equal": true
+    },
+    {
+      "wave": 76,
+      "local": "d1817d403525632515818b841f9dd9ae62f664c2",
+      "remote": "c48b3cc95d3dc6f9926ab86fda0450fe3380a612",
+      "tree": "5bb50c9b6aa8d9087dcdd0b64e49d1ed0a23d7f4",
+      "subject": "W76 verify local store I/O faults and twelve abrupt-writer recovery boundaries",
+      "verified_tree_equal": true
+    },
+    {
+      "wave": 77,
+      "local": "0518d1f7f95369a297074186e112cb7bccf507a4",
+      "remote": "e5bbb53e0b466c4d13cd8cdc425f28c0608f4df3",
+      "tree": "e6619068cbbe9435f102f20ee9e972d78828c8b2",
+      "subject": "W77 account numeric phase workspaces and make all audit profiles permanent gates",
+      "verified_tree_equal": true
+    },
+    {
+      "wave": 78,
+      "local": "fa02a2255bc9cee67a61aa35c79e0e2962495cf8",
+      "remote": "7188a09c46c74c0d065df153206146fe8dfaaf3f",
+      "tree": "52a848f6eccb60f7cbfc6883a40fd2ecebc9fe78",
+      "subject": "W78: project checked interfaces once per module and preserve manifest bytes",
+      "verified_tree_equal": true
+    },
+    {
+      "wave": 79,
+      "local": "145a874ac25c8e06f9ef489ad6d2eaae81302898",
+      "remote": "8a5bdfd5c2696fd4bd829a0ec789172dbc6bf2e4",
+      "tree": "ec175c4b10aa29f1cbedcfbe94369e9c9a6510c9",
+      "subject": "W79 preserve reproducible performance evidence and document migration contracts",
+      "verified_tree_equal": true
+    }
+  ],
+  "scope": "Exact local/remote Git tree pairs for W41-W79. The W80 tree cannot embed its own hash; its equality is checked separately during publication and the PR links the final head."
+}

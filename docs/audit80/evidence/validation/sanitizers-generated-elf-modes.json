@@ -1,0 +1,12 @@
+{
+  "reason": "Restore executable metadata only on completed locally generated ELF executables; all file bytes remain identical.",
+  "repairs": [
+    {
+      "path": "build-final-sanitizers-w80/compiler-fail/audit80/compiler_manifest",
+      "previous_mode": "0o644",
+      "new_mode": "0o755",
+      "binary_sha256_before": "e5a34cce6e620080edb849b386e811f577e962e8c0624c3b5ef505f2bbd4ca68",
+      "binary_sha256_after": "e5a34cce6e620080edb849b386e811f577e962e8c0624c3b5ef505f2bbd4ca68"
+    }
+  ]
+}

@@ -1,0 +1,215 @@
+python3 tools/axi-checker-identity.py --check
+HOSTCC='cc' CPPFLAGS='' CFLAGS='-std=c99 -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie' LDFLAGS='-fsanitize=address,undefined -fno-sanitize-recover=all -no-pie' LDLIBS='-lm' PYTHON='python3' AXI_AUDIT_CFLAGS='-std=c99 -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie' AXI_AUDIT_BUILD='/workspace/scratch/62cebbc40215/axial/build-final-sanitizers-w80/audit40-security' sh tests/audit40/security_faults.sh
+checker identity: 8304f6da573d02f6cd3975b19a4c93b12b786c8cab793acee104808b9b0b9a71 (126 source files); public v1 ABI pins PASS
+HOSTCC='cc' CPPFLAGS='' CFLAGS='-std=c99 -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie' LDFLAGS='-fsanitize=address,undefined -fno-sanitize-recover=all -no-pie' LDLIBS='-lm' PYTHON='python3' AXI_AUDIT_CFLAGS='-std=c99 -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie' AXI_AUDIT_BUILD='/workspace/scratch/62cebbc40215/axial/build-final-sanitizers-w80/audit80-security' AXI_AUDIT_BUILD_ONLY=1 sh tests/audit80/security.sh
+HOSTCC='cc' CPPFLAGS='' CFLAGS='-std=c99 -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie' LDFLAGS='-fsanitize=address,undefined -fno-sanitize-recover=all -no-pie' LDLIBS='-lm' PYTHON='python3' AXI_AUDIT_CFLAGS='-std=c99 -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie' AXI_AUDIT_BUILD='/workspace/scratch/62cebbc40215/axial/build-final-sanitizers-w80/audit80-security' AXI_AUDIT_BUILD_ONLY=1 sh tests/audit80/security_faults.sh
+audit40 W27 fault injection: 109 checks passed
+HOSTCC='cc' CPPFLAGS='' CFLAGS='-std=c99 -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie' LDFLAGS='-fsanitize=address,undefined -fno-sanitize-recover=all -no-pie' LDLIBS='-lm' PYTHON='python3' AXI_AUDIT_CFLAGS='-std=c99 -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie' AXI_AUDIT_BUILD='/workspace/scratch/62cebbc40215/axial/build-final-sanitizers-w80/audit40-security' sh tests/audit40/security_costs.sh
+HOSTCC='cc' CPPFLAGS='' CFLAGS='-std=c99 -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie' LDFLAGS='-fsanitize=address,undefined -fno-sanitize-recover=all -no-pie' LDLIBS='-lm' PYTHON='python3' AXI_AUDIT_CFLAGS='-std=c99 -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie' AXI_AUDIT_BUILD='/workspace/scratch/62cebbc40215/axial/build-final-sanitizers-w80/audit80-security' AXI_AUDIT_BUILD_ONLY=1 sh tests/audit80/security_nohost.sh
+selective_disclosure_4096: hashes=2 bytes=4222
+delegation_depth_32: hashes=32 bytes=17696
+rf1_2048_records: comparisons=41069 bytes=28678
+python3 tools/audit80-runtime-bench.py check --source='/workspace/scratch/62cebbc40215/axial' --output='/workspace/scratch/62cebbc40215/axial/build-final-sanitizers-w80/audit80-runtime' --cc='cc' --cppflags='' --cflags='-std=c99 -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie' --ldflags='-fsanitize=address,undefined -fno-sanitize-recover=all -no-pie' --only runtime_workloads runtime_lifecycle runtime_memory runtime_stack runtime_concurrency runtime_concurrency_uncached runtime_concurrency_software runtime_io_faults runtime_recovery
+AXI=/workspace/scratch/62cebbc40215/axial/build-final-sanitizers-w80/axi sh tools/check.sh
+PASS lex/basic.axi
+PASS lex/diag.axi
+PASS lex/ops.axi
+PASS parse/basic.axi
+PASS parse/full.axi
+PASS parse/policy_explicit_cap.axi
+PASS parse/policy_minimal.axi
+PASS parse/policy_under.axi
+PASS parse/recover.axi
+PASS canon/comments.axi
+PASS canon/good.axi
+PASS canon/line_cap.axi
+PASS canon/messy.axi
+PASS canon/policy_canon.axi
+PASS canon/trivia_overflow.axi
+PASS types/builtin_cap_mismatch.axi
+PASS types/builtin_fs_exists.axi
+PASS types/builtin_json_policy.axi
+PASS types/call_window_17.axi
+PASS types/calls.axi
+PASS types/cap_method_swapped.axi
+PASS types/cap_method_unknown.axi
+PASS types/caps.axi
+PASS types/coercion.axi
+PASS types/green.axi
+PASS types/infer_cap_method.axi
+PASS types/infer_cap_mismatch.axi
+PASS types/infer_cycle.axi
+PASS types/infer_policy_bound.axi
+PASS types/infer_policy_violation.axi
+PASS types/infer_transitive.axi
+PASS types/names.axi
+PASS types/policy_else_nonbool.axi
+PASS types/proof_impure_call.axi
+PASS types/proof_pure_call.axi
+PASS types/pure.axi
+PASS types/scope_leak_else.axi
+PASS types/scope_leak_post_if.axi
+PASS types/union_payload_bytes.axi
+PASS types/union_payload_cap.axi
+PASS types/unions.axi
+PASS iface/ax-err.axi
+PASS iface/ax-fuel.axi
+PASS iface/ax-pname.axi
+PASS iface/ax-pure.axi
+PASS iface/ax-ret.axi
+PASS iface/v1.axi
+PASS iface/v2-breaking.axi
+PASS iface/v2-compatible.axi
+PASS iface/v2-identical.axi
+PASS hash/vectors
+PASS bc/bad-op.axs
+PASS bc/bad-shape.axs
+PASS bc/good.axs
+PASS bc/uchk.axs
+PASS run/bad-divzero
+PASS run/bad-eff
+PASS run/bad-falloff
+PASS run/bad-kinds
+PASS run/call
+audit80 workloads: 12 cases x 32 inputs = 384 checks PASS
+PASS run/fib
+PASS run/fuel-out
+PASS run/fuel-report
+PASS run/mem-out
+PASS run/mem-report
+PASS run/uchk-err
+PASS run/uchk-ok
+axial check: 67 PASS, 0 FAIL
+AXI=/workspace/scratch/62cebbc40215/axial/build-final-sanitizers-w80/axi sh tests/audit40/cli.sh
+PASS cli/signed-compile
+PASS cli/compiled-result
+PASS cli/wrong-producer
+PASS cli/missing-signing-key
+PASS cli/no-unsigned-output
+PASS cli/dis/missing-trust
+PASS cli/inspect/missing-trust
+PASS cli/verify/missing-trust
+PASS cli/check-seal/missing-trust
+PASS cli/run/missing-trust
+PASS cli/lex/unknown-option
+PASS cli/parse/unknown-option
+PASS cli/check/unknown-option
+PASS cli/form/unknown-option
+PASS cli/types/unknown-option
+PASS cli/iface/unknown-option
+PASS cli/canon/unknown-option
+PASS cli/version/extra-argument
+PASS cli/selftest/extra-argument
+PASS cli/caps/extra-argument
+PASS cli/iface-diff/extra-argument
+PASS cli/output-failure
+PASS cli/tampered-module
+PASS cli/green-seal
+PASS cli/check-seal
+PASS cli/checked-result
+PASS cli/unchecked-certificate
+PASS cli/red-false-law
+PASS cli/red-false-law/no-artifact
+PASS cli/red-no-laws
+PASS cli/red-no-laws/no-artifact
+PASS cli/red-trap-law
+PASS cli/red-trap-law/no-artifact
+PASS cli/assemble-fuel
+PASS cli/exact-fuel
+PASS cli/exhausted-fuel
+PASS cli/overflowing-fuel
+PASS cli/assemble-fs-read
+PASS cli/confined-read
+PASS cli/read/no-grant
+PASS cli/assemble-fs-write
+PASS cli/write/no-grant
+PASS cli/no-ungranted-mutation
+PASS cli/confined-write
+PASS cli/written-content
+PASS cli/assemble-record
+PASS cli/signed-record
+PASS cli/signed-replay
+PASS cli/replay/wrong-recorder
+PASS cli/replay/tampered
+PASS cli/recorder/preflight-distinct-key
+audit CLI: 51 PASS, 0 FAIL
+audit ABI: 72 compile-time layout checks + endian/version PASS
+audit driver: 23 checks PASS
+audit embed: 776 checks PASS
+AXI-B007 bad-quoted:2: const out of order or malformed | fix: declare k0,k1,... in order: kN u64|i64|f64|str|err <payload>
+AXI-B024 too-many-cells:769: module has more than 256 cells | fix: the encoded call index is one byte
+audit40 runtime: 1033 checks, 0 failures
+audit40 handle generation exhaustion: PASS
+audit seal: 77 checks PASS
+audit40 security: 14775 checks passed
+HOSTCC='cc' CPPFLAGS='' CFLAGS='-std=c99 -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie' LDFLAGS='-fsanitize=address,undefined -fno-sanitize-recover=all -no-pie' LDLIBS='-lm' PYTHON='python3' AXI_TEST_BUILD='/workspace/scratch/62cebbc40215/axial/build-final-sanitizers-w80/audit40-frontend' sh tests/audit40/frontend.sh /workspace/scratch/62cebbc40215/axial/build-final-sanitizers-w80/axi
+invalid_bytes=65536 cpu_seconds=0.001349
+frontend W01: PASS
+{"case":"lifecycle","cells":13,"laws":0,"calls":120,"peak_extra_bytes":90272}
+{"case":"lifecycle","cells":64,"laws":16,"calls":1169,"peak_extra_bytes":439416}
+{"case":"lifecycle","cells":256,"laws":16,"calls":4077,"peak_extra_bytes":1336440}
+audit80 lifecycle: 489 checks, 120 allocation failpoints PASS
+json_escape_bytes=65536 sink_calls=1 cpu_seconds=0.000107
+frontend W08: PASS
+{"case":"retained_contexts","count":1,"cells":256,"laws":64,"live_extra_bytes":1023096,"peak_extra_bytes":1336440}
+{"case":"retained_contexts","count":2,"cells":256,"laws":64,"live_extra_bytes":2046192,"peak_extra_bytes":2359536}
+{"case":"retained_contexts","count":4,"cells":256,"laws":64,"live_extra_bytes":4092384,"peak_extra_bytes":4405728}
+{"case":"retained_contexts","count":8,"cells":256,"laws":64,"live_extra_bytes":8184768,"peak_extra_bytes":8498112}
+{"case":"large_json_0","input_bytes":65536,"output_bytes":32762,"calls":1,"peak_extra_bytes":65536,"retained_extra_bytes":0}
+{"case":"large_json_1","input_bytes":65536,"output_bytes":32762,"calls":1,"peak_extra_bytes":65536,"retained_extra_bytes":0}
+{"case":"large_json_2","input_bytes":65536,"output_bytes":32762,"calls":1,"peak_extra_bytes":0,"retained_extra_bytes":0}
+{"case":"accounted_calls","limit_bytes":0,"peak_bytes":0,"ok":false}
+{"case":"accounted_calls","limit_bytes":4096,"peak_bytes":1408,"ok":false}
+{"case":"accounted_calls","limit_bytes":131072,"peak_bytes":24016,"ok":true}
+{"case":"process_high_water","ru_maxrss_linux_kib":203684}
+audit80 memory: 273 checks PASS
+{"case":"stack","depth":8,"registers":256,"stack_bytes":4194304,"fuel":36,"signal":0,"ok":true}
+{"case":"stack","depth":64,"registers":1,"stack_bytes":524288,"fuel":316,"signal":0,"ok":true}
+{"case":"stack","depth":256,"registers":1,"stack_bytes":2097152,"fuel":1276,"signal":0,"ok":true}
+audit80 concurrency: isolated create/eval/destroy, 8 workers, 1920 evaluations, PASS
+audit80 concurrency: shared immutable context, 8 workers, 1920 evaluations, PASS
+audit80 concurrency: isolated create/eval/destroy, 8 workers, 1920 evaluations, PASS
+audit80 concurrency: shared immutable context, 8 workers, 1920 evaluations, PASS
+audit80 concurrency: isolated create/eval/destroy, 8 workers, 1920 evaluations, PASS
+audit80 concurrency: shared immutable context, 8 workers, 1920 evaluations, PASS
+frontend W10: PASS (99 allocation refusals, 3 inputs, host recovery)
+{"case":"store_io_fault","fault":0,"hits":0,"call_state":2,"query_state":2,"effect_performed":1}
+{"case":"store_io_fault","fault":1,"hits":174,"call_state":2,"query_state":2,"effect_performed":1}
+{"case":"store_io_fault","fault":2,"hits":1,"call_state":2,"query_state":2,"effect_performed":1}
+{"case":"store_io_fault","fault":3,"hits":1,"call_state":2,"query_state":2,"effect_performed":1}
+{"case":"store_io_fault","fault":4,"hits":2,"call_state":4,"query_state":4,"effect_performed":0}
+{"case":"store_io_fault","fault":5,"hits":1,"call_state":4,"query_state":4,"effect_performed":0}
+{"case":"store_io_fault","fault":6,"hits":1,"call_state":4,"query_state":4,"effect_performed":0}
+{"case":"store_io_fault","fault":7,"hits":2,"call_state":3,"query_state":3,"effect_performed":1}
+{"case":"store_io_fault","fault":8,"hits":1,"call_state":3,"query_state":3,"effect_performed":1}
+{"case":"store_io_fault","fault":9,"hits":1,"call_state":3,"query_state":3,"effect_performed":1}
+{"case":"store_io_fault","fault":10,"hits":1,"call_state":3,"query_state":2,"effect_performed":1}
+audit80 local I/O faults: 187 checks PASS
+Traceback (most recent call last):
+  File "/workspace/scratch/62cebbc40215/axial/tools/audit80-runtime-bench.py", line 434, in <module>
+    raise SystemExit(main())
+                     ^^^^^^
+  File "/workspace/scratch/62cebbc40215/axial/tools/audit80-runtime-bench.py", line 397, in main
+    if name not in ("runtime_bench", "runtime_context_profile"): run([binaries / name], timeout=60)
+                                                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/workspace/scratch/62cebbc40215/axial/tools/audit80-runtime-bench.py", line 28, in run
+    return subprocess.run([str(x) for x in command], check=True, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py", line 548, in run
+    with Popen(*popenargs, **kwargs) as process:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py", line 1026, in __init__
+    self._execute_child(args, executable, preexec_fn, close_fds,
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/subprocess.py", line 1955, in _execute_child
+    raise child_exception_type(errno_num, err_msg, err_filename)
+PermissionError: [Errno 13] Permission denied: '/workspace/scratch/62cebbc40215/axial/build-final-sanitizers-w80/audit80-runtime/runtime_recovery'
+make: *** [Makefile:125: gate-runtime] Error 1
+make: *** Waiting for unfinished jobs....
+frontend W10: PASS (99 allocation refusals, 3 inputs, host recovery)
+frontend W02: PASS (branch relocation widths and nested paths)
+frontend W03: PASS (live bindings, nesting, zero/16 args, reuse)
+frontend W04: PASS (ok/zero/false distinction and early returns)
+frontend W05: PASS (40,000 statements under a 2 MiB stack)
+frontend W06: PASS (signed range and compact literal lowering)
+frontend W07: PASS (256-cell forward/reverse, diamond, cycles, purity)
+frontend W09: PASS (75 decimal fixpoints preserve float values)

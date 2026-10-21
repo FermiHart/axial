@@ -94,3 +94,52 @@ simultâneas. A ABI pública e o formato serializado permanecem compatíveis.
 Os ganhos de conversão são microbenchmarks com a implementação exata
 anterior como base, documentados em [frontend.md](frontend.md). A execução
 segue automaticamente para a integração e validação final W71–W80.
+
+## Checkpoint W80 — 40 de 40 waves adicionais
+
+Concluída a integração W41–W80 com um commit por wave. As dez últimas
+waves fecham os probes e as correções de runtime, a contabilização dos
+workspaces numéricos, os gates permanentes, a projeção de interfaces em
+lote, a reprodução independente dos benchmarks e a documentação de migração.
+O [relatório final](REPORT.md) reúne a matriz completa das 40 entregas.
+
+Validação final local do mesmo produto integrado:
+
+- Normal C99 `-O1`: gate completo PASS.
+- Otimizado C99 `-O2`: gate completo PASS.
+- ASan/UBSan: gate completo PASS, após recompilação e correção de modo em
+  executáveis locais de teste; bytes preservados. As tentativas com
+  `EACCES` e a tentativa de log parcial continuam registradas. A origem
+  da perda do bit de execução não foi determinada.
+- ThreadSanitizer: variantes cached, uncached e software do produto
+  completo PASS; cada variante verifica 1.920 avaliações isoladas e
+  1.920 compartilhadas. Não houve alteração global de ASLR ou fallback.
+
+Os gates agora incluem 410 verificações C do compilador, 3.266 asserts CLI
+com 396 pontos reais de OOM e 1.360 asserts de manifesto com 169 pontos de
+OOM. Incluem também as suítes anteriores, a autoridade com credenciais
+reais, as regressões numéricas e de linguagem, memória/pilha/concorrência
+e recuperação após doze pontos de morte abrupta. O registro numérico final
+cobre 12 combinações locale/rounding; a ampliação anterior com locales de
+vírgula permanece identificada como execução separada.
+
+Produto SHA-256:
+`59dccaab79e2ab1e5dc4f32fc2a7f2d802f134579c4efd61fa6fc4fcff51a269`.
+Checker:
+`8304f6da573d02f6cd3975b19a4c93b12b786c8cab793acee104808b9b0b9a71`.
+Pins da ABI pública v1 válidos. [Logs e metadados](evidence/validation/README.md)
+preservam os quatro perfis sem somar repetições como casos independentes.
+
+Os ganhos são medidos em escopos explícitos: leitura decimal −66,10% e
+formatação −73,21% contra o núcleo já exato W65; geração de contratos
+−57,88% a −64,34% contra a versão imediatamente anterior à W78, com saída
+idêntica. Não há alegação de ganho universal da criação de contextos ou
+de throughput com oito leitores. Bases e amostras estão no
+[índice de evidências](evidence/README.md).
+
+A entrega permanece na [PR #2](https://github.com/FermiHart/axial/pull/2),
+baseada na PR #1, para revisão. Cada árvore enviada ao GitHub é comparada
+com a árvore local correspondente. `main` permanece na revisão
+`2d6752255ffcc92e0b103c97609daf205a5a39de`; não houve merge. Os limites de
+integração do serviço, produção, outras ABIs e perda física de energia
+continuam explícitos no relatório; não são alegações cobertas por estes testes.

@@ -1,0 +1,70 @@
+{
+  "schema": "axial.audit80.final-evidence.v1",
+  "product_sha256": "59dccaab79e2ab1e5dc4f32fc2a7f2d802f134579c4efd61fa6fc4fcff51a269",
+  "profiles": [
+    {
+      "profile": "normal",
+      "result": "PASS",
+      "metadata": "normal.json",
+      "log": "normal.log",
+      "product_sha256": "59dccaab79e2ab1e5dc4f32fc2a7f2d802f134579c4efd61fa6fc4fcff51a269",
+      "returncode": 0
+    },
+    {
+      "profile": "release",
+      "result": "PASS",
+      "metadata": "release.json",
+      "log": "release.log",
+      "product_sha256": "59dccaab79e2ab1e5dc4f32fc2a7f2d802f134579c4efd61fa6fc4fcff51a269",
+      "returncode": 0
+    },
+    {
+      "profile": "sanitizers",
+      "result": "PASS",
+      "metadata": "sanitizers.json",
+      "log": "sanitizers.log",
+      "product_sha256": "59dccaab79e2ab1e5dc4f32fc2a7f2d802f134579c4efd61fa6fc4fcff51a269",
+      "returncode": 0
+    },
+    {
+      "profile": "tsan",
+      "result": "PASS",
+      "metadata": "tsan.json",
+      "log": "tsan.log",
+      "product_sha256": "59dccaab79e2ab1e5dc4f32fc2a7f2d802f134579c4efd61fa6fc4fcff51a269",
+      "returncode": 0
+    }
+  ],
+  "preserved_failed_attempts": [
+    {
+      "metadata": "sanitizers-initial-exec-permission.json",
+      "log": "sanitizers-initial-exec-permission.log",
+      "returncode": 2,
+      "sha256": "eab874abeb417904c954ff3f0f5553cf443b1dc8cb07e1835d4159f1093f1337"
+    },
+    {
+      "metadata": "sanitizers-manifest-exec-permission.json",
+      "log": "sanitizers-manifest-exec-permission.log",
+      "returncode": 2,
+      "sha256": "b5d263645b1a3717869bbd20529d7f93f4bde54e28ce9fb3e775da84fd39b963"
+    },
+    {
+      "metadata": "sanitizers-recheck-incomplete.json",
+      "log": "sanitizers-recheck-incomplete.log",
+      "returncode": 2,
+      "sha256": "cdc91b5f2475d650bd8dfe17d4d791a63868ee5f8f01a94f6bd514d7fcbc2784"
+    },
+    {
+      "metadata": "sanitizers-recovery-exec-permission.json",
+      "log": "sanitizers-recovery-exec-permission.log",
+      "returncode": 2,
+      "sha256": "9ce32651a5ee2f364414a122b8ad6091e02a814257fbbd519f10e3c5998145eb"
+    }
+  ],
+  "notes": [
+    "Logs and original metadata are copied byte-for-byte. Preserved failed attempts retain their original log_file value; use the matching filenames in this index.",
+    "W79 changed reproduction documentation and an optional benchmark runner only; W80 changes reports and evidence only. Product SHA is identical for all four passing profiles.",
+    "Local executable-mode repairs are separately recorded, with unchanged binary hashes. Cause of the missing execution bits was not determined. No product/test-source workaround or sanitizer suppression was introduced.",
+    "LeakSanitizer remained disabled under process tracing."
+  ]
+}

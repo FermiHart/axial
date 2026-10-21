@@ -1,0 +1,34 @@
+{
+  "schema": "axial.audit80.validation-profile.v1",
+  "profile": "sanitizers",
+  "revision_at_start": "fa02a2255bc9cee67a61aa35c79e0e2962495cf8",
+  "product_sha256": "59dccaab79e2ab1e5dc4f32fc2a7f2d802f134579c4efd61fa6fc4fcff51a269",
+  "product_unchanged_after_run": true,
+  "command": [
+    "make",
+    "-j2",
+    "BUILD=build-final-sanitizers",
+    "AUTHORITY_RUNNER=direct",
+    "HOSTCC=cc",
+    "CPPFLAGS=",
+    "CFLAGS=-std=c99 -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L -O1 -g -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie",
+    "LDFLAGS=-fsanitize=address,undefined -fno-sanitize-recover=all -no-pie",
+    "LDLIBS=-lm",
+    "PYTHON=python3",
+    "gate"
+  ],
+  "compiler": "cc (Ubuntu 13.3.0-6ubuntu2~24.04) 13.3.0",
+  "environment": {
+    "ASAN_OPTIONS": "detect_leaks=0:abort_on_error=1",
+    "UBSAN_OPTIONS": "halt_on_error=1",
+    "TSAN_OPTIONS": "halt_on_error=1:exitcode=66",
+    "LC_ALL": "C"
+  },
+  "started_utc": "2026-10-19T22:06:15.745708+00:00",
+  "finished_utc": "2026-10-19T22:07:15.517177+00:00",
+  "elapsed_seconds": 59.760845509998035,
+  "returncode": 2,
+  "log_file": "sanitizers.log",
+  "raw_log_sha256": "eab874abeb417904c954ff3f0f5553cf443b1dc8cb07e1835d4159f1093f1337",
+  "scope": "Actual product and fixture execution; benchmark scripts and documentation are outside this gate."
+}

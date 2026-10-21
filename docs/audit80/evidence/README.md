@@ -1,9 +1,21 @@
 # Evidências de números e projeção — Audit80
 
 Este diretório distingue medições de desempenho, revisão independente e
-gates da integração. Os arquivos aqui preservados registram execuções
-locais anteriores; sua cópia na W79 não representa uma nova execução ou
-aprovação do gate final W80.
+gates da integração. A cópia das evidências numéricas e de projeção na W79
+preserva execuções anteriores, sem representar novas medições. Os gates
+finais da W80 aparecem separadamente na seção seguinte.
+
+## Validação final W80
+
+[validation/README.md](validation/README.md) registra o PASS dos quatro
+perfis locais: normal, otimizado, ASan/UBSan e ThreadSanitizer. Os logs,
+comandos, identidades, hashes e tentativas malsucedidas anteriores estão
+preservados. O produto tem o mesmo hash em todos os perfis; corrigir os
+metadados de execução de ELFs locais não modificou seus bytes nem o fonte.
+
+[commit-trees-w41-w79.json](commit-trees-w41-w79.json) associa cada commit
+local à árvore Git idêntica publicada no GitHub. A árvore da W80 é
+verificada separadamente, pois um commit não pode incluir seu próprio hash.
 
 ## Núcleo numérico: W65 → W68
 

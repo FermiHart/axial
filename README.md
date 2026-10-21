@@ -81,7 +81,7 @@ make dev                          # builds ./build/axi — C99 only
 # u64 55
 
 make gate-fast                     # 67 original golden checks
-make gate                          # extended audit gate; also requires Python 3
+make gate AUTHORITY_RUNNER=sudo    # full host gate; see UID requirements below
 make release                       # separate build-release/axi, portable -O2
 ```
 
@@ -104,29 +104,47 @@ Trust is the old model — trust the package, trust the registry, trust the inst
 
 ```sh
 git clone https://github.com/FermiHart/axial.git && cd axial
-make dev && make gate
+make dev
+make gate AUTHORITY_RUNNER=sudo
 ```
 
 The original 67 goldens remain available through `make gate-fast`. The full
-`make gate` also covers signed CLI effects/replay, compiler regressions, C API
-boundaries, allocation and I/O failures, worker IPC, checker source identity
-and the recorded public ABI. It requires Python 3 and a host that permits
-local Unix sequenced-packet sockets. All fixtures use public deterministic
-test identities and temporary directories.
+`make gate` also covers signed CLI effects/replay, compiler quotas, exact
+decimal conversion, C API boundaries, allocation and I/O failures, local
+authority, worker IPC, checker source identity and the recorded public ABI.
+It requires Python 3, POSIX threads and a Linux host that permits local Unix
+sequenced-packet sockets and the authority test's real UID transitions.
+`AUTHORITY_RUNNER=sudo` elevates only two already-built test executables;
+they drop to real UID 1000 / effective UID 1001 before exercising private
+temporary stores. Compilation runs as the invoking user. If the process
+already has suitable credentials, use the default `AUTHORITY_RUNNER=direct`.
+An unavailable required test fails explicitly. All fixtures use public
+deterministic test identities. [Gate commands and scope](docs/audit80/gates.md).
 
-## 40-wave audit
+## 80-wave audit
 
-The [audit report](docs/audit40/REPORT.md) records the fixes, compatibility
-changes, reproducible tests, measured performance and remaining limits.
-[Raw before/after samples](docs/audit40/benchmark.json) use identical `-O1`
-builds; the optional `release` target is a separate `-O2` profile. The CI
-workflow runs the full gate in normal, optimized and ASan/UBSan profiles.
+The [W41–W80 report](docs/audit80/REPORT.md) continues the
+[first 40 waves](docs/audit40/REPORT.md), with checkpoints every ten waves.
+It closes the documented source-lowering, string, numeric-conversion and
+compiler-budget gaps, introduces an opt-in host-local authority profile,
+and fixes deep-call stack exhaustion and the SHA-NI first-use cache race.
+Contract generation now projects the interface once per module. The
+[measurements and raw evidence](docs/audit80/evidence/README.md) distinguish
+numeric helpers, contract generation and runtime/context workloads, including
+the adverse context-creation results. The CI runs normal, optimized and
+ASan/UBSan gates plus a separate ThreadSanitizer job. The optional `release`
+target remains a portable `-O2` build.
 
 The public embed header and recorded ABI bytes are unchanged. The corrected
 checker has a new source identity: artifacts carrying an old CHECKED seal
 must be explicitly re-executed and resealed, including when admitted under
 SIGNATURE_VALID. Ordinary signed artifacts without seals keep their existing
-framing. CLI input files must be regular files of at most 64 MiB.
+framing. CLI input files must be regular files of at most 64 MiB. Compiler
+commands have a default 256-MiB invocation quota, configurable with
+`--compile-mem BYTES` after the required file arguments; the optional
+`--compile-mem-report` emits a JSON memory report. See
+[migration notes](docs/audit80/migration.md) before recompiling old decimal
+literals, escaped strings or CHECKED artifacts.
 
 ## The honest fine print (short)
 
