@@ -202,6 +202,34 @@ def measure(args, candidate):
         print(json.dumps(report, indent=2))
 
 
+def context_identity(source, binaries, cc, flags):
+    """GNU/ELF diagnostic evidence; generated helper never edits product source."""
+    source_file = binaries / "runtime_context_identity.c"
+    source_file.write_text('#include "runtime_fixture.h"\n#include <stdio.h>\n'
+        'int main(void) { runtime80_fixture f; if (runtime80_fixture_init(&f,13,0)) return 1; '
+        'if (fwrite(f.bytes,1,f.len,stdout)!=f.len) return 1; runtime80_fixture_free(&f); return 0; }\n')
+    objects = [binaries / (path.stem + ".o") for path in sorted((source / "src").glob("*.c"))
+               if path.name not in ("axi_main.c", "axi_dossier_main.c")]
+    objects += [binaries / "ed25519.o", binaries / "runtime_fixture.o"]
+    executable = binaries / "runtime_context_identity"
+    includes = ["-I" + str(source / part) for part in ("src", "include", "vendor")]
+    run([cc, *flags, *includes, "-I" + str(ROOT / "tests/audit80"), source_file,
+         *objects, "-lm", "-pthread", "-o", executable], capture_output=True)
+    module = run([executable], capture_output=True).stdout
+    section = binaries / "ed25519.text.bin"
+    run(["objcopy", "-O", "binary", "--only-section=.text", binaries / "ed25519.o", section], capture_output=True)
+    addresses = {}
+    for suffix in ("", "_crypto_first"):
+        symbols = run(["nm", "-n", binaries / ("runtime_bench" + suffix)], capture_output=True, text=True).stdout
+        addresses["crypto_first" if suffix else "original"] = next(
+            line.split()[0] for line in symbols.splitlines() if line.endswith(" ed25519_verify"))
+    code = section.read_bytes()
+    return {"fixture": "13 cells, 0 laws, signature-valid", "signed_module_bytes": len(module),
+            "signed_module_sha256": hashlib.sha256(module).hexdigest(),
+            "ed25519_text_bytes": len(code), "ed25519_text_sha256": hashlib.sha256(code).hexdigest(),
+            "ed25519_verify_link_address": addresses}
+
+
 def context_diagnose(args, candidate):
     """Keep cryptographic work fixed while controlling compiler/link placement."""
     flags = shlex.split(args.cflags)
@@ -276,6 +304,9 @@ def context_diagnose(args, candidate):
                          "Phase times include probe clock overhead and are diagnostic, not absolute performance numbers.",
                          "The CPU is pinned but shared, with uncontrolled frequency and other tenants. No outlier removal."],
               "results": summary, "raw_samples": raw}
+    report["artifact_identity"] = {
+        "baseline": context_identity(base, baseline, args.cc, flags),
+        "candidate": context_identity(args.source.resolve(), candidate, args.cc, flags)}
     data = json.dumps(report, indent=2) + "\n"
     if args.report:
         args.report.parent.mkdir(parents=True, exist_ok=True); args.report.write_text(data)

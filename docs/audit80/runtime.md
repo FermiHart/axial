@@ -188,3 +188,53 @@ factor, or a latency distribution under a supplied real arrival process.
 The three timing modes also pass ASan/UBSan smoke runs; those instrumented
 timings are discarded. All published distributions were recomputed exactly
 from the retained raw sample file, including its SHA-256 digest check.
+
+## W75 — diagnose the context-creation regression before changing code
+
+The adverse W74 result triggered a focused follow-up, not another broad
+benchmark. `diagnose-context` compares the selected flags, the same object
+files with Ed25519 linked first, and `-O2` release flags. Five rounds measure
+50 new contexts per configuration/variant, plus a separately instrumented
+13-cell phase probe. `runtime-context-w75.json` contains all 4,500 creation
+observations and phase measurements, without removing outliers.
+
+The signed 13/0 module is identical byte for byte in W40 and the candidate:
+2,269 bytes, SHA-256 `e55ceaae33fca0f24d4da0599571358e50ae9ea981b246879d7a074eaa878e1d`.
+The Ed25519 object text is also identical: 7,729 bytes, SHA-256
+`84c74de78efce4faa35e86d5977d0340d9fdbc73f2e99f139ae32c6b37178971`.
+Its original verifier address changes from `0x56c23` to `0x56c37`; the
+control puts it at `0x7580` in both binaries. Those checks use independent
+Python hashing, GNU `objcopy` and `nm`, outside timed intervals.
+
+| Creation configuration | Original O1 W40 → candidate p50, ms | Fixed crypto position p50, ms | O2 p50, ms |
+| --- | ---: | ---: | ---: |
+| 13 cells / 0 laws | 3.055 → 3.367 | 2.893 → 2.865 | 3.295 → 3.498 |
+| 64 cells / 16 laws | 3.542 → 4.228 | 3.605 → 3.882 | 4.053 → 4.130 |
+| 256 cells / 64 laws | 6.513 → 6.945 | 7.563 → 6.387 | 6.907 → 6.434 |
+
+The small-context discrepancy nearly vanishes when cryptographic code
+placement is held constant, with unchanged verification inputs, policy and
+machine instructions. This supports linker placement as the main cause of
+that observed discrepancy, rather than hundreds of microseconds of atomic
+cache cost. Phase measurements still place hashing at about 15–18 µs per
+context, versus several milliseconds in Ed25519 verification. The cache
+change cannot explain the main measured difference by its hashing work.
+
+Larger-context and release differences change direction, and high tails
+remain noisy on this shared host. The experiment does not prove identical
+performance for all executable layouts, and no global creation speedup is
+claimed. It also does not justify weakening signature verification, removing
+the proven race fix, or modifying cryptographic arithmetic. Product code is
+unchanged in this wave; the substantive result is a reproducible attribution
+control and an explicit limit on the performance conclusion. Reusing an
+admitted immutable context remains the way to avoid repeated admission work;
+the measured evaluation lane already exercises that permitted lifetime.
+
+```sh
+python3 tools/audit80-runtime-bench.py diagnose-context --samples 5 \
+  --context-iterations 50 --report docs/audit80/runtime-context-w75.json
+```
+
+This command builds its own snapshots/variants and regenerates artifact
+identity evidence. GNU/ELF inspection tools are diagnostic dependencies;
+the Axial runtime gains no dependency or public ABI change.
