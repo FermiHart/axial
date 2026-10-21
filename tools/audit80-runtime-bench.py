@@ -61,12 +61,21 @@ def build(source, output, cc, flags, names):
         obj = compile_one(ROOT / "tests/audit80" / (src_name + ".c"),
                           [defines[name]] if name in defines else (), name)
         extra = []
+        linked_objects = objects
         if name in ("runtime_lifecycle", "runtime_memory"):
             extra = [compile_one(ROOT / "tests/audit80/runtime_track.c"),
                      "-Wl,--wrap=malloc,--wrap=calloc,--wrap=realloc,--wrap=free"]
         if name == "runtime_context_profile":
             extra = ["-Wl,--wrap=axi_sha256,--wrap=ed25519_verify"]
-        run([cc, *flags, obj, *objects, *extra, "-lm", "-pthread", "-o", output / name], capture_output=True)
+        if name in ("runtime_io_faults", "runtime_recovery"):
+            redirects = ["-U_FORTIFY_SOURCE", "-D_FORTIFY_SOURCE=0"]
+            redirects += ["-D" + operation + "=runtime80_io_" + operation
+                          for operation in ("read", "write", "fsync", "renameat")]
+            wrapped = compile_one(source / "src/axi_local_attempt_v1.c", redirects, "runtime_store_attempt")
+            linked_objects = [path for path in objects if path.name != "axi_local_attempt_v1.o"]
+            extra = [wrapped, compile_one(ROOT / "tests/audit80/runtime_store.c"),
+                     compile_one(ROOT / "tests/audit80/runtime_store_io.c")]
+        run([cc, *flags, obj, *linked_objects, *extra, "-lm", "-pthread", "-o", output / name], capture_output=True)
     return output
 
 
@@ -332,7 +341,8 @@ def main():
     if not 10 <= args.context_iterations <= 10000: parser.error("context-iterations must be between 10 and 10000")
     try:
         names = ["runtime_workloads", "runtime_lifecycle", "runtime_memory", "runtime_stack", "runtime_concurrency",
-                 "runtime_concurrency_uncached", "runtime_concurrency_software", "runtime_bench", "runtime_context_profile"]
+                 "runtime_concurrency_uncached", "runtime_concurrency_software", "runtime_io_faults", "runtime_recovery",
+                 "runtime_bench", "runtime_context_profile"]
         if args.only:
             if set(args.only) - set(names): parser.error("unknown fixture in --only")
             names = args.only

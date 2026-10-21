@@ -238,3 +238,74 @@ python3 tools/audit80-runtime-bench.py diagnose-context --samples 5 \
 This command builds its own snapshots/variants and regenerates artifact
 identity evidence. GNU/ELF inspection tools are diagnostic dependencies;
 the Axial runtime gains no dependency or public ABI change.
+
+## W76 — local I/O faults and abrupt writer recovery
+
+The persistence lane operates on disposable private directories, each with
+an existing complete configuration and one signed fixture grant. It targets
+the inactive legacy store mechanism. Its fixed admission observations are
+fixture values; host UID, boot, live-clock and active-authority enforcement
+are covered separately in W41–W50. Only the test copy of
+`axi_local_attempt_v1.c` has `read`, `write`, `fsync` and `renameat` redirected.
+Fault names, reached events and normal/sanitizer observations are retained
+in `runtime-store-w76.json`.
+
+Eleven I/O cases pass 187 checks. Three-byte short transfers and one-shot
+read/write EINTR still complete exactly one publication. Partial payload
+write followed by ENOSPC, payload file-fsync EIO, and payload rename EIO
+preserve the old configuration and yield FAILED with no effect. Partial
+terminal writes, terminal file-fsync failures and terminal rename failures
+preserve the durable spend and new configuration, yield UNKNOWN/effect=1,
+and refuse a second publication.
+
+Failure of the final records-directory fsync has a deliberate distinction:
+the interrupted call reports UNKNOWN/effect=1, while a later query can read
+the already visible COMMITTED record. The payload and spend had already
+been synchronized. That query never performs another effect and does not
+prove what a future power failure would retain. The experiment confirmed
+this behavior and prompted the store owner to correct an inaccurate comment
+in W49; these harnesses do not alter production persistence semantics.
+
+For interruption, the wrapper reports one exact reached point through a
+pipe and sends SIGKILL only to its own writer child. The parent verifies
+both the marker and signal before opening status/scan/retry paths. Twelve
+points are each repeated three times, for 543 checks:
+
+| Point of writer death | State read by recovery | Configuration after death | Further publication |
+| --- | --- | --- | --- |
+| Record created, zero bytes written | NOT_ATTEMPTED | Original | One successful attempt; replay then refused |
+| Partial nonzero record | CORRUPT refusal | Original | Refused |
+| Full record written, before file fsync | UNKNOWN | Original | Refused |
+| Spend file / records directory / store directory synced | UNKNOWN | Original | Refused |
+| Payload temporary file synced | UNKNOWN | Original | Refused |
+| Payload renamed / store directory synced / terminal temporary synced | UNKNOWN | Complete replacement | Refused |
+| Terminal renamed / records directory synced | COMMITTED observed | Complete replacement | Refused |
+
+Status, scan and repeat-commit agree on record identity, action/context roots,
+payload hash/size and the v2 legacy zero-epoch footer. Every inspected
+configuration is exactly the original bytes or complete replacement;
+uncertainty never authorizes a second effect. All successful tests remove
+their temporary stores; the two directories left by a corrected fixture
+assertion during development were also removed.
+
+Both the normal and ASan/UBSan lanes pass the same 187+543 checks, with
+identical 47 recorded observations. LeakSanitizer is disabled on this traced
+host. The complete normal runtime suite also passes: workload/fuel oracles,
+120 lifecycle allocation failpoints, bounded memory, stack probes and all
+three concurrency lanes. No further performance run is mixed with these
+instrumented reliability tests.
+
+```sh
+python3 tools/audit80-runtime-bench.py check
+ASAN_OPTIONS=detect_leaks=0 python3 tools/audit80-runtime-bench.py check \
+  --only runtime_io_faults runtime_recovery \
+  --output build/audit80-runtime-asan \
+  --cflags '-std=c99 -O1 -g -Wall -Wextra -Werror -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-pie -no-pie'
+```
+
+The machine, kernel and filesystem caches stay running throughout SIGKILL
+experiments. Injected ENOSPC/EIO values are controlled syscall results, not
+a physically full or failing device. These results establish the observed
+local process-recovery states, not physical power-loss durability,
+guest/kernel enforcement, or every possible crash schedule. Those remain
+infrastructure-dependent validation tasks.

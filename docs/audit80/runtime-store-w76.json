@@ -1,0 +1,503 @@
+{
+  "schema": "axial.audit80.store-reliability.v1",
+  "recorded_at_utc": "2026-10-19T20:53:55.347438+00:00",
+  "source_sha256": "5402aac5226ef20bc3627beb482c767efad261064e066e3630a2f38336c97ee7",
+  "fixture_sha256": "fef55ba891d510d85db34f2bc3e0ca0d77c9b19ff91da39883b5608fee669bbe",
+  "checks": {
+    "normal": {
+      "io": 187,
+      "recovery": 543
+    },
+    "asan_ubsan": {
+      "io": 187,
+      "recovery": 543
+    }
+  },
+  "scope": [
+    "Inactive legacy local-store mechanism, owner-private temporary directories; active authority is tested separately by W41-W50.",
+    "I/O function names redirected only in the test copy of axi_local_attempt_v1.c; ordinary product code is uninstrumented.",
+    "Short I/O and EINTR use real progress/retry; selected ENOSPC/EIO results are injected, not a physically full or failed block device.",
+    "Only each harness writer child receives SIGKILL; parent verifies the reported cut point, signal and freshly read store state.",
+    "12 process-interruption points repeated three times. Kernel, filesystem cache and machine remain running.",
+    "Observed recovery is not proof of physical power-loss durability, guest/kernel enforcement or arbitrary crash schedules.",
+    "ASan/UBSan ran the same state matrix; LeakSanitizer is disabled on this traced host."
+  ],
+  "fault_names": [
+    "control",
+    "short_read_write",
+    "write_eintr",
+    "read_eintr",
+    "partial_payload_enospc",
+    "payload_file_fsync_eio",
+    "payload_rename_eio",
+    "partial_terminal_write_eio",
+    "terminal_file_fsync_eio",
+    "terminal_rename_eio",
+    "terminal_directory_fsync_eio"
+  ],
+  "crash_points": [
+    "unused",
+    "empty_record",
+    "partial_record",
+    "written_record",
+    "spend_file_fsync",
+    "spend_records_fsync",
+    "spend_store_fsync",
+    "payload_file_fsync",
+    "payload_rename",
+    "payload_store_fsync",
+    "terminal_file_fsync",
+    "terminal_rename",
+    "terminal_records_fsync"
+  ],
+  "observations": [
+    {
+      "case": "store_io_fault",
+      "fault": 0,
+      "hits": 0,
+      "call_state": 2,
+      "query_state": 2,
+      "effect_performed": 1
+    },
+    {
+      "case": "store_io_fault",
+      "fault": 1,
+      "hits": 174,
+      "call_state": 2,
+      "query_state": 2,
+      "effect_performed": 1
+    },
+    {
+      "case": "store_io_fault",
+      "fault": 2,
+      "hits": 1,
+      "call_state": 2,
+      "query_state": 2,
+      "effect_performed": 1
+    },
+    {
+      "case": "store_io_fault",
+      "fault": 3,
+      "hits": 1,
+      "call_state": 2,
+      "query_state": 2,
+      "effect_performed": 1
+    },
+    {
+      "case": "store_io_fault",
+      "fault": 4,
+      "hits": 2,
+      "call_state": 4,
+      "query_state": 4,
+      "effect_performed": 0
+    },
+    {
+      "case": "store_io_fault",
+      "fault": 5,
+      "hits": 1,
+      "call_state": 4,
+      "query_state": 4,
+      "effect_performed": 0
+    },
+    {
+      "case": "store_io_fault",
+      "fault": 6,
+      "hits": 1,
+      "call_state": 4,
+      "query_state": 4,
+      "effect_performed": 0
+    },
+    {
+      "case": "store_io_fault",
+      "fault": 7,
+      "hits": 2,
+      "call_state": 3,
+      "query_state": 3,
+      "effect_performed": 1
+    },
+    {
+      "case": "store_io_fault",
+      "fault": 8,
+      "hits": 1,
+      "call_state": 3,
+      "query_state": 3,
+      "effect_performed": 1
+    },
+    {
+      "case": "store_io_fault",
+      "fault": 9,
+      "hits": 1,
+      "call_state": 3,
+      "query_state": 3,
+      "effect_performed": 1
+    },
+    {
+      "case": "store_io_fault",
+      "fault": 10,
+      "hits": 1,
+      "call_state": 3,
+      "query_state": 2,
+      "effect_performed": 1
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 1,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 0,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 1,
+      "recovery_publishes": 1
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 2,
+      "signal": 9,
+      "query_rc": -3,
+      "query_state": -1,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 0,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 3,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 0,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 4,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 0,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 5,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 0,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 6,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 0,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 7,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 0,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 8,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 1,
+      "new_config_after_recovery": 1,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 9,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 1,
+      "new_config_after_recovery": 1,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 10,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 1,
+      "new_config_after_recovery": 1,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 11,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 2,
+      "new_config_after_interruption": 1,
+      "new_config_after_recovery": 1,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 12,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 2,
+      "new_config_after_interruption": 1,
+      "new_config_after_recovery": 1,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 1,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 0,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 1,
+      "recovery_publishes": 1
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 2,
+      "signal": 9,
+      "query_rc": -3,
+      "query_state": -1,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 0,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 3,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 0,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 4,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 0,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 5,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 0,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 6,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 0,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 7,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 0,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 8,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 1,
+      "new_config_after_recovery": 1,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 9,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 1,
+      "new_config_after_recovery": 1,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 10,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 1,
+      "new_config_after_recovery": 1,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 11,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 2,
+      "new_config_after_interruption": 1,
+      "new_config_after_recovery": 1,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 12,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 2,
+      "new_config_after_interruption": 1,
+      "new_config_after_recovery": 1,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 1,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 0,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 1,
+      "recovery_publishes": 1
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 2,
+      "signal": 9,
+      "query_rc": -3,
+      "query_state": -1,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 0,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 3,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 0,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 4,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 0,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 5,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 0,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 6,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 0,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 7,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 0,
+      "new_config_after_recovery": 0,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 8,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 1,
+      "new_config_after_recovery": 1,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 9,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 1,
+      "new_config_after_recovery": 1,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 10,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 3,
+      "new_config_after_interruption": 1,
+      "new_config_after_recovery": 1,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 11,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 2,
+      "new_config_after_interruption": 1,
+      "new_config_after_recovery": 1,
+      "recovery_publishes": 0
+    },
+    {
+      "case": "store_process_interruption",
+      "point": 12,
+      "signal": 9,
+      "query_rc": 0,
+      "query_state": 2,
+      "new_config_after_interruption": 1,
+      "new_config_after_recovery": 1,
+      "recovery_publishes": 0
+    }
+  ]
+}
