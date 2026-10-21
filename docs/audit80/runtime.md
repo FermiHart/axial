@@ -70,3 +70,28 @@ host; the requested-byte wrapper independently checks observed cleanup.
 This is a measured stack reduction and prevented crash, not a claimed
 context-creation speedup. Maximum-register recursion still requires a large
 host stack; the C API has no promise to run on an arbitrarily small stack.
+
+## W72 — concurrent independent invocations and first-use hash safety
+
+Eight threads exercise isolated context creation/evaluation/destruction and
+shared immutable-context evaluation, each with private request/workspace/
+outcome storage. All readers join before destruction. Each mode completes
+1,920 mixed evaluations with exact result and fuel oracles; no concurrent
+destruction, mutable-request sharing or one-shot CAP reuse is permitted.
+
+The experiment exposed a real first-use data race in the SHA-NI detection
+cache. A freshly instantiated copy of the W40 header reports a read/write
+race at its cache access under ThreadSanitizer (exit 66), even though digest
+checks appear to pass. The cache now uses relaxed atomic accesses on supported
+GCC/Clang; no other state is published by that integer. Each hash context
+retains its own detection result. The uncached fallback queries CPUID once
+per initialized context, never per compression block. Product code acquires
+no pthread dependency. A compile-time uncached lane and the existing forced
+software lane verify identical digests independently.
+
+Full product+fixture ThreadSanitizer runs pass for cached, uncached and
+software test-header lanes. Each also performs both context workloads; this
+is evidence for these lifetimes and inputs, not proof of all race freedom.
+Reproduce with `--only runtime_concurrency runtime_concurrency_uncached
+runtime_concurrency_software`, a separate `--output` and CFLAGS including
+`-fsanitize=thread -fno-omit-frame-pointer -fno-pie -no-pie`.

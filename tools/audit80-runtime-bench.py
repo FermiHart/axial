@@ -38,19 +38,23 @@ def build(source, output, cc, flags, names):
     sources = [p for p in sources if p.name not in ("axi_main.c", "axi_dossier_main.c")]
     sources += [source / "vendor/ed25519.c", ROOT / "tests/audit80/runtime_fixture.c"]
 
-    def compile_one(path):
-        obj = output / (path.stem + ".o")
+    def compile_one(path, extra_flags=(), name=None):
+        obj = output / ((name or path.stem) + ".o")
         stamp = obj.with_suffix(".key")
-        digest = hashlib.sha256((key + str(path)).encode() + path.read_bytes()).hexdigest()
+        digest = hashlib.sha256((key + str(path) + repr(extra_flags)).encode() + path.read_bytes()).hexdigest()
         if not obj.exists() or not stamp.exists() or stamp.read_text() != digest:
-            run([cc, *flags, *includes, "-c", path, "-o", obj], capture_output=True)
+            run([cc, *flags, *extra_flags, *includes, "-c", path, "-o", obj], capture_output=True)
             stamp.write_text(digest)
         return obj
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=2) as pool:
         objects = list(pool.map(compile_one, sources))
     for name in names:
-        obj = compile_one(ROOT / "tests/audit80" / (name + ".c"))
+        defines = {"runtime_concurrency_uncached": "-DSHA256NI_NO_CACHE=1",
+                   "runtime_concurrency_software": "-DSHA256NI_FORCE_SOFTWARE=1"}
+        src_name = "runtime_concurrency" if name in defines else name
+        obj = compile_one(ROOT / "tests/audit80" / (src_name + ".c"),
+                          [defines[name]] if name in defines else (), name)
         extra = []
         if name in ("runtime_lifecycle",):
             extra = [compile_one(ROOT / "tests/audit80/runtime_track.c"),
@@ -68,10 +72,15 @@ def main():
     parser.add_argument("--cflags", default=os.environ.get("AXI_AUDIT_CFLAGS", FLAGS))
     parser.add_argument("--samples", type=int, default=5)
     parser.add_argument("--report", type=Path)
+    parser.add_argument("--only", nargs="+", help="build/check only the named runtime_* fixtures")
     args = parser.parse_args()
     if not 3 <= args.samples <= 100: parser.error("samples must be between 3 and 100")
     try:
-        names = ["runtime_workloads", "runtime_lifecycle", "runtime_stack", "runtime_bench"]
+        names = ["runtime_workloads", "runtime_lifecycle", "runtime_stack", "runtime_concurrency",
+                 "runtime_concurrency_uncached", "runtime_concurrency_software", "runtime_bench"]
+        if args.only:
+            if set(args.only) - set(names): parser.error("unknown fixture in --only")
+            names = args.only
         binaries = build(args.source.resolve(), args.output.resolve(), args.cc,
                          shlex.split(args.cflags), names)
         if args.mode == "check":
