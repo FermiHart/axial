@@ -761,11 +761,11 @@ char *axi_codegen_contract_v1(const axi_node *unit, size_t *out_len)
     if (axb_mod_body_hash_accounted(&model.body, model.derivation.body_hash, account) != 0)
         goto done;
     axi_arena_init_accounted(&model.arena, CONTRACT_MODULE_MAX, account);
+    if (axi_iface_manifests_v1(unit, &model.body, model.manifest,
+                               &model.arena) != 0) goto done;
     for (i = 0; i < model.body.n; i++) {
         const axb_cell *cell = &model.body.cells[i];
-        if (axi_iface_manifest_v1(unit, cell->name, strlen(cell->name),
-                                  &model.manifest[i], &model.arena) != 0
-                || axb_cell_body_hash_v1_accounted(cell,
+        if (axb_cell_body_hash_v1_accounted(cell,
                                          model.manifest[i].body_hash, account) != 0)
             goto done;
     }

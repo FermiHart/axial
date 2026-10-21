@@ -591,12 +591,20 @@ static const ifc_cell *find_cell(const ifc *f, const char *name)
 
 static const ifc_cell *find_cell_n(const ifc *f, const char *name, size_t len)
 {
-    size_t i;
+    size_t lo = 0, hi = f->n;
     if (!name) return NULL;
-    for (i = 0; i < f->n; i++)
-        if (strlen(f->cells[i].name) == len
-                && memcmp(f->cells[i].name, name, len) == 0)
-            return &f->cells[i];
+    /* project() sorts cell names. A length-delimited query need not have a
+     * trailing NUL; compare its common prefix before comparing lengths. */
+    while (lo < hi) {
+        size_t mid = lo + (hi - lo) / 2;
+        const ifc_cell *c = &f->cells[mid];
+        size_t n = strlen(c->name);
+        int order = memcmp(c->name, name, n < len ? n : len);
+        if (!order) order = n < len ? -1 : n > len ? 1 : 0;
+        if (order < 0) lo = mid + 1;
+        else if (order > 0) hi = mid;
+        else return c;
+    }
     return NULL;
 }
 
@@ -743,30 +751,21 @@ int axi_manifest_iface_hash_v1(const char *cell_name,
         cell_name, manifest, out, NULL);
 }
 
-/* INV-382 / AXI-INV-122: one source projection feeds both the legacy iface
- * identity and manifest facts. body_hash is deliberately not a source fact. */
-int axi_iface_manifest_v1(const axi_node *unit,
-                          const char *cell_name, size_t cell_name_len,
-                          axb_manifest *out, struct axi_arena *arena)
+/* Both producer APIs use the identical per-cell conversion. In particular,
+ * return wire tags are sorted separately from the text projection's atoms. */
+static int cell_manifest_v1(const ifc_cell *cell, axb_manifest *out,
+                            struct axi_arena *arena)
 {
-    ifc model;
-    const ifc_cell *cell;
     axb_manifest m;
     size_t i, j;
-    if (!out) return 1;
     memset(out, 0, sizeof *out);
-    if (!unit || !unit->contract_checked || !arena) return 1;
-    if (project(unit, &model) != 0) return 1;
-    cell = find_cell_n(&model, cell_name, cell_name_len);
     if (!cell || !cell->has_fuel
             || cell->nparams > AXB_MANIFEST_MAX_PARAMS
             || cell->nrets > AXB_MANIFEST_MAX_RETURNS
             || cell->nerrs > AXB_MANIFEST_MAX_ERRORS
             || cell->ncaps > AXB_MANIFEST_MAX_CAPS
-            || cell->nlaws > AXB_MANIFEST_MAX_LAWS) {
-        ifc_free(&model);
+            || cell->nlaws > AXB_MANIFEST_MAX_LAWS)
         return 1;
-    }
     memset(&m, 0, sizeof m);
     m.version = AXB_MANIFEST_VERSION;
     m.flags = (cell->pure ? AXB_MANIFEST_FLAG_PURE : 0u)
@@ -803,11 +802,51 @@ int axi_iface_manifest_v1(const axi_node *unit,
     memcpy(m.iface_hash, cell->hash_bytes, sizeof m.iface_hash);
     if (axb_manifest_v1_verify(&m) != 0) goto bad;
     *out = m;
-    ifc_free(&model);
     return 0;
 bad:
-    ifc_free(&model);
     return 1;
+}
+
+/* INV-382 / AXI-INV-122: one source projection feeds both the legacy iface
+ * identity and manifest facts. body_hash is deliberately not a source fact. */
+int axi_iface_manifest_v1(const axi_node *unit,
+                          const char *cell_name, size_t cell_name_len,
+                          axb_manifest *out, struct axi_arena *arena)
+{
+    ifc model;
+    int rc;
+    if (!out) return 1;
+    memset(out, 0, sizeof *out);
+    if (!unit || !unit->contract_checked || !arena) return 1;
+    if (project(unit, &model) != 0) return 1;
+    rc = cell_manifest_v1(find_cell_n(&model, cell_name, cell_name_len),
+                         out, arena);
+    ifc_free(&model);
+    return rc;
+}
+
+int axi_iface_manifests_v1(const axi_node *unit, const axb_mod *body,
+                           axb_manifest *out, struct axi_arena *arena)
+{
+    ifc model;
+    size_t i, bytes;
+    int rc = 1;
+    if (!out || !body || !body->n
+            || sizeof *out > (size_t)-1 / body->n) return 1;
+    bytes = (size_t)body->n * sizeof *out;
+    memset(out, 0, bytes);
+    if (!unit || !unit->contract_checked || !arena || !body->cells) return 1;
+    if (project(unit, &model) != 0) return 1;
+    for (i = 0; i < body->n; i++) {
+        const char *name = body->cells[i].name;
+        if (!name || cell_manifest_v1(find_cell_n(&model, name, strlen(name)),
+                                      &out[i], arena) != 0) goto done;
+    }
+    rc = 0;
+done:
+    ifc_free(&model);
+    if (rc) memset(out, 0, bytes);
+    return rc;
 }
 
 static void diff_cell(const ifc_cell *o, const ifc_cell *n, chgs *cs)

@@ -117,8 +117,9 @@ gate-workers: $(BUILD)/audit40/runtime
 
 gate-compiler: dev $(COMPILER_AUDIT_BIN)
 	@set -e; for test in $(COMPILER_AUDIT_BIN); do "$$test"; done
-	$(MAKE) BUILD='$(BUILD)/compiler-fail' CPPFLAGS='$(CPPFLAGS) -DAXI_ALLOC_FAILPOINT' dev
+	$(MAKE) BUILD='$(BUILD)/compiler-fail' CPPFLAGS='$(CPPFLAGS) -DAXI_ALLOC_FAILPOINT' dev '$(BUILD)/compiler-fail/audit80/compiler_manifest'
 	$(PYTHON) tests/audit80/compiler_cli.py $(abspath $(AXI)) $(abspath $(BUILD))/compiler-fail/axi
+	$(PYTHON) tests/audit80/manifest_faults.py $(abspath $(BUILD))/compiler-fail/audit80/compiler_manifest
 
 gate-runtime:
 	$(PYTHON) tools/audit80-runtime-bench.py check --source='$(CURDIR)' --output='$(abspath $(BUILD))/audit80-runtime' --cc='$(HOSTCC)' --cppflags='$(CPPFLAGS)' --cflags='$(CFLAGS)' --ldflags='$(LDFLAGS)' --only $(RUNTIME_CHECKS)
