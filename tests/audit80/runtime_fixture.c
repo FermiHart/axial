@@ -113,6 +113,30 @@ void runtime80_fixture_free(runtime80_fixture *f)
     axb_contract_mod_free(&f->model); free(f->bytes); memset(f, 0, sizeof *f);
 }
 
+int runtime80_chain_init(runtime80_fixture *f, unsigned depth, unsigned registers)
+{
+    char *source;
+    size_t len = 0, cap = 131072;
+    unsigned i;
+    axi_sig identity;
+    if (!f || !depth || depth > 256 || !registers || registers > 256) return -1;
+    memset(f, 0, sizeof *f); source = malloc(cap);
+    if (!source) return -1;
+    for (i = 0; i < depth; i++) {
+        if (append(source, cap, &len,
+            "cell frame%03u nregs=%u\n  contract 1\n    param value u64\n"
+            "    ret u64\n    fuel 100000\n    pure\n  endcontract\n", i, registers)) goto fail;
+        if (i + 1 < depth && append(source, cap, &len, "  call r0 @frame%03u 1\n", i + 1)) goto fail;
+        if (append(source, cap, &len, "  ret r0\nend\n")) goto fail;
+    }
+    if (axb_contract_v1_parse(source, len, &f->model) != 0
+            || runtime80_fixture_resign(f) != 0
+            || axi_sig_make(seed, 0, seed, &identity) != 0) goto fail;
+    memcpy(f->pk, identity.pk, 32); free(source); return 0;
+fail:
+    free(source); runtime80_fixture_free(f); return -1;
+}
+
 int runtime80_context(const runtime80_fixture *f, unsigned profile, axi_embed_v1_context **out)
 {
     axi_embed_v1_context_options options = {0};

@@ -46,3 +46,27 @@ contexts per configuration, after a warmup process, are recorded in
 context is new but CPU, process and OS caches are warmed; this is not a
 machine-cold startup experiment. The measurement is pinned to one shared CPU,
 with no frequency, tenant-isolation or production-SLA claim.
+
+## W71 — eliminate maximum-size stack frames for small callees
+
+The workload expansion found a real availability defect: valid pure calls
+reserved all 256 registers per level even when their manifests used one.
+The W40 baseline died with SIGSEGV for 64 one-register cells on a 512-KiB
+pthread stack and for 256 cells on a 2-MiB stack. These are controlled child
+process experiments; the parent records signal and exit status.
+
+After `run_cell_prepare` validates register count 1..256 and call depth,
+the pure path now uses a C99 VLA of the actual count. Accounted invocations
+retain their existing checked slab. GCC `-fstack-usage` reported a 22,672-byte
+unaccounted-frame allocation before the change; the variable register
+storage is now 88 bytes per declared register, plus bounded function overhead.
+This removes 22,440 bytes of unnecessary register storage per one-register
+callee. All three probes pass after the change, including eight callees that
+actually require 256 registers. Return values and 36/316/1,276 fuel agree.
+The W69–W71 workloads, all 120 lifecycle allocation failpoints and all stack
+probes also pass with ASan/UBSan. LeakSanitizer remains disabled on this traced
+host; the requested-byte wrapper independently checks observed cleanup.
+
+This is a measured stack reduction and prevented crash, not a claimed
+context-creation speedup. Maximum-register recursion still requires a large
+host stack; the C API has no promise to run on an arbitrarily small stack.

@@ -26,6 +26,7 @@ typedef struct {
 #define RUNTIME80_CASES 12u
 extern const char *const runtime80_case_names[RUNTIME80_CASES];
 int runtime80_fixture_init(runtime80_fixture *f, unsigned cells, unsigned laws);
+int runtime80_chain_init(runtime80_fixture *f, unsigned depth, unsigned registers);
 int runtime80_fixture_resign(runtime80_fixture *f);
 void runtime80_fixture_free(runtime80_fixture *f);
 int runtime80_context(const runtime80_fixture *f, unsigned profile,

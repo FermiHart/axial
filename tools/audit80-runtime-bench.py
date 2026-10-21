@@ -71,7 +71,7 @@ def main():
     args = parser.parse_args()
     if not 3 <= args.samples <= 100: parser.error("samples must be between 3 and 100")
     try:
-        names = ["runtime_workloads", "runtime_lifecycle", "runtime_bench"]
+        names = ["runtime_workloads", "runtime_lifecycle", "runtime_stack", "runtime_bench"]
         binaries = build(args.source.resolve(), args.output.resolve(), args.cc,
                          shlex.split(args.cflags), names)
         if args.mode == "check":

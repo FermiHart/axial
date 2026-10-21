@@ -655,13 +655,18 @@ static int run_cell_unaccounted(vm *V, uint32_t ci, const vval *args,
                                 uint64_t parent_ceiling)
 {
     vm_frame frame;
-    vval reg[AXB_MAX_REGS];
     uint32_t i;
     if (!run_cell_prepare(V, ci, args, argc, depth, parent_ceiling, &frame))
         return 0;
-    for (i = 0; i < frame.nregs; i++) reg[i] = VUNIT();
-    for (i = 0; i < argc && i < frame.nregs; i++) reg[i] = args[i];
-    return run_cell_execute(V, ci, reg, ret, depth, 0, &frame);
+    {
+        /* C99 bounded VLA: prepare validated 1..AXB_MAX_REGS and depth.
+         * Small callees must not reserve all 256 registers at every level;
+         * the old fixed frame overflowed ordinary bounded thread stacks. */
+        vval reg[frame.nregs];
+        for (i = 0; i < frame.nregs; i++) reg[i] = VUNIT();
+        for (i = 0; i < argc && i < frame.nregs; i++) reg[i] = args[i];
+        return run_cell_execute(V, ci, reg, ret, depth, 0, &frame);
+    }
 }
 
 #define VM_REG_SLAB_MAX_COUNT \
