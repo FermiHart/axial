@@ -124,3 +124,67 @@ separately as whole-process high water, including fixture and tracking
 overhead; it is neither runtime-only heap nor a portable quota measure.
 
 Run `python3 tools/audit80-runtime-bench.py check --only runtime_memory`.
+
+## W74 — latency distributions and validated throughput
+
+The comparator builds the exact W40 revision into a snapshot below its own
+build directory. It never modifies another checkout. Both variants use the
+same generated workloads and GCC 13.3 C99 `-O1` flags; source and fixture
+hashes are recorded. Five rounds alternate the order of baseline/candidate
+processes. Each round measures 2,000 individual calls per family and 100 new
+contexts per size. Raw samples, including outliers, are retained alongside
+the summary in `runtime-latency-w74.json` and its compressed sample file.
+Percentiles use integer nearest rank. The median clock-pair interval was
+20 ns; it is reported, not subtracted.
+
+| Workload | W40 p50/p95/p99, ns | W73 p50/p95/p99, ns | Exact fuel |
+| --- | ---: | ---: | ---: |
+| Policy allow | 330 / 381 / 501 | 321 / 371 / 510 | 3 |
+| Policy deny | 320 / 400 / 490 | 311 / 400 / 491 | 3 |
+| Ordinary false | 291 / 361 / 461 | 290 / 360 / 441 | 4 |
+| Plain JSON string | 641 / 751 / 1,142 | 631 / 711 / 1,092 | 10 |
+| Escaped JSON string | 711 / 811 / 1,272 | 691 / 751 / 1,152 | 10 |
+| Eight calls | 712 / 852 / 1,252 | 651 / 721 / 1,102 | 38 |
+| 128-iteration loop | 3,455 / 3,576 / 25,348 | 3,445 / 3,535 / 18,567 | 512 |
+| Division trap | 371 / 461 / 721 | 361 / 420 / 681 | 4 |
+| Fuel trap | 491 / 601 / 891 | 471 / 541 / 842 | 0 |
+| Interface refusal | 130 / 161 / 190 | 130 / 160 / 190 | 0 |
+| Workspace refusal | 721 / 871 / 1,402 | 711 / 812 / 1,362 | 10 |
+| Invalid JSON trap | 360 / 421 / 561 | 350 / 401 / 550 | 0 |
+
+There are 10,000 latency observations per family and variant. Every result
+and fuel value is checked outside its timing interval. A separate amortized
+loop includes those checks: its median was 1.153 versus 1.205 million
+evaluations/s. Parallel readers share one immutable context, keep private
+requests/workspaces/outcomes, and join before destruction. With 1/2/4/8
+readers, candidate median loop rates were 1.234/2.420/3.338/5.418 million/s.
+The 8-reader baseline median was 5.908 million/s, with ranges overlapping
+the candidate (4.158–6.589 versus 3.908–6.304 million/s). These are five
+throughput samples, not thousands of independent throughput observations.
+
+Context creation initially regressed: median 13-cell/0-law admission was
+2.732 to 3.370 ms; 64/16 was 3.498 to 3.931 ms; 256/64 was 5.589 to
+6.194 ms. This is retained as an adverse result, not hidden by aggregate
+evaluation improvements. The phase probe `runtime_context_profile` isolates
+SHA-256 and Ed25519 verification using test-only link wrappers. Its initial
+13/0 experiment observed 34 SHA-256 calls taking 15–20 microseconds total,
+while unchanged Ed25519 verification consumed more than 96% of creation
+time. W75 follows up with controlled placement and release-build evidence.
+
+The runner supports `compare`, `latency` and the earlier `context` mode.
+For the recorded comparison run:
+
+```sh
+python3 tools/audit80-runtime-bench.py compare --samples 5 --iterations 2000 \
+  --context-iterations 100 --report docs/audit80/runtime-latency-w74.json
+```
+
+CPU affinity is pinned for single-reader latency and widened to the requested
+reader count for parallel loops. The host cgroup reported an eight-CPU quota,
+but CPUs, frequencies and other tenants were not isolated. Setup, signing and
+thread creation are outside timed intervals; crypto/allocator/OS caches are
+warmed. No result here establishes a production SLA, a guaranteed scaling
+factor, or a latency distribution under a supplied real arrival process.
+The three timing modes also pass ASan/UBSan smoke runs; those instrumented
+timings are discarded. All published distributions were recomputed exactly
+from the retained raw sample file, including its SHA-256 digest check.
