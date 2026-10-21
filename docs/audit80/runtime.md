@@ -95,3 +95,32 @@ is evidence for these lifetimes and inputs, not proof of all race freedom.
 Reproduce with `--only runtime_concurrency runtime_concurrency_uncached
 runtime_concurrency_software`, a separate `--output` and CFLAGS including
 `-fsanitize=thread -fno-omit-frame-pointer -fno-pie -no-pie`.
+
+## W73 — retained contexts, bounded JSON and accounted memory
+
+The memory lane retains 1/2/4/8 CHECKED contexts containing 256 cells and
+64 laws, then destroys every context. Requested live heap grows by exactly
+1,023,088 bytes per admitted context in this build. Eight contexts retain
+8,184,704 bytes and reach 8,498,048 peak extra requested bytes; destruction
+restores the starting live-byte count. Caller input/output and fixture
+construction are outside those extra-byte intervals.
+
+Forty-eight JSON evaluations alternate a successful decoded result, output
+workspace refusal, and a failed scratch allocation. The accepted document is
+exactly the existing 65,536-byte JSON input limit and returns 32,762 decoded
+bytes. Successful and workspace-refused evaluations each allocate one
+65,536-byte scratch region and release it; allocation failure retains no
+memory. A separate 65,537-byte document traps before any opcode/allocation,
+using zero fuel and preserving output. The initial experimental assertion
+was a fixture mistake: its 65,547-byte document exceeded that existing limit.
+No JSON product limit or behavior was changed to accommodate the workload.
+
+The accounted nested-call path is also checked at 0/4,096/131,072-byte
+budgets: the first two refuse with the existing quota failure, the last
+succeeds with 24,016 peak accounted bytes and unchanged result/fuel. All
+three leave zero live allocations. The lane passes 273 checks normally and
+with ASan/UBSan (`ASAN_OPTIONS=detect_leaks=0`). Linux `ru_maxrss` is printed
+separately as whole-process high water, including fixture and tracking
+overhead; it is neither runtime-only heap nor a portable quota measure.
+
+Run `python3 tools/audit80-runtime-bench.py check --only runtime_memory`.

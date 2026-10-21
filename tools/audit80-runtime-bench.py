@@ -56,7 +56,7 @@ def build(source, output, cc, flags, names):
         obj = compile_one(ROOT / "tests/audit80" / (src_name + ".c"),
                           [defines[name]] if name in defines else (), name)
         extra = []
-        if name in ("runtime_lifecycle",):
+        if name in ("runtime_lifecycle", "runtime_memory"):
             extra = [compile_one(ROOT / "tests/audit80/runtime_track.c"),
                      "-Wl,--wrap=malloc,--wrap=calloc,--wrap=realloc,--wrap=free"]
         run([cc, *flags, obj, *objects, *extra, "-lm", "-pthread", "-o", output / name], capture_output=True)
@@ -76,7 +76,7 @@ def main():
     args = parser.parse_args()
     if not 3 <= args.samples <= 100: parser.error("samples must be between 3 and 100")
     try:
-        names = ["runtime_workloads", "runtime_lifecycle", "runtime_stack", "runtime_concurrency",
+        names = ["runtime_workloads", "runtime_lifecycle", "runtime_memory", "runtime_stack", "runtime_concurrency",
                  "runtime_concurrency_uncached", "runtime_concurrency_software", "runtime_bench"]
         if args.only:
             if set(args.only) - set(names): parser.error("unknown fixture in --only")
