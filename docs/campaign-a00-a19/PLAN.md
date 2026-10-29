@@ -3,7 +3,7 @@
 **Campanha:** contratos observáveis e mediação verificável  
 **Data:** 29 de outubro de 2026  
 **Decisão de referência:** ADR-AXIAL-0001, revisão 2  
-**Estado atual:** A00 concluída; A01 pronta para execução; A02–A19 pendentes. A00 começou em 29/10/2026 às 10h39 (America/Sao_Paulo).
+**Estado atual:** A00 e A01 concluídas; A02 pronta para execução; A03–A19 pendentes. A00 começou em 29/10/2026 às 10h39 (America/Sao_Paulo).
 
 **Branch:** work/axial-a00-a19-20261029. O estado operacional está em [STATUS.json](STATUS.json).
 
@@ -13,7 +13,7 @@ Entregar descoberta estruturada sobre o Axial existente e uma ação real demons
 
 A referência inicial do núcleo é [FermiHart/axial@26eec863](https://github.com/FermiHart/axial/tree/26eec8630e8cf1dc3a1808f1580cc12d36410a8e), da branch audit/axial-80-waves-20261019. A00 confirma novamente os heads e fixa a branch da campanha. A análise anterior do receptor usa Beyond_BDM@050ba81e, branch codex/gui20-phase1, com fronteira UNWIRED; isso não descreve automaticamente outras branches.
 
-**Perfis:** núcleo standalone e demonstração host isolada compõem a entrega inicial. Consumidor Jash e target Beyond recebem qualificação separada, conforme a seleção registrada em A00 e os contratos vigentes. Qualquer implementação de backend necessária deve ser decomposta explicitamente; vinte waves não constituem garantia de conclusão de todos os alvos.
+**Perfis:** núcleo standalone e demonstração host isolada local-config-publication compõem a entrega inicial; ver [decisões A01](A01-CONTRACTS.md). Consumidor Jash e target Beyond recebem qualificação separada, conforme a seleção registrada em A00 e os contratos vigentes. Qualquer implementação de backend necessária deve ser decomposta explicitamente; vinte waves não constituem garantia de conclusão de todos os alvos.
 
 ## Regras de execução e continuidade
 
@@ -32,7 +32,7 @@ A referência inicial do núcleo é [FermiHart/axial@26eec863](https://github.co
 Todas as vinte waves estão registradas. Caixa marcada significa entrega concluída com evidência; detalhes e dependências aparecem nos cards abaixo.
 
 - [x] **A00 — Baseline, inventário e delta** — CONCLUÍDA; ver [evidência](A00-BASELINE.md)
-- [ ] **A01 — Contratos e fronteira de confiança** — PENDENTE
+- [x] **A01 — Contratos e fronteira de confiança** — CONCLUÍDA; ver [decisões](A01-CONTRACTS.md)
 - [ ] **A02 — ABI, schemas e compatibilidade** — PENDENTE
 - [ ] **A03 — Catálogo de builtins, effects e backends** — PENDENTE
 - [ ] **A04 — Inspeção unificada e resumida** — PENDENTE
@@ -57,8 +57,8 @@ Todas as vinte waves estão registradas. Caixa marcada significa entrega conclu�
 | Wave | Entrega | Estado inicial |
 | --- | --- | --- |
 | A00 | Baseline, inventário e delta | DONE |
-| A01 | Contratos e fronteira de confiança | READY |
-| A02 | ABI, schemas e compatibilidade | PLANNED |
+| A01 | Contratos e fronteira de confiança | DONE |
+| A02 | ABI, schemas e compatibilidade | READY |
 | A03 | Catálogo de builtins, effects e backends | PLANNED |
 | A04 | Inspeção unificada e resumida | PLANNED |
 | A05 | Explicação de requisitos e recusas | PLANNED |
@@ -91,7 +91,7 @@ Fixar commits e escopos de Axial, receptor e consumidor. Inventariar fontes, opc
 
 ### A01 — Contratos e fronteira de confiança
 
-**Estado:** READY. **Dependência:** A00.
+**Estado:** DONE. **Dependência:** A00. **Evidência:** [A01-CONTRACTS.md](A01-CONTRACTS.md).
 
 Resolver conflitos documentais que afetem a implementação. Identificar quem admite o artefato, calcula a decisão, concede autoridade, publica o efeito e registra seu resultado. Usar ADR-042/043/044 para o consumidor e classificar o mapa Jash antigo como referência histórica.
 
@@ -101,7 +101,7 @@ Resolver conflitos documentais que afetem a implementação. Identificar quem ad
 
 ### A02 — ABI, schemas e compatibilidade
 
-**Estado:** PLANNED. **Dependências:** A00–A01.
+**Estado:** READY. **Dependências:** A00–A01.
 
 Reconciliar o status do header embed v1 com o perfil ABI e a documentação. Separar compatibilidade binária, formato de artefato, interface de célula e schema de inspeção. Definir versões, limites e representação sem perda de u64 e bytes para as extensões necessárias.
 
@@ -191,7 +191,7 @@ Fixar a revisão do consumidor e enumerar os pontos consequentes de seu conjunto
 
 **Estado:** PLANNED. **Dependências:** A07–A09; requisitos de confiança, lifecycle e evidência necessários antecipados de A11–A13.
 
-Executar uma operação pequena do perfil escolhido em consumidor isolado, como atualização de configuração de fixture. Ligar decisão, AG1, porta final e AER à mesma ação resolvida. Preservar as exigências do contrato mesmo nessa demonstração.
+Executar uma operação pequena do perfil escolhido em consumidor isolado, como atualização de configuração de fixture. Ligar decisão, AG1, porta final e o recibo do perfil à mesma ação resolvida; AER2 local e AER1 Jash conservam seus contratos conforme A01. Preservar as exigências do contrato mesmo nessa demonstração.
 
 - **Entrega:** cenário utilizável de permissão e recusa com resultado consultável.
 - **Componentes:** gateway, AG1, porta de efeito, AER e consumidor isolado.

@@ -224,9 +224,11 @@
     {
       "id": "A00-F01",
       "severity": "documentation/source-provenance",
-      "status": "OPEN",
+      "status": "DECISION_RECORDED",
       "owner_wave": "A01",
-      "description": "CAP table comments reference docs/CAP-METHODS.tsv and tools/gen_cap_table.py, absent from the standalone baseline tree."
+      "description": "CAP table comments reference docs/CAP-METHODS.tsv and tools/gen_cap_table.py, absent from the standalone baseline tree.",
+      "implementation_followup": "A03",
+      "resolution": "A01-CONTRACTS.md: table describes fixed code; locate/reconcile generator provenance before expanding it. Missing files are not claimed restored."
     },
     {
       "id": "A00-F02",

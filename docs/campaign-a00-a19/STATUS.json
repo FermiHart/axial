@@ -65,7 +65,9 @@
     {
       "id": "isolated-host-consumer",
       "required": true,
-      "qualification": "NOT_RUN"
+      "qualification": "NOT_RUN",
+      "scenario": "local-config-publication",
+      "contract_reference": "A01-CONTRACTS.md"
     },
     {
       "id": "jash-consumer",
@@ -100,19 +102,22 @@
     {
       "id": "A01",
       "title": "Contratos e fronteira de confiança",
-      "state": "READY",
+      "state": "DONE",
       "depends_on": [
         "A00"
       ],
       "started_at": null,
-      "completed_at": null,
-      "evidence": [],
-      "blocked_reason": null
+      "completed_at": "2026-10-29T13:49:22.559087+00:00",
+      "evidence": [
+        "A01-CONTRACTS.md"
+      ],
+      "blocked_reason": null,
+      "start_note": "Preparação documental iniciada em paralelo; horário exato não registrado. Aceite realizado após conclusão de A00."
     },
     {
       "id": "A02",
       "title": "ABI, schemas e compatibilidade",
-      "state": "PLANNED",
+      "state": "READY",
       "depends_on": [
         "A00",
         "A01"
