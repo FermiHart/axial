@@ -1,0 +1,403 @@
+{
+  "schema": "axial.campaign.v1",
+  "campaign_id": "AXIAL-A00-A19-20261029",
+  "repository": "FermiHart/axial",
+  "branch": "work/axial-a00-a19-20261029",
+  "decision": "../ADR-AXIAL-0001.md",
+  "plan": "PLAN.md",
+  "baseline": {
+    "commit": "26eec8630e8cf1dc3a1808f1580cc12d36410a8e",
+    "tree_sha": "069e92e1247544d7d7fae6138dd8e894f7a0265e",
+    "base_branch": "audit/axial-80-waves-20261019"
+  },
+  "started_at": "2026-10-29T13:39:37Z",
+  "timezone": "America/Sao_Paulo",
+  "checkpoints": [
+    {
+      "after": "A09",
+      "requires_done": [
+        "A00",
+        "A01",
+        "A02",
+        "A03",
+        "A04",
+        "A05",
+        "A06",
+        "A07",
+        "A08",
+        "A09"
+      ],
+      "state": "PENDING"
+    },
+    {
+      "after": "A19",
+      "requires_done": [
+        "A00",
+        "A01",
+        "A02",
+        "A03",
+        "A04",
+        "A05",
+        "A06",
+        "A07",
+        "A08",
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A14",
+        "A15",
+        "A16",
+        "A17",
+        "A18",
+        "A19"
+      ],
+      "state": "PENDING"
+    }
+  ],
+  "profiles": [
+    {
+      "id": "standalone-core",
+      "required": true,
+      "qualification": "NOT_RUN"
+    },
+    {
+      "id": "isolated-host-consumer",
+      "required": true,
+      "qualification": "NOT_RUN"
+    },
+    {
+      "id": "jash-consumer",
+      "required": false,
+      "qualification": "UNWIRED",
+      "activation_requires": "ADR-042 and mixed consumer gates; no universal mediation claim from a narrow demo"
+    },
+    {
+      "id": "beyond-target",
+      "required": false,
+      "qualification": "UNWIRED",
+      "activation_requires": "ADR-043/044, sovereign artifact and mixed gates"
+    }
+  ],
+  "waves": [
+    {
+      "id": "A00",
+      "title": "Baseline, inventário e delta",
+      "state": "IN_PROGRESS",
+      "depends_on": [],
+      "started_at": "2026-10-29T13:39:37Z",
+      "completed_at": null,
+      "evidence": [],
+      "blocked_reason": null
+    },
+    {
+      "id": "A01",
+      "title": "Contratos e fronteira de confiança",
+      "state": "PLANNED",
+      "depends_on": [
+        "A00"
+      ],
+      "started_at": null,
+      "completed_at": null,
+      "evidence": [],
+      "blocked_reason": null
+    },
+    {
+      "id": "A02",
+      "title": "ABI, schemas e compatibilidade",
+      "state": "PLANNED",
+      "depends_on": [
+        "A00",
+        "A01"
+      ],
+      "started_at": null,
+      "completed_at": null,
+      "evidence": [],
+      "blocked_reason": null
+    },
+    {
+      "id": "A03",
+      "title": "Catálogo de builtins, effects e backends",
+      "state": "PLANNED",
+      "depends_on": [
+        "A01",
+        "A02"
+      ],
+      "started_at": null,
+      "completed_at": null,
+      "evidence": [],
+      "blocked_reason": null
+    },
+    {
+      "id": "A04",
+      "title": "Inspeção unificada e resumida",
+      "state": "PLANNED",
+      "depends_on": [
+        "A02",
+        "A03"
+      ],
+      "started_at": null,
+      "completed_at": null,
+      "evidence": [],
+      "blocked_reason": null
+    },
+    {
+      "id": "A05",
+      "title": "Explicação de requisitos e recusas",
+      "state": "PLANNED",
+      "depends_on": [
+        "A01",
+        "A02",
+        "A03",
+        "A04"
+      ],
+      "started_at": null,
+      "completed_at": null,
+      "evidence": [],
+      "blocked_reason": null
+    },
+    {
+      "id": "A06",
+      "title": "Revisão de mudanças de contrato/política",
+      "state": "PLANNED",
+      "depends_on": [
+        "A02",
+        "A04",
+        "A05"
+      ],
+      "started_at": null,
+      "completed_at": null,
+      "evidence": [],
+      "blocked_reason": null
+    },
+    {
+      "id": "A07",
+      "title": "Identidade completa da invocação",
+      "state": "PLANNED",
+      "depends_on": [
+        "A01",
+        "A02",
+        "A03",
+        "A06"
+      ],
+      "started_at": null,
+      "completed_at": null,
+      "evidence": [],
+      "blocked_reason": null
+    },
+    {
+      "id": "A08",
+      "title": "Orçamento aplicado de ponta a ponta",
+      "state": "PLANNED",
+      "depends_on": [
+        "A03",
+        "A07"
+      ],
+      "started_at": null,
+      "completed_at": null,
+      "evidence": [],
+      "blocked_reason": null
+    },
+    {
+      "id": "A09",
+      "title": "Registry fechado e descriptor do consumidor",
+      "state": "PLANNED",
+      "depends_on": [
+        "A01",
+        "A02",
+        "A03",
+        "A04",
+        "A05",
+        "A06",
+        "A07",
+        "A08"
+      ],
+      "started_at": null,
+      "completed_at": null,
+      "evidence": [],
+      "blocked_reason": null
+    },
+    {
+      "id": "A10",
+      "title": "Ação mediada em consumidor isolado",
+      "state": "PLANNED",
+      "depends_on": [
+        "A07",
+        "A08",
+        "A09"
+      ],
+      "started_at": null,
+      "completed_at": null,
+      "evidence": [],
+      "blocked_reason": null
+    },
+    {
+      "id": "A11",
+      "title": "Resultados parciais e reconciliação",
+      "state": "PLANNED",
+      "depends_on": [
+        "A10"
+      ],
+      "started_at": null,
+      "completed_at": null,
+      "evidence": [],
+      "blocked_reason": null
+    },
+    {
+      "id": "A12",
+      "title": "Confiança, selagem e migração",
+      "state": "PLANNED",
+      "depends_on": [
+        "A02",
+        "A07",
+        "A10",
+        "A11"
+      ],
+      "started_at": null,
+      "completed_at": null,
+      "evidence": [],
+      "blocked_reason": null
+    },
+    {
+      "id": "A13",
+      "title": "Ciclo de vida e reutilização de contextos",
+      "state": "PLANNED",
+      "depends_on": [
+        "A10",
+        "A11",
+        "A12"
+      ],
+      "started_at": null,
+      "completed_at": null,
+      "evidence": [],
+      "blocked_reason": null
+    },
+    {
+      "id": "A14",
+      "title": "Planejamento limitado",
+      "state": "PLANNED",
+      "depends_on": [
+        "A03",
+        "A04",
+        "A05",
+        "A07",
+        "A08",
+        "A11",
+        "A12",
+        "A13"
+      ],
+      "started_at": null,
+      "completed_at": null,
+      "evidence": [],
+      "blocked_reason": null
+    },
+    {
+      "id": "A15",
+      "title": "Grafo e correlação causal",
+      "state": "PLANNED",
+      "depends_on": [
+        "A04",
+        "A05",
+        "A07",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A14"
+      ],
+      "started_at": null,
+      "completed_at": null,
+      "evidence": [],
+      "blocked_reason": null
+    },
+    {
+      "id": "A16",
+      "title": "Qualificação do receptor/plataforma",
+      "state": "PLANNED",
+      "depends_on": [
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A14",
+        "A15"
+      ],
+      "started_at": null,
+      "completed_at": null,
+      "evidence": [],
+      "blocked_reason": null
+    },
+    {
+      "id": "A17",
+      "title": "Conformidade e regressão delimitadas",
+      "state": "PLANNED",
+      "depends_on": [
+        "A03",
+        "A04",
+        "A05",
+        "A06",
+        "A07",
+        "A08",
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A14",
+        "A15",
+        "A16"
+      ],
+      "started_at": null,
+      "completed_at": null,
+      "evidence": [],
+      "blocked_reason": null
+    },
+    {
+      "id": "A18",
+      "title": "Performance por workload e ambiente",
+      "state": "PLANNED",
+      "depends_on": [
+        "A13",
+        "A15",
+        "A16",
+        "A17"
+      ],
+      "started_at": null,
+      "completed_at": null,
+      "evidence": [],
+      "blocked_reason": null
+    },
+    {
+      "id": "A19",
+      "title": "Qualificação e checkpoint final",
+      "state": "PLANNED",
+      "depends_on": [
+        "A00",
+        "A01",
+        "A02",
+        "A03",
+        "A04",
+        "A05",
+        "A06",
+        "A07",
+        "A08",
+        "A09",
+        "A10",
+        "A11",
+        "A12",
+        "A13",
+        "A14",
+        "A15",
+        "A16",
+        "A17",
+        "A18"
+      ],
+      "started_at": null,
+      "completed_at": null,
+      "evidence": [],
+      "blocked_reason": null
+    }
+  ]
+}
