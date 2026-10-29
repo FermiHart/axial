@@ -1,0 +1,51 @@
+{
+  "schema": "axial.a00.verification.v1",
+  "baseline_commit": "26eec8630e8cf1dc3a1808f1580cc12d36410a8e",
+  "baseline_tree": "069e92e1247544d7d7fae6138dd8e894f7a0265e",
+  "inventory_sha256": "be24eace3332b8f8c6868d397a7a68d185ad0de1eeaa17db8f8e2b2e3276999b",
+  "tool_sha256": "dbf1c6284ecf0cbde639711e1e443f08bfdc0dff0e3060d9a267ae0babdfd76a",
+  "verified_at": "2026-10-29T13:45:15.237130+00:00",
+  "scope": "inventory tooling and campaign consistency only",
+  "product_build_run": false,
+  "product_runtime_tests_run": false,
+  "guest_boot_run": false,
+  "checks": [
+    {
+      "id": "baseline-repeat",
+      "status": "PASS",
+      "sha256": "be24eace3332b8f8c6868d397a7a68d185ad0de1eeaa17db8f8e2b2e3276999b",
+      "counts": {
+        "builtins": 14,
+        "c_h_files": 175,
+        "capabilities": 16,
+        "capability_methods": 3,
+        "opcodes": 23,
+        "product_c_h_files": 127,
+        "source_units": 74,
+        "tracked_blobs": 590
+      }
+    },
+    {
+      "id": "git-snapshot-equivalence",
+      "status": "PASS",
+      "fixture": "four actual registry sources plus benign README",
+      "sha256": "997803b55b41a2999059b9c6d316f32e23e7b7b907c6b18544944d186693e196"
+    },
+    {
+      "id": "stale-mirror-refused",
+      "status": "PASS",
+      "exit_code": 2,
+      "diagnostic": "axial-inventory: source blob mismatch: src/axi_bc.h"
+    },
+    {
+      "id": "incomplete-tree-refused",
+      "status": "PASS",
+      "exit_code": 2
+    },
+    {
+      "id": "campaign-complete-acyclic",
+      "status": "PASS",
+      "waves": 20
+    }
+  ]
+}

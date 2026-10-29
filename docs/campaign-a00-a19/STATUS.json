@@ -84,17 +84,23 @@
     {
       "id": "A00",
       "title": "Baseline, inventário e delta",
-      "state": "IN_PROGRESS",
+      "state": "DONE",
       "depends_on": [],
       "started_at": "2026-10-29T13:39:37Z",
-      "completed_at": null,
-      "evidence": [],
+      "completed_at": "2026-10-29T13:47:29.168417+00:00",
+      "evidence": [
+        "A00-BASELINE.md",
+        "DELTA.json",
+        "evidence/axial-inventory.json",
+        "evidence/source-snapshot.json",
+        "evidence/A00-VERIFICATION.json"
+      ],
       "blocked_reason": null
     },
     {
       "id": "A01",
       "title": "Contratos e fronteira de confiança",
-      "state": "PLANNED",
+      "state": "READY",
       "depends_on": [
         "A00"
       ],

@@ -1,0 +1,2865 @@
+{
+  "builtins": [
+    {
+      "arguments": [
+        "U64",
+        "U64",
+        "U64"
+      ],
+      "arity": 3,
+      "capability": "CAP_NONE",
+      "capability_gated": false,
+      "capability_name": null,
+      "name": "budget.fits",
+      "returns": "BOOL"
+    },
+    {
+      "arguments": [
+        "U64",
+        "U64",
+        "U64"
+      ],
+      "arity": 3,
+      "capability": "CAP_NONE",
+      "capability_gated": false,
+      "capability_name": null,
+      "name": "budget.fits_product",
+      "returns": "BOOL"
+    },
+    {
+      "arguments": [
+        "STR",
+        "STR"
+      ],
+      "arity": 2,
+      "capability": "CAP_FS_READ",
+      "capability_gated": true,
+      "capability_name": "fs.Read",
+      "name": "fs.path_under",
+      "returns": "BOOL"
+    },
+    {
+      "arguments": [
+        "JSON",
+        "STR"
+      ],
+      "arity": 2,
+      "capability": "CAP_NONE",
+      "capability_gated": false,
+      "capability_name": null,
+      "name": "json.bool",
+      "returns": "BOOL"
+    },
+    {
+      "arguments": [
+        "JSON",
+        "STR"
+      ],
+      "arity": 2,
+      "capability": "CAP_NONE",
+      "capability_gated": false,
+      "capability_name": null,
+      "name": "json.get",
+      "returns": "JSON"
+    },
+    {
+      "arguments": [
+        "JSON",
+        "STR"
+      ],
+      "arity": 2,
+      "capability": "CAP_NONE",
+      "capability_gated": false,
+      "capability_name": null,
+      "name": "json.i64",
+      "returns": "I64"
+    },
+    {
+      "arguments": [
+        "JSON",
+        "STR"
+      ],
+      "arity": 2,
+      "capability": "CAP_NONE",
+      "capability_gated": false,
+      "capability_name": null,
+      "name": "json.kind",
+      "returns": "STR"
+    },
+    {
+      "arguments": [
+        "JSON",
+        "STR"
+      ],
+      "arity": 2,
+      "capability": "CAP_NONE",
+      "capability_gated": false,
+      "capability_name": null,
+      "name": "json.string",
+      "returns": "STR"
+    },
+    {
+      "arguments": [
+        "JSON",
+        "STR"
+      ],
+      "arity": 2,
+      "capability": "CAP_NONE",
+      "capability_gated": false,
+      "capability_name": null,
+      "name": "json.u64",
+      "returns": "U64"
+    },
+    {
+      "arguments": [
+        "U64",
+        "U64"
+      ],
+      "arity": 2,
+      "capability": "CAP_NONE",
+      "capability_gated": false,
+      "capability_name": null,
+      "name": "math.add_checked",
+      "returns": "U64"
+    },
+    {
+      "arguments": [
+        "U64",
+        "U64"
+      ],
+      "arity": 2,
+      "capability": "CAP_NONE",
+      "capability_gated": false,
+      "capability_name": null,
+      "name": "math.div_checked",
+      "returns": "U64"
+    },
+    {
+      "arguments": [
+        "U64",
+        "U64"
+      ],
+      "arity": 2,
+      "capability": "CAP_NONE",
+      "capability_gated": false,
+      "capability_name": null,
+      "name": "math.mod_checked",
+      "returns": "U64"
+    },
+    {
+      "arguments": [
+        "U64",
+        "U64"
+      ],
+      "arity": 2,
+      "capability": "CAP_NONE",
+      "capability_gated": false,
+      "capability_name": null,
+      "name": "math.mul_checked",
+      "returns": "U64"
+    },
+    {
+      "arguments": [
+        "U64",
+        "U64"
+      ],
+      "arity": 2,
+      "capability": "CAP_NONE",
+      "capability_gated": false,
+      "capability_name": null,
+      "name": "math.sub_checked",
+      "returns": "U64"
+    }
+  ],
+  "c_h_files": [
+    {
+      "blob_sha": "ba73746a53ec3fc44c5c6d5101210353dfc4be68",
+      "mode": "100644",
+      "path": "docs/audit80/evidence/numeric-crossreview/axi_numeric.c",
+      "size_bytes": 16410
+    },
+    {
+      "blob_sha": "e7d9ebf255fcace0798fb0dd3335543ea478d213",
+      "mode": "100644",
+      "path": "docs/audit80/evidence/numeric-crossreview/axi_numeric.h",
+      "size_bytes": 2711
+    },
+    {
+      "blob_sha": "e64d357dc7899868f8abee65c0bd2bfcd8b9ad55",
+      "mode": "100644",
+      "path": "docs/audit80/evidence/numeric-crossreview/probe.c",
+      "size_bytes": 2915
+    },
+    {
+      "blob_sha": "7bbeefb040672ba622326e843995b6cdd0a2da9f",
+      "mode": "100644",
+      "path": "docs/audit80/evidence/numeric-w65/axi_numeric.c",
+      "size_bytes": 13247
+    },
+    {
+      "blob_sha": "e7d9ebf255fcace0798fb0dd3335543ea478d213",
+      "mode": "100644",
+      "path": "docs/audit80/evidence/numeric-w65/axi_numeric.h",
+      "size_bytes": 2711
+    },
+    {
+      "blob_sha": "60933df0f43677d7f1424715337934a6dccdf700",
+      "mode": "100644",
+      "path": "include/axial/axi_embed_v1.h",
+      "size_bytes": 4789
+    },
+    {
+      "blob_sha": "38c92c7b66b115f941b9868385aceb65af6e0762",
+      "mode": "100644",
+      "path": "scripts/jash_policy_demo.c",
+      "size_bytes": 4126
+    },
+    {
+      "blob_sha": "471345b4f50b26f772c27e1cd9e70b8e89d65c33",
+      "mode": "100755",
+      "path": "src/axi.h",
+      "size_bytes": 5557
+    },
+    {
+      "blob_sha": "9c8f58231ea1472d6db450c83583fe34b4d1fe53",
+      "mode": "100644",
+      "path": "src/axi_admission_v1.c",
+      "size_bytes": 3617
+    },
+    {
+      "blob_sha": "efc166a57b75b658e02f2dd5c925771c03fda08f",
+      "mode": "100644",
+      "path": "src/axi_admission_v1.h",
+      "size_bytes": 1396
+    },
+    {
+      "blob_sha": "555616c59b0b8938b015b6cf713efe4b359cd7f7",
+      "mode": "100644",
+      "path": "src/axi_aer1.c",
+      "size_bytes": 8291
+    },
+    {
+      "blob_sha": "636317dded17b722ac7be09cc34c0ab15af134f1",
+      "mode": "100644",
+      "path": "src/axi_aer1.h",
+      "size_bytes": 2397
+    },
+    {
+      "blob_sha": "63fbee7915be67239cab31c72acf1b52dc3ab02e",
+      "mode": "100644",
+      "path": "src/axi_aer1_verify.c",
+      "size_bytes": 6004
+    },
+    {
+      "blob_sha": "4e2635e8b02421fec93803b91cf3a2956db7ad72",
+      "mode": "100644",
+      "path": "src/axi_aer1_verify.h",
+      "size_bytes": 263
+    },
+    {
+      "blob_sha": "8409cde2dd3e7ed773719abe32f669215a4e5420",
+      "mode": "100644",
+      "path": "src/axi_aer2_v1.c",
+      "size_bytes": 20353
+    },
+    {
+      "blob_sha": "314c8fb7b1d0444b80af8f83b8a76bf1165ed782",
+      "mode": "100644",
+      "path": "src/axi_aer2_v1.h",
+      "size_bytes": 6072
+    },
+    {
+      "blob_sha": "1a960000266884b838511fcf8d6792a3e4470c69",
+      "mode": "100644",
+      "path": "src/axi_ag1_core_v1.c",
+      "size_bytes": 6145
+    },
+    {
+      "blob_sha": "06bebe221094324f06b66a7f2e4678e2e6bb96e3",
+      "mode": "100644",
+      "path": "src/axi_ag1_crypto_v1.h",
+      "size_bytes": 530
+    },
+    {
+      "blob_sha": "5a9bd3781f598a3d5e5a21bced9b7788cd466a2e",
+      "mode": "100644",
+      "path": "src/axi_ag1_v1.c",
+      "size_bytes": 2741
+    },
+    {
+      "blob_sha": "6f050e573c4e7ec0f0aaf4aef9efc02614975533",
+      "mode": "100644",
+      "path": "src/axi_ag1_v1.h",
+      "size_bytes": 2754
+    },
+    {
+      "blob_sha": "c157819761a08f065a1db99588191602a949a67d",
+      "mode": "100644",
+      "path": "src/axi_alloc.c",
+      "size_bytes": 2524
+    },
+    {
+      "blob_sha": "3e5d87b5c6f30587833e37c5251ac74af326b8b0",
+      "mode": "100644",
+      "path": "src/axi_alloc.h",
+      "size_bytes": 589
+    },
+    {
+      "blob_sha": "28565279ffc6b3b86162cf8cc40209946eb700de",
+      "mode": "100755",
+      "path": "src/axi_arena.c",
+      "size_bytes": 2266
+    },
+    {
+      "blob_sha": "ab4079fbc9522d5db41cf469de02309111aef8a7",
+      "mode": "100755",
+      "path": "src/axi_arena.h",
+      "size_bytes": 1697
+    },
+    {
+      "blob_sha": "67ebc09541784267a75529b47b0e3d9b3fa71dfe",
+      "mode": "100755",
+      "path": "src/axi_ast.h",
+      "size_bytes": 5010
+    },
+    {
+      "blob_sha": "4b2e2802a69b2d705f92eb5248dfeb1aa9afe367",
+      "mode": "100755",
+      "path": "src/axi_bc.c",
+      "size_bytes": 106044
+    },
+    {
+      "blob_sha": "f2f95d17dae4006448f66cb82bbe06372fc0f73c",
+      "mode": "100755",
+      "path": "src/axi_bc.h",
+      "size_bytes": 14629
+    },
+    {
+      "blob_sha": "f50dfdda0eb3119e87cf8d83ac3f502f06222bc6",
+      "mode": "100644",
+      "path": "src/axi_builtin.c",
+      "size_bytes": 10149
+    },
+    {
+      "blob_sha": "eb35b51164b09fb00d767723f89aa865626e0030",
+      "mode": "100644",
+      "path": "src/axi_builtin.h",
+      "size_bytes": 2556
+    },
+    {
+      "blob_sha": "7e6e45df605bdd0d5729ab6f384fbbfad3bce9d9",
+      "mode": "100644",
+      "path": "src/axi_builtin_registry.h",
+      "size_bytes": 1211
+    },
+    {
+      "blob_sha": "a370bb0a313e48f9f45ad0c38227afb12b4445d6",
+      "mode": "100644",
+      "path": "src/axi_ca43_47_core.c",
+      "size_bytes": 3821
+    },
+    {
+      "blob_sha": "9fc5eff86024a3eba194b71fc3aeb1182e252304",
+      "mode": "100644",
+      "path": "src/axi_ca43_47_core.h",
+      "size_bytes": 1411
+    },
+    {
+      "blob_sha": "f6486b68d1252daf45ef035ca775305bb1598577",
+      "mode": "100755",
+      "path": "src/axi_canon.c",
+      "size_bytes": 18374
+    },
+    {
+      "blob_sha": "9b794ce0fa81d2ba618e66c22aa1c6b8ab1a9b6a",
+      "mode": "100644",
+      "path": "src/axi_cap_infer.c",
+      "size_bytes": 7608
+    },
+    {
+      "blob_sha": "9b7286d8825af954f9fa4d2f38bf2ddcf91032e6",
+      "mode": "100644",
+      "path": "src/axi_cap_infer.h",
+      "size_bytes": 1974
+    },
+    {
+      "blob_sha": "074fd66a07cf1dc82edd203637c823ea04aba961",
+      "mode": "100644",
+      "path": "src/axi_cap_table.c",
+      "size_bytes": 3257
+    },
+    {
+      "blob_sha": "cd107db2d4d847eec1f13fbe4e9ced87c0a913ca",
+      "mode": "100644",
+      "path": "src/axi_cap_table.h",
+      "size_bytes": 2153
+    },
+    {
+      "blob_sha": "c3d4e9eda5c5da45ced487bff7b4bfcec883396d",
+      "mode": "100644",
+      "path": "src/axi_checker_identity.h",
+      "size_bytes": 282
+    },
+    {
+      "blob_sha": "620099dd489ff3cf93358338ac78277ea86d8372",
+      "mode": "100644",
+      "path": "src/axi_codegen.c",
+      "size_bytes": 34483
+    },
+    {
+      "blob_sha": "cce56896d8586a2811449dc685736c0dc1a91dd3",
+      "mode": "100644",
+      "path": "src/axi_codegen.h",
+      "size_bytes": 717
+    },
+    {
+      "blob_sha": "e1f8d7abcb34aeddcbe652b02071c4197f2979e3",
+      "mode": "100644",
+      "path": "src/axi_compile_budget.c",
+      "size_bytes": 6973
+    },
+    {
+      "blob_sha": "5652606da1647f43a7f56453330762def2bc2455",
+      "mode": "100644",
+      "path": "src/axi_compile_budget.h",
+      "size_bytes": 2750
+    },
+    {
+      "blob_sha": "da9f45e519dbcfdcb102cb6fd91ffe2067c47999",
+      "mode": "100644",
+      "path": "src/axi_contract.c",
+      "size_bytes": 52435
+    },
+    {
+      "blob_sha": "3ef684c32f5b9d15cea2073039ddba47fabc4b37",
+      "mode": "100644",
+      "path": "src/axi_contract.h",
+      "size_bytes": 6820
+    },
+    {
+      "blob_sha": "67e378fbf9d5401bf7d467a6e047e7301a0a2a53",
+      "mode": "100644",
+      "path": "src/axi_coverage_v1.c",
+      "size_bytes": 6162
+    },
+    {
+      "blob_sha": "79acfc7037751858ec02155d1a8869428def8644",
+      "mode": "100644",
+      "path": "src/axi_coverage_v1.h",
+      "size_bytes": 2024
+    },
+    {
+      "blob_sha": "23935ec87d500eccb753d17b8c6263d3fd6e5e7c",
+      "mode": "100644",
+      "path": "src/axi_delegation_v1.c",
+      "size_bytes": 11873
+    },
+    {
+      "blob_sha": "da8a1419221547d4be174090502208b4c4beda54",
+      "mode": "100644",
+      "path": "src/axi_delegation_v1.h",
+      "size_bytes": 2913
+    },
+    {
+      "blob_sha": "52078a0fcb9736062e3dff3df690398b13efe6ac",
+      "mode": "100644",
+      "path": "src/axi_diag.c",
+      "size_bytes": 5755
+    },
+    {
+      "blob_sha": "27b4b450015ea4e211456009606baf968f688d21",
+      "mode": "100644",
+      "path": "src/axi_diag.h",
+      "size_bytes": 2211
+    },
+    {
+      "blob_sha": "8b14bf520dcb429d01449fb6dc7c21ed369b4df1",
+      "mode": "100644",
+      "path": "src/axi_dossier.c",
+      "size_bytes": 58085
+    },
+    {
+      "blob_sha": "b15532da4183b6d96a7b6d34ac4821d8ef1fb052",
+      "mode": "100644",
+      "path": "src/axi_dossier.h",
+      "size_bytes": 634
+    },
+    {
+      "blob_sha": "773c8da221fe177cd635d23b93475b83b553b06f",
+      "mode": "100644",
+      "path": "src/axi_dossier_main.c",
+      "size_bytes": 2225
+    },
+    {
+      "blob_sha": "93d7603ac1ca418c28a7feeffc95d408985949a0",
+      "mode": "100644",
+      "path": "src/axi_effect.c",
+      "size_bytes": 33631
+    },
+    {
+      "blob_sha": "406658791e47f4ffda114bb937c0395d468662f5",
+      "mode": "100644",
+      "path": "src/axi_effect.h",
+      "size_bytes": 12643
+    },
+    {
+      "blob_sha": "c8a884ea3aae317286e1408d8bfc06e4f4859177",
+      "mode": "100644",
+      "path": "src/axi_embed.c",
+      "size_bytes": 16272
+    },
+    {
+      "blob_sha": "9445f99da8b155a20579756a95ff950e6c30b6cb",
+      "mode": "100644",
+      "path": "src/axi_embed.h",
+      "size_bytes": 5127
+    },
+    {
+      "blob_sha": "17cddaaadac1e2a72df2d51caff9b9a34e151ec0",
+      "mode": "100644",
+      "path": "src/axi_embed_v1.c",
+      "size_bytes": 28313
+    },
+    {
+      "blob_sha": "716066338e4565b4e4b7976ff00ba1376e9a33d1",
+      "mode": "100644",
+      "path": "src/axi_extdec_v1.c",
+      "size_bytes": 3894
+    },
+    {
+      "blob_sha": "a927aa3323b919b494d16d0398f872a74d454e22",
+      "mode": "100644",
+      "path": "src/axi_extdec_v1.h",
+      "size_bytes": 1625
+    },
+    {
+      "blob_sha": "c69775e9fb99165937bf82b484bbb4eec5c0ad87",
+      "mode": "100644",
+      "path": "src/axi_gateway_v1.c",
+      "size_bytes": 3151
+    },
+    {
+      "blob_sha": "67469d475a89780359659ab3f86ae5bb68890785",
+      "mode": "100644",
+      "path": "src/axi_gateway_v1.h",
+      "size_bytes": 1284
+    },
+    {
+      "blob_sha": "103222c65a611e94993a4c09f3fb64e87c6a430b",
+      "mode": "100644",
+      "path": "src/axi_handle_table.c",
+      "size_bytes": 6099
+    },
+    {
+      "blob_sha": "745cf63aa0ae446d590e5769a12db7aaf8b428fe",
+      "mode": "100644",
+      "path": "src/axi_handle_table.h",
+      "size_bytes": 1561
+    },
+    {
+      "blob_sha": "d9d9034fab57b589d1e6a7a9e8a9d0d6923dab6c",
+      "mode": "100755",
+      "path": "src/axi_hash.c",
+      "size_bytes": 2682
+    },
+    {
+      "blob_sha": "eb6e362dc5143b3e8866c7f892e42cf9b913dd50",
+      "mode": "100755",
+      "path": "src/axi_hash.h",
+      "size_bytes": 1007
+    },
+    {
+      "blob_sha": "b66df81ee8d4f1e56b7e4b7fdffa84c6a4e2232e",
+      "mode": "100755",
+      "path": "src/axi_iface.c",
+      "size_bytes": 35421
+    },
+    {
+      "blob_sha": "a6e23f338544514428edfbff35916ba2572f4a68",
+      "mode": "100755",
+      "path": "src/axi_iface.h",
+      "size_bytes": 3201
+    },
+    {
+      "blob_sha": "b3ab1a9a5606315c4dbd640b506dd5050d7d59d0",
+      "mode": "100644",
+      "path": "src/axi_jm1_v1.c",
+      "size_bytes": 3420
+    },
+    {
+      "blob_sha": "9fff097cb0586c77d33860f8bcbfc8032ce61304",
+      "mode": "100644",
+      "path": "src/axi_jm1_v1.h",
+      "size_bytes": 768
+    },
+    {
+      "blob_sha": "6457c8671461c056882bb7132ef4008bf48520f9",
+      "mode": "100644",
+      "path": "src/axi_json.c",
+      "size_bytes": 22111
+    },
+    {
+      "blob_sha": "381e8424b7b8adf99380a496bbe6b9243ba1ea28",
+      "mode": "100644",
+      "path": "src/axi_json.h",
+      "size_bytes": 2499
+    },
+    {
+      "blob_sha": "98345eacfb18a35e8ed7ba23702a98bad4fb1512",
+      "mode": "100755",
+      "path": "src/axi_lex.c",
+      "size_bytes": 14880
+    },
+    {
+      "blob_sha": "292f8b641d19d0549f78c8f93d9bc1f5bbcf6c3c",
+      "mode": "100644",
+      "path": "src/axi_local_action_v1.c",
+      "size_bytes": 11083
+    },
+    {
+      "blob_sha": "4d866b7dad6c021a479727d24049e2303ed5f58e",
+      "mode": "100644",
+      "path": "src/axi_local_action_v1.h",
+      "size_bytes": 2354
+    },
+    {
+      "blob_sha": "2c6565729b69c0bbff316265fb2498f29b11c0b0",
+      "mode": "100644",
+      "path": "src/axi_local_admission_v1.c",
+      "size_bytes": 7223
+    },
+    {
+      "blob_sha": "05a8443a475c96f6e2d7dcd1e0a9e0f213ddb1a0",
+      "mode": "100644",
+      "path": "src/axi_local_admission_v1.h",
+      "size_bytes": 3316
+    },
+    {
+      "blob_sha": "46739b4f385757a95ed4bb8312560e34aa416b7c",
+      "mode": "100644",
+      "path": "src/axi_local_attempt_v1.c",
+      "size_bytes": 47458
+    },
+    {
+      "blob_sha": "b230714f2af4a6d08427afc57befb2fc5a2f6fbb",
+      "mode": "100644",
+      "path": "src/axi_local_attempt_v1.h",
+      "size_bytes": 8353
+    },
+    {
+      "blob_sha": "955591e4cffb892c74add95b0ab1b4113fbf13e3",
+      "mode": "100644",
+      "path": "src/axi_local_authority_internal.h",
+      "size_bytes": 2049
+    },
+    {
+      "blob_sha": "b608f00d8a598e7fbef2278d313fa7cb7fa7ea78",
+      "mode": "100644",
+      "path": "src/axi_local_authority_v1.c",
+      "size_bytes": 20564
+    },
+    {
+      "blob_sha": "ea6b382f5788f061d396765cc1268950d5ce91e8",
+      "mode": "100644",
+      "path": "src/axi_local_authority_v1.h",
+      "size_bytes": 8180
+    },
+    {
+      "blob_sha": "169fff5528ecbb982a0eb6d820683c9526d3e3fa",
+      "mode": "100644",
+      "path": "src/axi_local_consumer_v1.c",
+      "size_bytes": 7561
+    },
+    {
+      "blob_sha": "2f91a3618c810eb3bbbb0b1866b40e99010bf735",
+      "mode": "100644",
+      "path": "src/axi_local_consumer_v1.h",
+      "size_bytes": 3846
+    },
+    {
+      "blob_sha": "f605e8b5483ca75129d5cdd0498f8d02245e2e7c",
+      "mode": "100644",
+      "path": "src/axi_local_diag_v1.c",
+      "size_bytes": 4167
+    },
+    {
+      "blob_sha": "a22826e5681cd9d6052ead22a945cb61d564ece2",
+      "mode": "100644",
+      "path": "src/axi_local_diag_v1.h",
+      "size_bytes": 1826
+    },
+    {
+      "blob_sha": "2f30e01623682b5feeca853c459834fe549167f5",
+      "mode": "100644",
+      "path": "src/axi_local_epoch_v1.c",
+      "size_bytes": 11589
+    },
+    {
+      "blob_sha": "0167bb1eeca7baf5c755c180626a487b25221bd1",
+      "mode": "100644",
+      "path": "src/axi_local_epoch_v1.h",
+      "size_bytes": 3619
+    },
+    {
+      "blob_sha": "aa3c69b0d841df37abad50b66450e1617ecb3c7c",
+      "mode": "100644",
+      "path": "src/axi_local_store_v1.h",
+      "size_bytes": 2322
+    },
+    {
+      "blob_sha": "68f6bee3c3b844e1856d965245da3e5814b2c6fd",
+      "mode": "100644",
+      "path": "src/axi_main.c",
+      "size_bytes": 47227
+    },
+    {
+      "blob_sha": "80e0b843032128495b88a8ec23ece442ecf95dde",
+      "mode": "100644",
+      "path": "src/axi_mem_account.c",
+      "size_bytes": 12328
+    },
+    {
+      "blob_sha": "78dbb1a297019551672525713640d8deddfdff62",
+      "mode": "100644",
+      "path": "src/axi_mem_account.h",
+      "size_bytes": 2815
+    },
+    {
+      "blob_sha": "ba73746a53ec3fc44c5c6d5101210353dfc4be68",
+      "mode": "100644",
+      "path": "src/axi_numeric.c",
+      "size_bytes": 16410
+    },
+    {
+      "blob_sha": "e7d9ebf255fcace0798fb0dd3335543ea478d213",
+      "mode": "100644",
+      "path": "src/axi_numeric.h",
+      "size_bytes": 2711
+    },
+    {
+      "blob_sha": "c52a00ea9bab83969ca7b35a8629544d71073b57",
+      "mode": "100755",
+      "path": "src/axi_osif.c",
+      "size_bytes": 1072
+    },
+    {
+      "blob_sha": "dd3cae977cbfe4885359ca6f4449b302b666f9fa",
+      "mode": "100755",
+      "path": "src/axi_osif.h",
+      "size_bytes": 2496
+    },
+    {
+      "blob_sha": "ae9d823c6c6b45b055124289ee3061a4f7ce1a92",
+      "mode": "100755",
+      "path": "src/axi_parse.c",
+      "size_bytes": 35803
+    },
+    {
+      "blob_sha": "ed1128fd50010bc7684bac517e9e9831f9ae4189",
+      "mode": "100644",
+      "path": "src/axi_platform.h",
+      "size_bytes": 4576
+    },
+    {
+      "blob_sha": "9d45016641df4635b07e72466d80ec7d2d6b6faf",
+      "mode": "100644",
+      "path": "src/axi_platform_posix.c",
+      "size_bytes": 47707
+    },
+    {
+      "blob_sha": "31b723652735207d38f27cf4fc13dcd56f6655f0",
+      "mode": "100644",
+      "path": "src/axi_policy_lint.c",
+      "size_bytes": 2311
+    },
+    {
+      "blob_sha": "e863beab0887d86724aabc14a8a5f791e6b56f9c",
+      "mode": "100644",
+      "path": "src/axi_policy_lint.h",
+      "size_bytes": 217
+    },
+    {
+      "blob_sha": "079223270dcf2ca4f2f6d012fa1f63cfaf47495e",
+      "mode": "100644",
+      "path": "src/axi_replay.c",
+      "size_bytes": 19562
+    },
+    {
+      "blob_sha": "53c625d022c381721a161b10e38506b584beaea4",
+      "mode": "100644",
+      "path": "src/axi_replay.h",
+      "size_bytes": 5715
+    },
+    {
+      "blob_sha": "20966e0fe21e2cf8ded9ae5b37abee765e9ed7ea",
+      "mode": "100644",
+      "path": "src/axi_replay_v4.c",
+      "size_bytes": 39188
+    },
+    {
+      "blob_sha": "d467be481ef982cf5a0643aebaca5b067edcccae",
+      "mode": "100644",
+      "path": "src/axi_replay_v4.h",
+      "size_bytes": 8903
+    },
+    {
+      "blob_sha": "6ce008611eae52cf5f59e079be350c52b5f2d669",
+      "mode": "100644",
+      "path": "src/axi_resource_envelope.c",
+      "size_bytes": 9571
+    },
+    {
+      "blob_sha": "7513c5a7f74f72473471fe8df60ec5070deb8124",
+      "mode": "100644",
+      "path": "src/axi_resource_envelope.h",
+      "size_bytes": 2826
+    },
+    {
+      "blob_sha": "5ad7cf16a9d1a079bc189846382b9ac3b659ca45",
+      "mode": "100644",
+      "path": "src/axi_rf1_pin_v1.c",
+      "size_bytes": 6500
+    },
+    {
+      "blob_sha": "29b9ff889e50ea6c4e94f411cd91ebd95c11f6a6",
+      "mode": "100644",
+      "path": "src/axi_rf1_pin_v1.h",
+      "size_bytes": 1385
+    },
+    {
+      "blob_sha": "16325c35eef11d2a4f269f72cad7c10ddf4c0a54",
+      "mode": "100644",
+      "path": "src/axi_rollout_v1.c",
+      "size_bytes": 4575
+    },
+    {
+      "blob_sha": "518956525e6574c3125520eb93edd793c67ea46b",
+      "mode": "100644",
+      "path": "src/axi_rollout_v1.h",
+      "size_bytes": 1189
+    },
+    {
+      "blob_sha": "38d6ae70fc373b1b72e2d2fc9e2592a3310b1901",
+      "mode": "100644",
+      "path": "src/axi_selective_disclosure_v1.c",
+      "size_bytes": 4753
+    },
+    {
+      "blob_sha": "0fd6a78bc7e38d7056618437c283352ab1ae04a9",
+      "mode": "100644",
+      "path": "src/axi_selective_disclosure_v1.h",
+      "size_bytes": 1350
+    },
+    {
+      "blob_sha": "003127755d34c8f7ab101074eab5a8e2640d6a61",
+      "mode": "100644",
+      "path": "src/axi_sign.c",
+      "size_bytes": 3014
+    },
+    {
+      "blob_sha": "d1664a4b4035fb2be2d0f76ad10391848545c5ba",
+      "mode": "100644",
+      "path": "src/axi_sign.h",
+      "size_bytes": 4216
+    },
+    {
+      "blob_sha": "083628877b046e35716402fc49f8570bd0722721",
+      "mode": "100644",
+      "path": "src/axi_string.h",
+      "size_bytes": 1042
+    },
+    {
+      "blob_sha": "09e27a0884364400a513bff9df6ce244c8f30584",
+      "mode": "100644",
+      "path": "src/axi_time_lease_v1.c",
+      "size_bytes": 12795
+    },
+    {
+      "blob_sha": "27d5194f142d5692ed1ee7c2e9de1c48b86632a2",
+      "mode": "100644",
+      "path": "src/axi_time_lease_v1.h",
+      "size_bytes": 3121
+    },
+    {
+      "blob_sha": "a0f5357ed4fc033008424fc73ec82190d0ae9b03",
+      "mode": "100755",
+      "path": "src/axi_trace.c",
+      "size_bytes": 4928
+    },
+    {
+      "blob_sha": "d2d36389b6719f123d788e86e9e8413560c11173",
+      "mode": "100755",
+      "path": "src/axi_trace.h",
+      "size_bytes": 4151
+    },
+    {
+      "blob_sha": "2dbb408053405f2d3ad0d423e1261d760a607b3c",
+      "mode": "100644",
+      "path": "src/axi_trust_canon_v1.c",
+      "size_bytes": 874
+    },
+    {
+      "blob_sha": "08a929c20de0e1a0f92cbf42942b94529e1af92f",
+      "mode": "100644",
+      "path": "src/axi_trust_canon_v1.h",
+      "size_bytes": 1127
+    },
+    {
+      "blob_sha": "087e384e8d4095dedd4dfada30d3087b8b4e7d56",
+      "mode": "100644",
+      "path": "src/axi_trust_v1.c",
+      "size_bytes": 14246
+    },
+    {
+      "blob_sha": "99b1dd45e6e910b02e04384fe445103334eb80e8",
+      "mode": "100644",
+      "path": "src/axi_trust_v1.h",
+      "size_bytes": 2224
+    },
+    {
+      "blob_sha": "3e401982f41f92c4c90cd21de22ddd7cd0f3fcd4",
+      "mode": "100755",
+      "path": "src/axi_types.c",
+      "size_bytes": 54608
+    },
+    {
+      "blob_sha": "18fd0ae9ee8150428b8fdb4a29bc00bdabe0f920",
+      "mode": "100644",
+      "path": "src/axi_u64.c",
+      "size_bytes": 2731
+    },
+    {
+      "blob_sha": "deec4c19a3fc2daa8dbf817188483b0e36b1ab8e",
+      "mode": "100644",
+      "path": "src/axi_u64.h",
+      "size_bytes": 1500
+    },
+    {
+      "blob_sha": "ca212e1c03c78ba7d32d0a81c031b051cc8d100d",
+      "mode": "100644",
+      "path": "src/axi_vm.c",
+      "size_bytes": 137176
+    },
+    {
+      "blob_sha": "adf3f94afe180bc7719e1706e8a81f9e6af5a0db",
+      "mode": "100644",
+      "path": "src/axi_vm.h",
+      "size_bytes": 5909
+    },
+    {
+      "blob_sha": "cd7fdf2c12710b0ed6ee1a228e34a97a7ac41301",
+      "mode": "100644",
+      "path": "src/axi_wipe.h",
+      "size_bytes": 312
+    },
+    {
+      "blob_sha": "2f3981b9723c88f29a75636895f2eb20a763c23d",
+      "mode": "100644",
+      "path": "tests/audit40/abi.c",
+      "size_bytes": 7444
+    },
+    {
+      "blob_sha": "b6e1e06db82abe53357ad9253eca602e618a4552",
+      "mode": "100644",
+      "path": "tests/audit40/driver.c",
+      "size_bytes": 2948
+    },
+    {
+      "blob_sha": "1c95d429193df6dcee81612c6c481d02b17d9eca",
+      "mode": "100644",
+      "path": "tests/audit40/embed.c",
+      "size_bytes": 4833
+    },
+    {
+      "blob_sha": "135c282ab67943b8a0043d79b91267bf451f820f",
+      "mode": "100644",
+      "path": "tests/audit40/frontend_diag.c",
+      "size_bytes": 1289
+    },
+    {
+      "blob_sha": "a656e54f1436d507a598b0bd6ddc781c50f6eb47",
+      "mode": "100644",
+      "path": "tests/audit40/frontend_json.c",
+      "size_bytes": 2186
+    },
+    {
+      "blob_sha": "13c1dd3500f9e37240b752a216320dae43802849",
+      "mode": "100644",
+      "path": "tests/audit40/frontend_parser.c",
+      "size_bytes": 3468
+    },
+    {
+      "blob_sha": "384a864916849e18dc6c058eb5fd054fb2d75bf6",
+      "mode": "100644",
+      "path": "tests/audit40/runtime.c",
+      "size_bytes": 29543
+    },
+    {
+      "blob_sha": "016543568efa88230d41bb89c46784cb0a2fd679",
+      "mode": "100644",
+      "path": "tests/audit40/runtime_bench.c",
+      "size_bytes": 4341
+    },
+    {
+      "blob_sha": "b3b63a6f35e9979ffb63c26c8121b936c0ba6da7",
+      "mode": "100644",
+      "path": "tests/audit40/runtime_handles.c",
+      "size_bytes": 1319
+    },
+    {
+      "blob_sha": "d9e541a84f77fb3d6012025e3d1607e261ae7283",
+      "mode": "100644",
+      "path": "tests/audit40/seal.c",
+      "size_bytes": 4483
+    },
+    {
+      "blob_sha": "14292682fd22f40a5233ba7180ac086bc86edce5",
+      "mode": "100644",
+      "path": "tests/audit40/security.c",
+      "size_bytes": 23055
+    },
+    {
+      "blob_sha": "02953296011c812558d6b10723b7b4b93127336a",
+      "mode": "100644",
+      "path": "tests/audit80/compiler_backend.c",
+      "size_bytes": 4640
+    },
+    {
+      "blob_sha": "dd7914732fa6d9cfdf5ace7ef750e29795702440",
+      "mode": "100644",
+      "path": "tests/audit80/compiler_budget.c",
+      "size_bytes": 3642
+    },
+    {
+      "blob_sha": "48d4d6d8746d204241357917f5dbafaa2d80b4c8",
+      "mode": "100644",
+      "path": "tests/audit80/compiler_codegen.c",
+      "size_bytes": 1945
+    },
+    {
+      "blob_sha": "05ba0f19cf7698fa92d13d5ec243d90c57697e60",
+      "mode": "100644",
+      "path": "tests/audit80/compiler_frontend.c",
+      "size_bytes": 2557
+    },
+    {
+      "blob_sha": "45559bdd8a57ab8f21e63a5c7133a885c3ab9aeb",
+      "mode": "100644",
+      "path": "tests/audit80/compiler_manifest.c",
+      "size_bytes": 6339
+    },
+    {
+      "blob_sha": "e0b944e324bcc71d2ce2aaa5e6febd0cc38ceeae",
+      "mode": "100644",
+      "path": "tests/audit80/compiler_numeric.c",
+      "size_bytes": 4440
+    },
+    {
+      "blob_sha": "22f95fd024ee47778404ce93aaa35fc775e5fa5c",
+      "mode": "100644",
+      "path": "tests/audit80/compiler_parse.c",
+      "size_bytes": 2485
+    },
+    {
+      "blob_sha": "fef696fd991872210edc3ab3404f682f830b4ff3",
+      "mode": "100644",
+      "path": "tests/audit80/frontend_strings.c",
+      "size_bytes": 1873
+    },
+    {
+      "blob_sha": "e021cf1aaac7ac45e537134626abfb9069f6b13e",
+      "mode": "100644",
+      "path": "tests/audit80/manifest_bench.c",
+      "size_bytes": 3783
+    },
+    {
+      "blob_sha": "b8e475b86e386e912ad090b2c53130dc1f4d8325",
+      "mode": "100644",
+      "path": "tests/audit80/manifest_fixture.h",
+      "size_bytes": 747
+    },
+    {
+      "blob_sha": "cc5e6802b9e14b0a6ff1f77dbd28aa3da10c0aa4",
+      "mode": "100644",
+      "path": "tests/audit80/numeric_bench.c",
+      "size_bytes": 2424
+    },
+    {
+      "blob_sha": "3b108609411f0ede3ded632724af861ec223c217",
+      "mode": "100644",
+      "path": "tests/audit80/numeric_driver.c",
+      "size_bytes": 2248
+    },
+    {
+      "blob_sha": "5093dfbb7700211691d56ed7dcb129444be1f535",
+      "mode": "100644",
+      "path": "tests/audit80/numeric_limits.c",
+      "size_bytes": 6350
+    },
+    {
+      "blob_sha": "8cd550c3195c0f08e615bf0e2050453b8705f047",
+      "mode": "100644",
+      "path": "tests/audit80/runtime_bench.c",
+      "size_bytes": 9019
+    },
+    {
+      "blob_sha": "01d69c7e2349659b0e1ddcbf776488a24dc38c81",
+      "mode": "100644",
+      "path": "tests/audit80/runtime_concurrency.c",
+      "size_bytes": 4165
+    },
+    {
+      "blob_sha": "46cc4c473f76a1e38f426de5034870a77d3e4c6c",
+      "mode": "100644",
+      "path": "tests/audit80/runtime_context_profile.c",
+      "size_bytes": 2760
+    },
+    {
+      "blob_sha": "cfe1097cd6452f4356413d963637f9da31c63b03",
+      "mode": "100644",
+      "path": "tests/audit80/runtime_fixture.c",
+      "size_bytes": 10448
+    },
+    {
+      "blob_sha": "ee150cac97d1f321ef4fd9ba4164a2f827ecf8f3",
+      "mode": "100644",
+      "path": "tests/audit80/runtime_fixture.h",
+      "size_bytes": 1357
+    },
+    {
+      "blob_sha": "0aaaa1a1f80ecc931d5ee817932fcdbc7f6830fb",
+      "mode": "100644",
+      "path": "tests/audit80/runtime_io_faults.c",
+      "size_bytes": 2665
+    },
+    {
+      "blob_sha": "a8cc1aa942c004878fe7fcdc506b8319a69f7854",
+      "mode": "100644",
+      "path": "tests/audit80/runtime_lifecycle.c",
+      "size_bytes": 2864
+    },
+    {
+      "blob_sha": "f35b28f357c706c4ece84291623e1ce2a7466564",
+      "mode": "100644",
+      "path": "tests/audit80/runtime_memory.c",
+      "size_bytes": 5651
+    },
+    {
+      "blob_sha": "d6e6192a1e19be465fc83ea1a08c2d30c728b226",
+      "mode": "100644",
+      "path": "tests/audit80/runtime_recovery.c",
+      "size_bytes": 4373
+    },
+    {
+      "blob_sha": "bc7d57b8fb3f87009a064dfd4e241b9a01a0b966",
+      "mode": "100644",
+      "path": "tests/audit80/runtime_stack.c",
+      "size_bytes": 2960
+    },
+    {
+      "blob_sha": "0525faa3fc53dc7f194d6b8d26d569c748a0f1d1",
+      "mode": "100644",
+      "path": "tests/audit80/runtime_store.c",
+      "size_bytes": 7504
+    },
+    {
+      "blob_sha": "8fe65184244b1c68a91182466dd9dcdf67c5bb2d",
+      "mode": "100644",
+      "path": "tests/audit80/runtime_store.h",
+      "size_bytes": 2146
+    },
+    {
+      "blob_sha": "c11e654c5f30d525c5eb54d627045c623bd23025",
+      "mode": "100644",
+      "path": "tests/audit80/runtime_store_io.c",
+      "size_bytes": 5671
+    },
+    {
+      "blob_sha": "b4a315cba30ec89c21adde958fd5173473cdd67d",
+      "mode": "100644",
+      "path": "tests/audit80/runtime_track.c",
+      "size_bytes": 3076
+    },
+    {
+      "blob_sha": "2cf41959cb71471e0233e46837036810ddd04662",
+      "mode": "100644",
+      "path": "tests/audit80/runtime_track.h",
+      "size_bytes": 388
+    },
+    {
+      "blob_sha": "b16b1255fbd3cf33e4b7a5f436de5e2910a065bc",
+      "mode": "100644",
+      "path": "tests/audit80/runtime_workloads.c",
+      "size_bytes": 1202
+    },
+    {
+      "blob_sha": "fb30bde10aa7dc3d78947c2bd76ba7681ed7dfc0",
+      "mode": "100644",
+      "path": "tests/audit80/security.c",
+      "size_bytes": 35360
+    },
+    {
+      "blob_sha": "cf8974bcea6ebd17436fbbb8768f270050eaa60a",
+      "mode": "100644",
+      "path": "tests/embed/nonbool_policy.c",
+      "size_bytes": 6293
+    },
+    {
+      "blob_sha": "5029a568d64336601e26bcf043fa7667f0eafe59",
+      "mode": "100644",
+      "path": "vendor/ed25519.c",
+      "size_bytes": 18357
+    },
+    {
+      "blob_sha": "906fc0b3a00831ce72e277ae8a14bdfe46cd7f0e",
+      "mode": "100644",
+      "path": "vendor/ed25519.h",
+      "size_bytes": 3559
+    },
+    {
+      "blob_sha": "e5ec21ab169cb5a680f3d7f9e4e8dc445a41a7fd",
+      "mode": "100755",
+      "path": "vendor/sha256_ni.h",
+      "size_bytes": 18141
+    }
+  ],
+  "capabilities": [
+    {
+      "enum_value": 1,
+      "host_verb": "fs.Read",
+      "name": "fs.Read",
+      "symbol": "CAP_FS_READ"
+    },
+    {
+      "enum_value": 2,
+      "host_verb": "fs.Write",
+      "name": "fs.Write",
+      "symbol": "CAP_FS_WRITE"
+    },
+    {
+      "enum_value": 3,
+      "host_verb": "fs.Metadata",
+      "name": "fs.Metadata",
+      "symbol": "CAP_FS_METADATA"
+    },
+    {
+      "enum_value": 4,
+      "host_verb": "env.Read",
+      "name": "env.Read",
+      "symbol": "CAP_ENV_READ"
+    },
+    {
+      "enum_value": 5,
+      "host_verb": "env.Write",
+      "name": "env.Write",
+      "symbol": "CAP_ENV_WRITE"
+    },
+    {
+      "enum_value": 6,
+      "host_verb": "proc.Inspect",
+      "name": "proc.Inspect",
+      "symbol": "CAP_PROC_INSPECT"
+    },
+    {
+      "enum_value": 7,
+      "host_verb": "proc.Spawn",
+      "name": "proc.Spawn",
+      "symbol": "CAP_PROC_SPAWN"
+    },
+    {
+      "enum_value": 8,
+      "host_verb": "net.Connect",
+      "name": "net.Connect",
+      "symbol": "CAP_NET_CONNECT"
+    },
+    {
+      "enum_value": 9,
+      "host_verb": "net.Bind",
+      "name": "net.Bind",
+      "symbol": "CAP_NET_BIND"
+    },
+    {
+      "enum_value": 10,
+      "host_verb": "net.Read",
+      "name": "net.Read",
+      "symbol": "CAP_NET_READ"
+    },
+    {
+      "enum_value": 11,
+      "host_verb": "net.Write",
+      "name": "net.Write",
+      "symbol": "CAP_NET_WRITE"
+    },
+    {
+      "enum_value": 12,
+      "host_verb": "net.Close",
+      "name": "net.Close",
+      "symbol": "CAP_NET_CLOSE"
+    },
+    {
+      "enum_value": 13,
+      "host_verb": "time.Now",
+      "name": "time.Now",
+      "symbol": "CAP_TIME_NOW"
+    },
+    {
+      "enum_value": 14,
+      "host_verb": "crypto.Hash",
+      "name": "crypto.Hash",
+      "symbol": "CAP_CRYPTO_HASH"
+    },
+    {
+      "enum_value": 15,
+      "host_verb": "sigil.Attest",
+      "name": "sigil.Attest",
+      "symbol": "CAP_SIGIL_ATTEST"
+    },
+    {
+      "enum_value": 16,
+      "host_verb": "io.Write",
+      "name": "io.Write",
+      "symbol": "CAP_IO_WRITE"
+    }
+  ],
+  "capability_methods": [
+    {
+      "capability": "CAP_CRYPTO_HASH",
+      "effect": "crypto.Hash",
+      "method": "hash",
+      "returns": "str"
+    },
+    {
+      "capability": "CAP_FS_READ",
+      "effect": "fs.Read",
+      "method": "read",
+      "returns": "str"
+    },
+    {
+      "capability": "CAP_IO_WRITE",
+      "effect": "io.Write",
+      "method": "write",
+      "returns": "u64"
+    }
+  ],
+  "commit": "26eec8630e8cf1dc3a1808f1580cc12d36410a8e",
+  "counts": {
+    "builtins": 14,
+    "c_h_files": 175,
+    "capabilities": 16,
+    "capability_methods": 3,
+    "opcodes": 23,
+    "product_c_h_files": 127,
+    "source_units": 74,
+    "tracked_blobs": 590
+  },
+  "inspected_sources": [
+    {
+      "blob_sha": "f2f95d17dae4006448f66cb82bbe06372fc0f73c",
+      "path": "src/axi_bc.h",
+      "sha256": "acad9f2f9695ba0065bbd2d92c1799b3422ec21639ba10cc65a4443cdda8bfd7",
+      "size_bytes": 14629
+    },
+    {
+      "blob_sha": "7e6e45df605bdd0d5729ab6f384fbbfad3bce9d9",
+      "path": "src/axi_builtin_registry.h",
+      "sha256": "a350f08a0fb774df7cc44097e1bb66d61317ec960e5a542624b5f671a23adef7",
+      "size_bytes": 1211
+    },
+    {
+      "blob_sha": "cd107db2d4d847eec1f13fbe4e9ced87c0a913ca",
+      "path": "src/axi_cap_table.h",
+      "sha256": "7adc16ae5161abdb26e14e656ffe13aa3ccb7bc7d1cc0350ab8727784f2452ce",
+      "size_bytes": 2153
+    },
+    {
+      "blob_sha": "074fd66a07cf1dc82edd203637c823ea04aba961",
+      "path": "src/axi_cap_table.c",
+      "sha256": "b83d2ba0ef293722351473d3313ab7a12efdde6b2c3fe67afedba0206b090bf4",
+      "size_bytes": 3257
+    }
+  ],
+  "opcodes": [
+    {
+      "description": "no operation",
+      "enum_symbol": "OP_NOP",
+      "fuel": 1,
+      "name": "nop",
+      "operands": "AXB_OPS_NONE",
+      "ordinal": 0
+    },
+    {
+      "description": "ra = consts[bc]",
+      "enum_symbol": "OP_LDK",
+      "fuel": 1,
+      "name": "ldk",
+      "operands": "AXB_OPS_RA_KBC",
+      "ordinal": 1
+    },
+    {
+      "description": "ra = rb",
+      "enum_symbol": "OP_MOV",
+      "fuel": 1,
+      "name": "mov",
+      "operands": "AXB_OPS_RA_RB",
+      "ordinal": 2
+    },
+    {
+      "description": "ra = rb + rc",
+      "enum_symbol": "OP_ADD",
+      "fuel": 1,
+      "name": "add",
+      "operands": "AXB_OPS_RA_RB_RC",
+      "ordinal": 3
+    },
+    {
+      "description": "ra = rb - rc",
+      "enum_symbol": "OP_SUB",
+      "fuel": 1,
+      "name": "sub",
+      "operands": "AXB_OPS_RA_RB_RC",
+      "ordinal": 4
+    },
+    {
+      "description": "ra = rb * rc",
+      "enum_symbol": "OP_MUL",
+      "fuel": 2,
+      "name": "mul",
+      "operands": "AXB_OPS_RA_RB_RC",
+      "ordinal": 5
+    },
+    {
+      "description": "ra = rb / rc (checked)",
+      "enum_symbol": "OP_DIV",
+      "fuel": 4,
+      "name": "div",
+      "operands": "AXB_OPS_RA_RB_RC",
+      "ordinal": 6
+    },
+    {
+      "description": "ra = rb % rc (int only)",
+      "enum_symbol": "OP_MOD",
+      "fuel": 4,
+      "name": "mod",
+      "operands": "AXB_OPS_RA_RB_RC",
+      "ordinal": 7
+    },
+    {
+      "description": "ra = !rb (bool only)",
+      "enum_symbol": "OP_NOT",
+      "fuel": 1,
+      "name": "not",
+      "operands": "AXB_OPS_RA_RB",
+      "ordinal": 8
+    },
+    {
+      "description": "ra = rb == rc",
+      "enum_symbol": "OP_EQ",
+      "fuel": 1,
+      "name": "eq",
+      "operands": "AXB_OPS_RA_RB_RC",
+      "ordinal": 9
+    },
+    {
+      "description": "ra = rb < rc  /INV-002/",
+      "enum_symbol": "OP_LT",
+      "fuel": 1,
+      "name": "lt",
+      "operands": "AXB_OPS_RA_RB_RC",
+      "ordinal": 10
+    },
+    {
+      "description": "ra = rb <= rc /INV-002/",
+      "enum_symbol": "OP_LE",
+      "fuel": 1,
+      "name": "le",
+      "operands": "AXB_OPS_RA_RB_RC",
+      "ordinal": 11
+    },
+    {
+      "description": "pc += sbc",
+      "enum_symbol": "OP_JMP",
+      "fuel": 1,
+      "name": "jmp",
+      "operands": "AXB_OPS_SBC",
+      "ordinal": 12
+    },
+    {
+      "description": "if !ra: pc += sbc",
+      "enum_symbol": "OP_JF",
+      "fuel": 1,
+      "name": "jf",
+      "operands": "AXB_OPS_RA_SBC",
+      "ordinal": 13
+    },
+    {
+      "description": "rA=base @cellB argcC; args rA.., result rA",
+      "enum_symbol": "OP_CALL",
+      "fuel": 4,
+      "name": "call",
+      "operands": "AXB_OPS_RA_CB_IC",
+      "ordinal": 14
+    },
+    {
+      "description": "return ra",
+      "enum_symbol": "OP_RET",
+      "fuel": 1,
+      "name": "ret",
+      "operands": "AXB_OPS_RA",
+      "ordinal": 15
+    },
+    {
+      "description": "ra = union tag rb pay rc",
+      "enum_symbol": "OP_UMAKE",
+      "fuel": 1,
+      "name": "umake",
+      "operands": "AXB_OPS_RA_RB_RC",
+      "ordinal": 16
+    },
+    {
+      "description": "ra = tag(rb)",
+      "enum_symbol": "OP_UTAG",
+      "fuel": 1,
+      "name": "utag",
+      "operands": "AXB_OPS_RA_RB",
+      "ordinal": 17
+    },
+    {
+      "description": "ra = payload(rb)",
+      "enum_symbol": "OP_UPAY",
+      "fuel": 1,
+      "name": "upay",
+      "operands": "AXB_OPS_RA_RB",
+      "ordinal": 18
+    },
+    {
+      "description": "the `?`: tag 0 unwraps to ra, else return rb",
+      "enum_symbol": "OP_UCHK",
+      "fuel": 2,
+      "name": "uchk",
+      "operands": "AXB_OPS_RA_RB",
+      "ordinal": 19
+    },
+    {
+      "description": "rA = eff @effB, payload rC",
+      "enum_symbol": "OP_EFF",
+      "fuel": 100,
+      "name": "eff",
+      "operands": "AXB_OPS_RA_EB_RC",
+      "ordinal": 20
+    },
+    {
+      "description": "rA = builtin @builtinB, args rC..",
+      "enum_symbol": "OP_BUILTIN",
+      "fuel": 8,
+      "name": "builtin",
+      "operands": "AXB_OPS_RA_BB_RC",
+      "ordinal": 21
+    },
+    {
+      "description": "trap: fell off the cell",
+      "enum_symbol": "OP_HALT",
+      "fuel": 1,
+      "name": "halt",
+      "operands": "AXB_OPS_NONE",
+      "ordinal": 22
+    }
+  ],
+  "product_c_h_files": [
+    {
+      "blob_sha": "60933df0f43677d7f1424715337934a6dccdf700",
+      "mode": "100644",
+      "path": "include/axial/axi_embed_v1.h",
+      "size_bytes": 4789
+    },
+    {
+      "blob_sha": "471345b4f50b26f772c27e1cd9e70b8e89d65c33",
+      "mode": "100755",
+      "path": "src/axi.h",
+      "size_bytes": 5557
+    },
+    {
+      "blob_sha": "9c8f58231ea1472d6db450c83583fe34b4d1fe53",
+      "mode": "100644",
+      "path": "src/axi_admission_v1.c",
+      "size_bytes": 3617
+    },
+    {
+      "blob_sha": "efc166a57b75b658e02f2dd5c925771c03fda08f",
+      "mode": "100644",
+      "path": "src/axi_admission_v1.h",
+      "size_bytes": 1396
+    },
+    {
+      "blob_sha": "555616c59b0b8938b015b6cf713efe4b359cd7f7",
+      "mode": "100644",
+      "path": "src/axi_aer1.c",
+      "size_bytes": 8291
+    },
+    {
+      "blob_sha": "636317dded17b722ac7be09cc34c0ab15af134f1",
+      "mode": "100644",
+      "path": "src/axi_aer1.h",
+      "size_bytes": 2397
+    },
+    {
+      "blob_sha": "63fbee7915be67239cab31c72acf1b52dc3ab02e",
+      "mode": "100644",
+      "path": "src/axi_aer1_verify.c",
+      "size_bytes": 6004
+    },
+    {
+      "blob_sha": "4e2635e8b02421fec93803b91cf3a2956db7ad72",
+      "mode": "100644",
+      "path": "src/axi_aer1_verify.h",
+      "size_bytes": 263
+    },
+    {
+      "blob_sha": "8409cde2dd3e7ed773719abe32f669215a4e5420",
+      "mode": "100644",
+      "path": "src/axi_aer2_v1.c",
+      "size_bytes": 20353
+    },
+    {
+      "blob_sha": "314c8fb7b1d0444b80af8f83b8a76bf1165ed782",
+      "mode": "100644",
+      "path": "src/axi_aer2_v1.h",
+      "size_bytes": 6072
+    },
+    {
+      "blob_sha": "1a960000266884b838511fcf8d6792a3e4470c69",
+      "mode": "100644",
+      "path": "src/axi_ag1_core_v1.c",
+      "size_bytes": 6145
+    },
+    {
+      "blob_sha": "06bebe221094324f06b66a7f2e4678e2e6bb96e3",
+      "mode": "100644",
+      "path": "src/axi_ag1_crypto_v1.h",
+      "size_bytes": 530
+    },
+    {
+      "blob_sha": "5a9bd3781f598a3d5e5a21bced9b7788cd466a2e",
+      "mode": "100644",
+      "path": "src/axi_ag1_v1.c",
+      "size_bytes": 2741
+    },
+    {
+      "blob_sha": "6f050e573c4e7ec0f0aaf4aef9efc02614975533",
+      "mode": "100644",
+      "path": "src/axi_ag1_v1.h",
+      "size_bytes": 2754
+    },
+    {
+      "blob_sha": "c157819761a08f065a1db99588191602a949a67d",
+      "mode": "100644",
+      "path": "src/axi_alloc.c",
+      "size_bytes": 2524
+    },
+    {
+      "blob_sha": "3e5d87b5c6f30587833e37c5251ac74af326b8b0",
+      "mode": "100644",
+      "path": "src/axi_alloc.h",
+      "size_bytes": 589
+    },
+    {
+      "blob_sha": "28565279ffc6b3b86162cf8cc40209946eb700de",
+      "mode": "100755",
+      "path": "src/axi_arena.c",
+      "size_bytes": 2266
+    },
+    {
+      "blob_sha": "ab4079fbc9522d5db41cf469de02309111aef8a7",
+      "mode": "100755",
+      "path": "src/axi_arena.h",
+      "size_bytes": 1697
+    },
+    {
+      "blob_sha": "67ebc09541784267a75529b47b0e3d9b3fa71dfe",
+      "mode": "100755",
+      "path": "src/axi_ast.h",
+      "size_bytes": 5010
+    },
+    {
+      "blob_sha": "4b2e2802a69b2d705f92eb5248dfeb1aa9afe367",
+      "mode": "100755",
+      "path": "src/axi_bc.c",
+      "size_bytes": 106044
+    },
+    {
+      "blob_sha": "f2f95d17dae4006448f66cb82bbe06372fc0f73c",
+      "mode": "100755",
+      "path": "src/axi_bc.h",
+      "size_bytes": 14629
+    },
+    {
+      "blob_sha": "f50dfdda0eb3119e87cf8d83ac3f502f06222bc6",
+      "mode": "100644",
+      "path": "src/axi_builtin.c",
+      "size_bytes": 10149
+    },
+    {
+      "blob_sha": "eb35b51164b09fb00d767723f89aa865626e0030",
+      "mode": "100644",
+      "path": "src/axi_builtin.h",
+      "size_bytes": 2556
+    },
+    {
+      "blob_sha": "7e6e45df605bdd0d5729ab6f384fbbfad3bce9d9",
+      "mode": "100644",
+      "path": "src/axi_builtin_registry.h",
+      "size_bytes": 1211
+    },
+    {
+      "blob_sha": "a370bb0a313e48f9f45ad0c38227afb12b4445d6",
+      "mode": "100644",
+      "path": "src/axi_ca43_47_core.c",
+      "size_bytes": 3821
+    },
+    {
+      "blob_sha": "9fc5eff86024a3eba194b71fc3aeb1182e252304",
+      "mode": "100644",
+      "path": "src/axi_ca43_47_core.h",
+      "size_bytes": 1411
+    },
+    {
+      "blob_sha": "f6486b68d1252daf45ef035ca775305bb1598577",
+      "mode": "100755",
+      "path": "src/axi_canon.c",
+      "size_bytes": 18374
+    },
+    {
+      "blob_sha": "9b794ce0fa81d2ba618e66c22aa1c6b8ab1a9b6a",
+      "mode": "100644",
+      "path": "src/axi_cap_infer.c",
+      "size_bytes": 7608
+    },
+    {
+      "blob_sha": "9b7286d8825af954f9fa4d2f38bf2ddcf91032e6",
+      "mode": "100644",
+      "path": "src/axi_cap_infer.h",
+      "size_bytes": 1974
+    },
+    {
+      "blob_sha": "074fd66a07cf1dc82edd203637c823ea04aba961",
+      "mode": "100644",
+      "path": "src/axi_cap_table.c",
+      "size_bytes": 3257
+    },
+    {
+      "blob_sha": "cd107db2d4d847eec1f13fbe4e9ced87c0a913ca",
+      "mode": "100644",
+      "path": "src/axi_cap_table.h",
+      "size_bytes": 2153
+    },
+    {
+      "blob_sha": "c3d4e9eda5c5da45ced487bff7b4bfcec883396d",
+      "mode": "100644",
+      "path": "src/axi_checker_identity.h",
+      "size_bytes": 282
+    },
+    {
+      "blob_sha": "620099dd489ff3cf93358338ac78277ea86d8372",
+      "mode": "100644",
+      "path": "src/axi_codegen.c",
+      "size_bytes": 34483
+    },
+    {
+      "blob_sha": "cce56896d8586a2811449dc685736c0dc1a91dd3",
+      "mode": "100644",
+      "path": "src/axi_codegen.h",
+      "size_bytes": 717
+    },
+    {
+      "blob_sha": "e1f8d7abcb34aeddcbe652b02071c4197f2979e3",
+      "mode": "100644",
+      "path": "src/axi_compile_budget.c",
+      "size_bytes": 6973
+    },
+    {
+      "blob_sha": "5652606da1647f43a7f56453330762def2bc2455",
+      "mode": "100644",
+      "path": "src/axi_compile_budget.h",
+      "size_bytes": 2750
+    },
+    {
+      "blob_sha": "da9f45e519dbcfdcb102cb6fd91ffe2067c47999",
+      "mode": "100644",
+      "path": "src/axi_contract.c",
+      "size_bytes": 52435
+    },
+    {
+      "blob_sha": "3ef684c32f5b9d15cea2073039ddba47fabc4b37",
+      "mode": "100644",
+      "path": "src/axi_contract.h",
+      "size_bytes": 6820
+    },
+    {
+      "blob_sha": "67e378fbf9d5401bf7d467a6e047e7301a0a2a53",
+      "mode": "100644",
+      "path": "src/axi_coverage_v1.c",
+      "size_bytes": 6162
+    },
+    {
+      "blob_sha": "79acfc7037751858ec02155d1a8869428def8644",
+      "mode": "100644",
+      "path": "src/axi_coverage_v1.h",
+      "size_bytes": 2024
+    },
+    {
+      "blob_sha": "23935ec87d500eccb753d17b8c6263d3fd6e5e7c",
+      "mode": "100644",
+      "path": "src/axi_delegation_v1.c",
+      "size_bytes": 11873
+    },
+    {
+      "blob_sha": "da8a1419221547d4be174090502208b4c4beda54",
+      "mode": "100644",
+      "path": "src/axi_delegation_v1.h",
+      "size_bytes": 2913
+    },
+    {
+      "blob_sha": "52078a0fcb9736062e3dff3df690398b13efe6ac",
+      "mode": "100644",
+      "path": "src/axi_diag.c",
+      "size_bytes": 5755
+    },
+    {
+      "blob_sha": "27b4b450015ea4e211456009606baf968f688d21",
+      "mode": "100644",
+      "path": "src/axi_diag.h",
+      "size_bytes": 2211
+    },
+    {
+      "blob_sha": "8b14bf520dcb429d01449fb6dc7c21ed369b4df1",
+      "mode": "100644",
+      "path": "src/axi_dossier.c",
+      "size_bytes": 58085
+    },
+    {
+      "blob_sha": "b15532da4183b6d96a7b6d34ac4821d8ef1fb052",
+      "mode": "100644",
+      "path": "src/axi_dossier.h",
+      "size_bytes": 634
+    },
+    {
+      "blob_sha": "773c8da221fe177cd635d23b93475b83b553b06f",
+      "mode": "100644",
+      "path": "src/axi_dossier_main.c",
+      "size_bytes": 2225
+    },
+    {
+      "blob_sha": "93d7603ac1ca418c28a7feeffc95d408985949a0",
+      "mode": "100644",
+      "path": "src/axi_effect.c",
+      "size_bytes": 33631
+    },
+    {
+      "blob_sha": "406658791e47f4ffda114bb937c0395d468662f5",
+      "mode": "100644",
+      "path": "src/axi_effect.h",
+      "size_bytes": 12643
+    },
+    {
+      "blob_sha": "c8a884ea3aae317286e1408d8bfc06e4f4859177",
+      "mode": "100644",
+      "path": "src/axi_embed.c",
+      "size_bytes": 16272
+    },
+    {
+      "blob_sha": "9445f99da8b155a20579756a95ff950e6c30b6cb",
+      "mode": "100644",
+      "path": "src/axi_embed.h",
+      "size_bytes": 5127
+    },
+    {
+      "blob_sha": "17cddaaadac1e2a72df2d51caff9b9a34e151ec0",
+      "mode": "100644",
+      "path": "src/axi_embed_v1.c",
+      "size_bytes": 28313
+    },
+    {
+      "blob_sha": "716066338e4565b4e4b7976ff00ba1376e9a33d1",
+      "mode": "100644",
+      "path": "src/axi_extdec_v1.c",
+      "size_bytes": 3894
+    },
+    {
+      "blob_sha": "a927aa3323b919b494d16d0398f872a74d454e22",
+      "mode": "100644",
+      "path": "src/axi_extdec_v1.h",
+      "size_bytes": 1625
+    },
+    {
+      "blob_sha": "c69775e9fb99165937bf82b484bbb4eec5c0ad87",
+      "mode": "100644",
+      "path": "src/axi_gateway_v1.c",
+      "size_bytes": 3151
+    },
+    {
+      "blob_sha": "67469d475a89780359659ab3f86ae5bb68890785",
+      "mode": "100644",
+      "path": "src/axi_gateway_v1.h",
+      "size_bytes": 1284
+    },
+    {
+      "blob_sha": "103222c65a611e94993a4c09f3fb64e87c6a430b",
+      "mode": "100644",
+      "path": "src/axi_handle_table.c",
+      "size_bytes": 6099
+    },
+    {
+      "blob_sha": "745cf63aa0ae446d590e5769a12db7aaf8b428fe",
+      "mode": "100644",
+      "path": "src/axi_handle_table.h",
+      "size_bytes": 1561
+    },
+    {
+      "blob_sha": "d9d9034fab57b589d1e6a7a9e8a9d0d6923dab6c",
+      "mode": "100755",
+      "path": "src/axi_hash.c",
+      "size_bytes": 2682
+    },
+    {
+      "blob_sha": "eb6e362dc5143b3e8866c7f892e42cf9b913dd50",
+      "mode": "100755",
+      "path": "src/axi_hash.h",
+      "size_bytes": 1007
+    },
+    {
+      "blob_sha": "b66df81ee8d4f1e56b7e4b7fdffa84c6a4e2232e",
+      "mode": "100755",
+      "path": "src/axi_iface.c",
+      "size_bytes": 35421
+    },
+    {
+      "blob_sha": "a6e23f338544514428edfbff35916ba2572f4a68",
+      "mode": "100755",
+      "path": "src/axi_iface.h",
+      "size_bytes": 3201
+    },
+    {
+      "blob_sha": "b3ab1a9a5606315c4dbd640b506dd5050d7d59d0",
+      "mode": "100644",
+      "path": "src/axi_jm1_v1.c",
+      "size_bytes": 3420
+    },
+    {
+      "blob_sha": "9fff097cb0586c77d33860f8bcbfc8032ce61304",
+      "mode": "100644",
+      "path": "src/axi_jm1_v1.h",
+      "size_bytes": 768
+    },
+    {
+      "blob_sha": "6457c8671461c056882bb7132ef4008bf48520f9",
+      "mode": "100644",
+      "path": "src/axi_json.c",
+      "size_bytes": 22111
+    },
+    {
+      "blob_sha": "381e8424b7b8adf99380a496bbe6b9243ba1ea28",
+      "mode": "100644",
+      "path": "src/axi_json.h",
+      "size_bytes": 2499
+    },
+    {
+      "blob_sha": "98345eacfb18a35e8ed7ba23702a98bad4fb1512",
+      "mode": "100755",
+      "path": "src/axi_lex.c",
+      "size_bytes": 14880
+    },
+    {
+      "blob_sha": "292f8b641d19d0549f78c8f93d9bc1f5bbcf6c3c",
+      "mode": "100644",
+      "path": "src/axi_local_action_v1.c",
+      "size_bytes": 11083
+    },
+    {
+      "blob_sha": "4d866b7dad6c021a479727d24049e2303ed5f58e",
+      "mode": "100644",
+      "path": "src/axi_local_action_v1.h",
+      "size_bytes": 2354
+    },
+    {
+      "blob_sha": "2c6565729b69c0bbff316265fb2498f29b11c0b0",
+      "mode": "100644",
+      "path": "src/axi_local_admission_v1.c",
+      "size_bytes": 7223
+    },
+    {
+      "blob_sha": "05a8443a475c96f6e2d7dcd1e0a9e0f213ddb1a0",
+      "mode": "100644",
+      "path": "src/axi_local_admission_v1.h",
+      "size_bytes": 3316
+    },
+    {
+      "blob_sha": "46739b4f385757a95ed4bb8312560e34aa416b7c",
+      "mode": "100644",
+      "path": "src/axi_local_attempt_v1.c",
+      "size_bytes": 47458
+    },
+    {
+      "blob_sha": "b230714f2af4a6d08427afc57befb2fc5a2f6fbb",
+      "mode": "100644",
+      "path": "src/axi_local_attempt_v1.h",
+      "size_bytes": 8353
+    },
+    {
+      "blob_sha": "955591e4cffb892c74add95b0ab1b4113fbf13e3",
+      "mode": "100644",
+      "path": "src/axi_local_authority_internal.h",
+      "size_bytes": 2049
+    },
+    {
+      "blob_sha": "b608f00d8a598e7fbef2278d313fa7cb7fa7ea78",
+      "mode": "100644",
+      "path": "src/axi_local_authority_v1.c",
+      "size_bytes": 20564
+    },
+    {
+      "blob_sha": "ea6b382f5788f061d396765cc1268950d5ce91e8",
+      "mode": "100644",
+      "path": "src/axi_local_authority_v1.h",
+      "size_bytes": 8180
+    },
+    {
+      "blob_sha": "169fff5528ecbb982a0eb6d820683c9526d3e3fa",
+      "mode": "100644",
+      "path": "src/axi_local_consumer_v1.c",
+      "size_bytes": 7561
+    },
+    {
+      "blob_sha": "2f91a3618c810eb3bbbb0b1866b40e99010bf735",
+      "mode": "100644",
+      "path": "src/axi_local_consumer_v1.h",
+      "size_bytes": 3846
+    },
+    {
+      "blob_sha": "f605e8b5483ca75129d5cdd0498f8d02245e2e7c",
+      "mode": "100644",
+      "path": "src/axi_local_diag_v1.c",
+      "size_bytes": 4167
+    },
+    {
+      "blob_sha": "a22826e5681cd9d6052ead22a945cb61d564ece2",
+      "mode": "100644",
+      "path": "src/axi_local_diag_v1.h",
+      "size_bytes": 1826
+    },
+    {
+      "blob_sha": "2f30e01623682b5feeca853c459834fe549167f5",
+      "mode": "100644",
+      "path": "src/axi_local_epoch_v1.c",
+      "size_bytes": 11589
+    },
+    {
+      "blob_sha": "0167bb1eeca7baf5c755c180626a487b25221bd1",
+      "mode": "100644",
+      "path": "src/axi_local_epoch_v1.h",
+      "size_bytes": 3619
+    },
+    {
+      "blob_sha": "aa3c69b0d841df37abad50b66450e1617ecb3c7c",
+      "mode": "100644",
+      "path": "src/axi_local_store_v1.h",
+      "size_bytes": 2322
+    },
+    {
+      "blob_sha": "68f6bee3c3b844e1856d965245da3e5814b2c6fd",
+      "mode": "100644",
+      "path": "src/axi_main.c",
+      "size_bytes": 47227
+    },
+    {
+      "blob_sha": "80e0b843032128495b88a8ec23ece442ecf95dde",
+      "mode": "100644",
+      "path": "src/axi_mem_account.c",
+      "size_bytes": 12328
+    },
+    {
+      "blob_sha": "78dbb1a297019551672525713640d8deddfdff62",
+      "mode": "100644",
+      "path": "src/axi_mem_account.h",
+      "size_bytes": 2815
+    },
+    {
+      "blob_sha": "ba73746a53ec3fc44c5c6d5101210353dfc4be68",
+      "mode": "100644",
+      "path": "src/axi_numeric.c",
+      "size_bytes": 16410
+    },
+    {
+      "blob_sha": "e7d9ebf255fcace0798fb0dd3335543ea478d213",
+      "mode": "100644",
+      "path": "src/axi_numeric.h",
+      "size_bytes": 2711
+    },
+    {
+      "blob_sha": "c52a00ea9bab83969ca7b35a8629544d71073b57",
+      "mode": "100755",
+      "path": "src/axi_osif.c",
+      "size_bytes": 1072
+    },
+    {
+      "blob_sha": "dd3cae977cbfe4885359ca6f4449b302b666f9fa",
+      "mode": "100755",
+      "path": "src/axi_osif.h",
+      "size_bytes": 2496
+    },
+    {
+      "blob_sha": "ae9d823c6c6b45b055124289ee3061a4f7ce1a92",
+      "mode": "100755",
+      "path": "src/axi_parse.c",
+      "size_bytes": 35803
+    },
+    {
+      "blob_sha": "ed1128fd50010bc7684bac517e9e9831f9ae4189",
+      "mode": "100644",
+      "path": "src/axi_platform.h",
+      "size_bytes": 4576
+    },
+    {
+      "blob_sha": "9d45016641df4635b07e72466d80ec7d2d6b6faf",
+      "mode": "100644",
+      "path": "src/axi_platform_posix.c",
+      "size_bytes": 47707
+    },
+    {
+      "blob_sha": "31b723652735207d38f27cf4fc13dcd56f6655f0",
+      "mode": "100644",
+      "path": "src/axi_policy_lint.c",
+      "size_bytes": 2311
+    },
+    {
+      "blob_sha": "e863beab0887d86724aabc14a8a5f791e6b56f9c",
+      "mode": "100644",
+      "path": "src/axi_policy_lint.h",
+      "size_bytes": 217
+    },
+    {
+      "blob_sha": "079223270dcf2ca4f2f6d012fa1f63cfaf47495e",
+      "mode": "100644",
+      "path": "src/axi_replay.c",
+      "size_bytes": 19562
+    },
+    {
+      "blob_sha": "53c625d022c381721a161b10e38506b584beaea4",
+      "mode": "100644",
+      "path": "src/axi_replay.h",
+      "size_bytes": 5715
+    },
+    {
+      "blob_sha": "20966e0fe21e2cf8ded9ae5b37abee765e9ed7ea",
+      "mode": "100644",
+      "path": "src/axi_replay_v4.c",
+      "size_bytes": 39188
+    },
+    {
+      "blob_sha": "d467be481ef982cf5a0643aebaca5b067edcccae",
+      "mode": "100644",
+      "path": "src/axi_replay_v4.h",
+      "size_bytes": 8903
+    },
+    {
+      "blob_sha": "6ce008611eae52cf5f59e079be350c52b5f2d669",
+      "mode": "100644",
+      "path": "src/axi_resource_envelope.c",
+      "size_bytes": 9571
+    },
+    {
+      "blob_sha": "7513c5a7f74f72473471fe8df60ec5070deb8124",
+      "mode": "100644",
+      "path": "src/axi_resource_envelope.h",
+      "size_bytes": 2826
+    },
+    {
+      "blob_sha": "5ad7cf16a9d1a079bc189846382b9ac3b659ca45",
+      "mode": "100644",
+      "path": "src/axi_rf1_pin_v1.c",
+      "size_bytes": 6500
+    },
+    {
+      "blob_sha": "29b9ff889e50ea6c4e94f411cd91ebd95c11f6a6",
+      "mode": "100644",
+      "path": "src/axi_rf1_pin_v1.h",
+      "size_bytes": 1385
+    },
+    {
+      "blob_sha": "16325c35eef11d2a4f269f72cad7c10ddf4c0a54",
+      "mode": "100644",
+      "path": "src/axi_rollout_v1.c",
+      "size_bytes": 4575
+    },
+    {
+      "blob_sha": "518956525e6574c3125520eb93edd793c67ea46b",
+      "mode": "100644",
+      "path": "src/axi_rollout_v1.h",
+      "size_bytes": 1189
+    },
+    {
+      "blob_sha": "38d6ae70fc373b1b72e2d2fc9e2592a3310b1901",
+      "mode": "100644",
+      "path": "src/axi_selective_disclosure_v1.c",
+      "size_bytes": 4753
+    },
+    {
+      "blob_sha": "0fd6a78bc7e38d7056618437c283352ab1ae04a9",
+      "mode": "100644",
+      "path": "src/axi_selective_disclosure_v1.h",
+      "size_bytes": 1350
+    },
+    {
+      "blob_sha": "003127755d34c8f7ab101074eab5a8e2640d6a61",
+      "mode": "100644",
+      "path": "src/axi_sign.c",
+      "size_bytes": 3014
+    },
+    {
+      "blob_sha": "d1664a4b4035fb2be2d0f76ad10391848545c5ba",
+      "mode": "100644",
+      "path": "src/axi_sign.h",
+      "size_bytes": 4216
+    },
+    {
+      "blob_sha": "083628877b046e35716402fc49f8570bd0722721",
+      "mode": "100644",
+      "path": "src/axi_string.h",
+      "size_bytes": 1042
+    },
+    {
+      "blob_sha": "09e27a0884364400a513bff9df6ce244c8f30584",
+      "mode": "100644",
+      "path": "src/axi_time_lease_v1.c",
+      "size_bytes": 12795
+    },
+    {
+      "blob_sha": "27d5194f142d5692ed1ee7c2e9de1c48b86632a2",
+      "mode": "100644",
+      "path": "src/axi_time_lease_v1.h",
+      "size_bytes": 3121
+    },
+    {
+      "blob_sha": "a0f5357ed4fc033008424fc73ec82190d0ae9b03",
+      "mode": "100755",
+      "path": "src/axi_trace.c",
+      "size_bytes": 4928
+    },
+    {
+      "blob_sha": "d2d36389b6719f123d788e86e9e8413560c11173",
+      "mode": "100755",
+      "path": "src/axi_trace.h",
+      "size_bytes": 4151
+    },
+    {
+      "blob_sha": "2dbb408053405f2d3ad0d423e1261d760a607b3c",
+      "mode": "100644",
+      "path": "src/axi_trust_canon_v1.c",
+      "size_bytes": 874
+    },
+    {
+      "blob_sha": "08a929c20de0e1a0f92cbf42942b94529e1af92f",
+      "mode": "100644",
+      "path": "src/axi_trust_canon_v1.h",
+      "size_bytes": 1127
+    },
+    {
+      "blob_sha": "087e384e8d4095dedd4dfada30d3087b8b4e7d56",
+      "mode": "100644",
+      "path": "src/axi_trust_v1.c",
+      "size_bytes": 14246
+    },
+    {
+      "blob_sha": "99b1dd45e6e910b02e04384fe445103334eb80e8",
+      "mode": "100644",
+      "path": "src/axi_trust_v1.h",
+      "size_bytes": 2224
+    },
+    {
+      "blob_sha": "3e401982f41f92c4c90cd21de22ddd7cd0f3fcd4",
+      "mode": "100755",
+      "path": "src/axi_types.c",
+      "size_bytes": 54608
+    },
+    {
+      "blob_sha": "18fd0ae9ee8150428b8fdb4a29bc00bdabe0f920",
+      "mode": "100644",
+      "path": "src/axi_u64.c",
+      "size_bytes": 2731
+    },
+    {
+      "blob_sha": "deec4c19a3fc2daa8dbf817188483b0e36b1ab8e",
+      "mode": "100644",
+      "path": "src/axi_u64.h",
+      "size_bytes": 1500
+    },
+    {
+      "blob_sha": "ca212e1c03c78ba7d32d0a81c031b051cc8d100d",
+      "mode": "100644",
+      "path": "src/axi_vm.c",
+      "size_bytes": 137176
+    },
+    {
+      "blob_sha": "adf3f94afe180bc7719e1706e8a81f9e6af5a0db",
+      "mode": "100644",
+      "path": "src/axi_vm.h",
+      "size_bytes": 5909
+    },
+    {
+      "blob_sha": "cd7fdf2c12710b0ed6ee1a228e34a97a7ac41301",
+      "mode": "100644",
+      "path": "src/axi_wipe.h",
+      "size_bytes": 312
+    },
+    {
+      "blob_sha": "5029a568d64336601e26bcf043fa7667f0eafe59",
+      "mode": "100644",
+      "path": "vendor/ed25519.c",
+      "size_bytes": 18357
+    },
+    {
+      "blob_sha": "906fc0b3a00831ce72e277ae8a14bdfe46cd7f0e",
+      "mode": "100644",
+      "path": "vendor/ed25519.h",
+      "size_bytes": 3559
+    },
+    {
+      "blob_sha": "e5ec21ab169cb5a680f3d7f9e4e8dc445a41a7fd",
+      "mode": "100755",
+      "path": "vendor/sha256_ni.h",
+      "size_bytes": 18141
+    }
+  ],
+  "referenced_sources": [
+    {
+      "path": "docs/CAP-METHODS.tsv",
+      "present_in_commit": false,
+      "referenced_by": [
+        "src/axi_cap_table.c",
+        "src/axi_cap_table.h"
+      ]
+    },
+    {
+      "path": "tools/gen_cap_table.py",
+      "present_in_commit": false,
+      "referenced_by": [
+        "src/axi_cap_table.c",
+        "src/axi_cap_table.h"
+      ]
+    }
+  ],
+  "repository": "FermiHart/axial",
+  "schema": "axial.inventory.v1",
+  "scope": {
+    "builtin_flag": "capability_gated is the checker impurity flag, not a fuel price",
+    "effect_scope": "declared capability verbs and method mappings; backend support is not inferred",
+    "kind": "static_source_inventory",
+    "product_filter": ".c/.h paths under src/, include/, vendor/",
+    "product_filter_is_checker_identity": false,
+    "runtime_availability": "not_evaluated"
+  },
+  "source_units": [
+    {
+      "files": [
+        "include/axial/axi_embed_v1.h"
+      ],
+      "stem": "include/axial/axi_embed_v1"
+    },
+    {
+      "files": [
+        "src/axi.h"
+      ],
+      "stem": "src/axi"
+    },
+    {
+      "files": [
+        "src/axi_admission_v1.c",
+        "src/axi_admission_v1.h"
+      ],
+      "stem": "src/axi_admission_v1"
+    },
+    {
+      "files": [
+        "src/axi_aer1.c",
+        "src/axi_aer1.h"
+      ],
+      "stem": "src/axi_aer1"
+    },
+    {
+      "files": [
+        "src/axi_aer1_verify.c",
+        "src/axi_aer1_verify.h"
+      ],
+      "stem": "src/axi_aer1_verify"
+    },
+    {
+      "files": [
+        "src/axi_aer2_v1.c",
+        "src/axi_aer2_v1.h"
+      ],
+      "stem": "src/axi_aer2_v1"
+    },
+    {
+      "files": [
+        "src/axi_ag1_core_v1.c"
+      ],
+      "stem": "src/axi_ag1_core_v1"
+    },
+    {
+      "files": [
+        "src/axi_ag1_crypto_v1.h"
+      ],
+      "stem": "src/axi_ag1_crypto_v1"
+    },
+    {
+      "files": [
+        "src/axi_ag1_v1.c",
+        "src/axi_ag1_v1.h"
+      ],
+      "stem": "src/axi_ag1_v1"
+    },
+    {
+      "files": [
+        "src/axi_alloc.c",
+        "src/axi_alloc.h"
+      ],
+      "stem": "src/axi_alloc"
+    },
+    {
+      "files": [
+        "src/axi_arena.c",
+        "src/axi_arena.h"
+      ],
+      "stem": "src/axi_arena"
+    },
+    {
+      "files": [
+        "src/axi_ast.h"
+      ],
+      "stem": "src/axi_ast"
+    },
+    {
+      "files": [
+        "src/axi_bc.c",
+        "src/axi_bc.h"
+      ],
+      "stem": "src/axi_bc"
+    },
+    {
+      "files": [
+        "src/axi_builtin.c",
+        "src/axi_builtin.h"
+      ],
+      "stem": "src/axi_builtin"
+    },
+    {
+      "files": [
+        "src/axi_builtin_registry.h"
+      ],
+      "stem": "src/axi_builtin_registry"
+    },
+    {
+      "files": [
+        "src/axi_ca43_47_core.c",
+        "src/axi_ca43_47_core.h"
+      ],
+      "stem": "src/axi_ca43_47_core"
+    },
+    {
+      "files": [
+        "src/axi_canon.c"
+      ],
+      "stem": "src/axi_canon"
+    },
+    {
+      "files": [
+        "src/axi_cap_infer.c",
+        "src/axi_cap_infer.h"
+      ],
+      "stem": "src/axi_cap_infer"
+    },
+    {
+      "files": [
+        "src/axi_cap_table.c",
+        "src/axi_cap_table.h"
+      ],
+      "stem": "src/axi_cap_table"
+    },
+    {
+      "files": [
+        "src/axi_checker_identity.h"
+      ],
+      "stem": "src/axi_checker_identity"
+    },
+    {
+      "files": [
+        "src/axi_codegen.c",
+        "src/axi_codegen.h"
+      ],
+      "stem": "src/axi_codegen"
+    },
+    {
+      "files": [
+        "src/axi_compile_budget.c",
+        "src/axi_compile_budget.h"
+      ],
+      "stem": "src/axi_compile_budget"
+    },
+    {
+      "files": [
+        "src/axi_contract.c",
+        "src/axi_contract.h"
+      ],
+      "stem": "src/axi_contract"
+    },
+    {
+      "files": [
+        "src/axi_coverage_v1.c",
+        "src/axi_coverage_v1.h"
+      ],
+      "stem": "src/axi_coverage_v1"
+    },
+    {
+      "files": [
+        "src/axi_delegation_v1.c",
+        "src/axi_delegation_v1.h"
+      ],
+      "stem": "src/axi_delegation_v1"
+    },
+    {
+      "files": [
+        "src/axi_diag.c",
+        "src/axi_diag.h"
+      ],
+      "stem": "src/axi_diag"
+    },
+    {
+      "files": [
+        "src/axi_dossier.c",
+        "src/axi_dossier.h"
+      ],
+      "stem": "src/axi_dossier"
+    },
+    {
+      "files": [
+        "src/axi_dossier_main.c"
+      ],
+      "stem": "src/axi_dossier_main"
+    },
+    {
+      "files": [
+        "src/axi_effect.c",
+        "src/axi_effect.h"
+      ],
+      "stem": "src/axi_effect"
+    },
+    {
+      "files": [
+        "src/axi_embed.c",
+        "src/axi_embed.h"
+      ],
+      "stem": "src/axi_embed"
+    },
+    {
+      "files": [
+        "src/axi_embed_v1.c"
+      ],
+      "stem": "src/axi_embed_v1"
+    },
+    {
+      "files": [
+        "src/axi_extdec_v1.c",
+        "src/axi_extdec_v1.h"
+      ],
+      "stem": "src/axi_extdec_v1"
+    },
+    {
+      "files": [
+        "src/axi_gateway_v1.c",
+        "src/axi_gateway_v1.h"
+      ],
+      "stem": "src/axi_gateway_v1"
+    },
+    {
+      "files": [
+        "src/axi_handle_table.c",
+        "src/axi_handle_table.h"
+      ],
+      "stem": "src/axi_handle_table"
+    },
+    {
+      "files": [
+        "src/axi_hash.c",
+        "src/axi_hash.h"
+      ],
+      "stem": "src/axi_hash"
+    },
+    {
+      "files": [
+        "src/axi_iface.c",
+        "src/axi_iface.h"
+      ],
+      "stem": "src/axi_iface"
+    },
+    {
+      "files": [
+        "src/axi_jm1_v1.c",
+        "src/axi_jm1_v1.h"
+      ],
+      "stem": "src/axi_jm1_v1"
+    },
+    {
+      "files": [
+        "src/axi_json.c",
+        "src/axi_json.h"
+      ],
+      "stem": "src/axi_json"
+    },
+    {
+      "files": [
+        "src/axi_lex.c"
+      ],
+      "stem": "src/axi_lex"
+    },
+    {
+      "files": [
+        "src/axi_local_action_v1.c",
+        "src/axi_local_action_v1.h"
+      ],
+      "stem": "src/axi_local_action_v1"
+    },
+    {
+      "files": [
+        "src/axi_local_admission_v1.c",
+        "src/axi_local_admission_v1.h"
+      ],
+      "stem": "src/axi_local_admission_v1"
+    },
+    {
+      "files": [
+        "src/axi_local_attempt_v1.c",
+        "src/axi_local_attempt_v1.h"
+      ],
+      "stem": "src/axi_local_attempt_v1"
+    },
+    {
+      "files": [
+        "src/axi_local_authority_internal.h"
+      ],
+      "stem": "src/axi_local_authority_internal"
+    },
+    {
+      "files": [
+        "src/axi_local_authority_v1.c",
+        "src/axi_local_authority_v1.h"
+      ],
+      "stem": "src/axi_local_authority_v1"
+    },
+    {
+      "files": [
+        "src/axi_local_consumer_v1.c",
+        "src/axi_local_consumer_v1.h"
+      ],
+      "stem": "src/axi_local_consumer_v1"
+    },
+    {
+      "files": [
+        "src/axi_local_diag_v1.c",
+        "src/axi_local_diag_v1.h"
+      ],
+      "stem": "src/axi_local_diag_v1"
+    },
+    {
+      "files": [
+        "src/axi_local_epoch_v1.c",
+        "src/axi_local_epoch_v1.h"
+      ],
+      "stem": "src/axi_local_epoch_v1"
+    },
+    {
+      "files": [
+        "src/axi_local_store_v1.h"
+      ],
+      "stem": "src/axi_local_store_v1"
+    },
+    {
+      "files": [
+        "src/axi_main.c"
+      ],
+      "stem": "src/axi_main"
+    },
+    {
+      "files": [
+        "src/axi_mem_account.c",
+        "src/axi_mem_account.h"
+      ],
+      "stem": "src/axi_mem_account"
+    },
+    {
+      "files": [
+        "src/axi_numeric.c",
+        "src/axi_numeric.h"
+      ],
+      "stem": "src/axi_numeric"
+    },
+    {
+      "files": [
+        "src/axi_osif.c",
+        "src/axi_osif.h"
+      ],
+      "stem": "src/axi_osif"
+    },
+    {
+      "files": [
+        "src/axi_parse.c"
+      ],
+      "stem": "src/axi_parse"
+    },
+    {
+      "files": [
+        "src/axi_platform.h"
+      ],
+      "stem": "src/axi_platform"
+    },
+    {
+      "files": [
+        "src/axi_platform_posix.c"
+      ],
+      "stem": "src/axi_platform_posix"
+    },
+    {
+      "files": [
+        "src/axi_policy_lint.c",
+        "src/axi_policy_lint.h"
+      ],
+      "stem": "src/axi_policy_lint"
+    },
+    {
+      "files": [
+        "src/axi_replay.c",
+        "src/axi_replay.h"
+      ],
+      "stem": "src/axi_replay"
+    },
+    {
+      "files": [
+        "src/axi_replay_v4.c",
+        "src/axi_replay_v4.h"
+      ],
+      "stem": "src/axi_replay_v4"
+    },
+    {
+      "files": [
+        "src/axi_resource_envelope.c",
+        "src/axi_resource_envelope.h"
+      ],
+      "stem": "src/axi_resource_envelope"
+    },
+    {
+      "files": [
+        "src/axi_rf1_pin_v1.c",
+        "src/axi_rf1_pin_v1.h"
+      ],
+      "stem": "src/axi_rf1_pin_v1"
+    },
+    {
+      "files": [
+        "src/axi_rollout_v1.c",
+        "src/axi_rollout_v1.h"
+      ],
+      "stem": "src/axi_rollout_v1"
+    },
+    {
+      "files": [
+        "src/axi_selective_disclosure_v1.c",
+        "src/axi_selective_disclosure_v1.h"
+      ],
+      "stem": "src/axi_selective_disclosure_v1"
+    },
+    {
+      "files": [
+        "src/axi_sign.c",
+        "src/axi_sign.h"
+      ],
+      "stem": "src/axi_sign"
+    },
+    {
+      "files": [
+        "src/axi_string.h"
+      ],
+      "stem": "src/axi_string"
+    },
+    {
+      "files": [
+        "src/axi_time_lease_v1.c",
+        "src/axi_time_lease_v1.h"
+      ],
+      "stem": "src/axi_time_lease_v1"
+    },
+    {
+      "files": [
+        "src/axi_trace.c",
+        "src/axi_trace.h"
+      ],
+      "stem": "src/axi_trace"
+    },
+    {
+      "files": [
+        "src/axi_trust_canon_v1.c",
+        "src/axi_trust_canon_v1.h"
+      ],
+      "stem": "src/axi_trust_canon_v1"
+    },
+    {
+      "files": [
+        "src/axi_trust_v1.c",
+        "src/axi_trust_v1.h"
+      ],
+      "stem": "src/axi_trust_v1"
+    },
+    {
+      "files": [
+        "src/axi_types.c"
+      ],
+      "stem": "src/axi_types"
+    },
+    {
+      "files": [
+        "src/axi_u64.c",
+        "src/axi_u64.h"
+      ],
+      "stem": "src/axi_u64"
+    },
+    {
+      "files": [
+        "src/axi_vm.c",
+        "src/axi_vm.h"
+      ],
+      "stem": "src/axi_vm"
+    },
+    {
+      "files": [
+        "src/axi_wipe.h"
+      ],
+      "stem": "src/axi_wipe"
+    },
+    {
+      "files": [
+        "vendor/ed25519.c",
+        "vendor/ed25519.h"
+      ],
+      "stem": "vendor/ed25519"
+    },
+    {
+      "files": [
+        "vendor/sha256_ni.h"
+      ],
+      "stem": "vendor/sha256_ni"
+    }
+  ],
+  "tree_sha": "069e92e1247544d7d7fae6138dd8e894f7a0265e",
+  "verification": {
+    "inspected_blobs_match": true,
+    "product_code_executed": false,
+    "runtime_tests_run": false,
+    "tree_manifest_matches": true
+  }
+}

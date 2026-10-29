@@ -3,7 +3,7 @@
 **Campanha:** contratos observáveis e mediação verificável  
 **Data:** 29 de outubro de 2026  
 **Decisão de referência:** ADR-AXIAL-0001, revisão 2  
-**Estado atual:** A00 em andamento desde 29/10/2026 às 10h39 (America/Sao_Paulo); A01–A19 pendentes.
+**Estado atual:** A00 concluída; A01 pronta para execução; A02–A19 pendentes. A00 começou em 29/10/2026 às 10h39 (America/Sao_Paulo).
 
 **Branch:** work/axial-a00-a19-20261029. O estado operacional está em [STATUS.json](STATUS.json).
 
@@ -31,7 +31,7 @@ A referência inicial do núcleo é [FermiHart/axial@26eec863](https://github.co
 
 Todas as vinte waves estão registradas. Caixa marcada significa entrega concluída com evidência; detalhes e dependências aparecem nos cards abaixo.
 
-- [ ] **A00 — Baseline, inventário e delta** — EM ANDAMENTO
+- [x] **A00 — Baseline, inventário e delta** — CONCLUÍDA; ver [evidência](A00-BASELINE.md)
 - [ ] **A01 — Contratos e fronteira de confiança** — PENDENTE
 - [ ] **A02 — ABI, schemas e compatibilidade** — PENDENTE
 - [ ] **A03 — Catálogo de builtins, effects e backends** — PENDENTE
@@ -56,8 +56,8 @@ Todas as vinte waves estão registradas. Caixa marcada significa entrega conclu�
 
 | Wave | Entrega | Estado inicial |
 | --- | --- | --- |
-| A00 | Baseline, inventário e delta | IN_PROGRESS |
-| A01 | Contratos e fronteira de confiança | PLANNED |
+| A00 | Baseline, inventário e delta | DONE |
+| A01 | Contratos e fronteira de confiança | READY |
 | A02 | ABI, schemas e compatibilidade | PLANNED |
 | A03 | Catálogo de builtins, effects e backends | PLANNED |
 | A04 | Inspeção unificada e resumida | PLANNED |
@@ -81,7 +81,7 @@ Todas as vinte waves estão registradas. Caixa marcada significa entrega conclu�
 
 ### A00 — Baseline, inventário e delta
 
-**Estado:** IN_PROGRESS. **Dependências:** nenhuma.
+**Estado:** DONE. **Dependências:** nenhuma. **Evidência:** [A00-BASELINE.md](A00-BASELINE.md).
 
 Fixar commits e escopos de Axial, receptor e consumidor. Inventariar fontes, opcodes, builtins, capacidades e interfaces usando os registries existentes; separar presença no código de integração ativa. Classificar cada intenção da ADR como EXISTE, ESTENDER, INTEGRAR ou INVESTIGAR.
 
@@ -91,7 +91,7 @@ Fixar commits e escopos de Axial, receptor e consumidor. Inventariar fontes, opc
 
 ### A01 — Contratos e fronteira de confiança
 
-**Estado:** PLANNED. **Dependência:** A00.
+**Estado:** READY. **Dependência:** A00.
 
 Resolver conflitos documentais que afetem a implementação. Identificar quem admite o artefato, calcula a decisão, concede autoridade, publica o efeito e registra seu resultado. Usar ADR-042/043/044 para o consumidor e classificar o mapa Jash antigo como referência histórica.
 

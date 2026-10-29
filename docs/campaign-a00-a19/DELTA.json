@@ -1,0 +1,246 @@
+{
+  "schema": "axial.a00.delta.v1",
+  "baseline_commit": "26eec8630e8cf1dc3a1808f1580cc12d36410a8e",
+  "interpretation": "Classificação estática do trabalho necessário. Presença de fonte não prova consumo ou qualificação runtime.",
+  "waves": [
+    {
+      "id": "A00",
+      "classification": "ESTENDER",
+      "source_paths": [
+        "src/axi_bc.h",
+        "src/axi_builtin_registry.h",
+        "src/axi_cap_table.c"
+      ],
+      "finding": "Inventário reproduzível adicionado nesta wave; baseline estático fixado.",
+      "runtime_qualification": "NOT_EVALUATED"
+    },
+    {
+      "id": "A01",
+      "classification": "ESTENDER",
+      "source_paths": [
+        "src/axi_builtin.h",
+        "src/axi_effect.h",
+        "src/axi_gateway_v1.h"
+      ],
+      "finding": "Responsabilidades existentes precisam de uma matriz coerente; mapa Jash antigo é histórico no receptor examinado.",
+      "runtime_qualification": "NOT_EVALUATED"
+    },
+    {
+      "id": "A02",
+      "classification": "ESTENDER",
+      "source_paths": [
+        "include/axial/axi_embed_v1.h",
+        "abi/axi_embed_v1-amd64-sysv-lp64.tsv"
+      ],
+      "finding": "Pins públicos existem; status textual do header precisa ser reconciliado com a documentação.",
+      "runtime_qualification": "NOT_EVALUATED"
+    },
+    {
+      "id": "A03",
+      "classification": "ESTENDER",
+      "source_paths": [
+        "src/axi_builtin_registry.h",
+        "src/axi_cap_table.c",
+        "src/axi_effect.h"
+      ],
+      "finding": "Registries existem; uma projeção uniforme precisa distinguir builtins, effects e suporte de backend.",
+      "runtime_qualification": "NOT_EVALUATED"
+    },
+    {
+      "id": "A04",
+      "classification": "ESTENDER",
+      "source_paths": [
+        "src/axi_main.c",
+        "src/axi_iface.h",
+        "src/axi_dossier.c"
+      ],
+      "finding": "iface/caps/dossier existem; acrescentar resumo e consulta seletiva sem execução.",
+      "runtime_qualification": "NOT_EVALUATED"
+    },
+    {
+      "id": "A05",
+      "classification": "ESTENDER",
+      "source_paths": [
+        "src/axi_cap_infer.c",
+        "src/axi_diag.h",
+        "src/axi_admission_v1.c"
+      ],
+      "finding": "Diagnósticos e inferência existem; ligar razões e requisitos à visão autorizada.",
+      "runtime_qualification": "NOT_EVALUATED"
+    },
+    {
+      "id": "A06",
+      "classification": "ESTENDER",
+      "source_paths": [
+        "src/axi_iface.c",
+        "src/axi_contract.h"
+      ],
+      "finding": "Comparação direcional de interfaces existente; cenários não provam equivalência universal.",
+      "runtime_qualification": "NOT_EVALUATED"
+    },
+    {
+      "id": "A07",
+      "classification": "ESTENDER",
+      "source_paths": [
+        "src/axi_replay_v4.h",
+        "src/axi_contract.h"
+      ],
+      "finding": "AXR4 vincula argumentos/grants/resultado; mapear identidade sem criar protocolo concorrente.",
+      "runtime_qualification": "NOT_EVALUATED"
+    },
+    {
+      "id": "A08",
+      "classification": "INTEGRAR",
+      "source_paths": [
+        "src/axi_resource_envelope.h",
+        "src/axi_mem_account.h",
+        "src/axi_compile_budget.h"
+      ],
+      "finding": "Orçamentos existem; consumo efetivo depende do adaptador e do perfil.",
+      "runtime_qualification": "NOT_EVALUATED"
+    },
+    {
+      "id": "A09",
+      "classification": "INTEGRAR",
+      "source_paths": [
+        "src/axi_jm1_v1.h",
+        "src/axi_gateway_v1.h"
+      ],
+      "finding": "Core JM1 presente; consumidor Jash permanece UNWIRED no receptor fixado.",
+      "runtime_qualification": "NOT_EVALUATED"
+    },
+    {
+      "id": "A10",
+      "classification": "INTEGRAR",
+      "source_paths": [
+        "src/axi_local_consumer_v1.h",
+        "src/axi_ag1_v1.h",
+        "src/axi_aer1.h"
+      ],
+      "finding": "Peças de autoridade/publicação local presentes; primeiro cenário do programa deve ser isolado e explicitamente qualificado.",
+      "runtime_qualification": "NOT_EVALUATED"
+    },
+    {
+      "id": "A11",
+      "classification": "ESTENDER",
+      "source_paths": [
+        "src/axi_local_attempt_v1.h",
+        "src/axi_effect.h"
+      ],
+      "finding": "Estados de tentativa/efeito existem; expor reconciliação ao consumidor.",
+      "runtime_qualification": "NOT_EVALUATED"
+    },
+    {
+      "id": "A12",
+      "classification": "INTEGRAR",
+      "source_paths": [
+        "src/axi_sign.h",
+        "src/axi_contract.h",
+        "src/axi_admission_v1.h"
+      ],
+      "finding": "Assinatura e admissão existentes; qualificar o caminho do consumidor e preservar migração.",
+      "runtime_qualification": "NOT_EVALUATED"
+    },
+    {
+      "id": "A13",
+      "classification": "ESTENDER",
+      "source_paths": [
+        "src/axi_embed_v1.c",
+        "include/axial/axi_embed_v1.h"
+      ],
+      "finding": "Contextos e testes de lifecycle existem; separar estruturas imutáveis de autoridade por tentativa.",
+      "runtime_qualification": "NOT_EVALUATED"
+    },
+    {
+      "id": "A14",
+      "classification": "INVESTIGAR",
+      "source_paths": [
+        "src/axi_effect.h",
+        "src/axi_local_action_v1.h"
+      ],
+      "finding": "Planejamento seguro por efeito precisa de contrato de completude/precondições; não inferir suporte global.",
+      "runtime_qualification": "NOT_EVALUATED"
+    },
+    {
+      "id": "A15",
+      "classification": "ESTENDER",
+      "source_paths": [
+        "src/axi_dossier.c",
+        "src/axi_trace.h",
+        "src/axi_aer1.h"
+      ],
+      "finding": "Preservar contratos distintos de grafo declarado, witness e recibo; acrescentar correlação.",
+      "runtime_qualification": "NOT_EVALUATED"
+    },
+    {
+      "id": "A16",
+      "classification": "INTEGRAR",
+      "source_paths": [
+        "src/axi_platform.h",
+        "src/axi_platform_posix.c"
+      ],
+      "finding": "Provider host existe; qualificação Beyond depende dos contratos ADR-043/044 e do consumidor real.",
+      "runtime_qualification": "NOT_EVALUATED"
+    },
+    {
+      "id": "A17",
+      "classification": "ESTENDER",
+      "source_paths": [
+        "Makefile",
+        "tools/check.sh"
+      ],
+      "finding": "Suites existentes devem ser reutilizadas sobre alterações e perfis pertinentes.",
+      "runtime_qualification": "NOT_EVALUATED"
+    },
+    {
+      "id": "A18",
+      "classification": "ESTENDER",
+      "source_paths": [
+        "tools/audit80-runtime-bench.py",
+        "docs/audit80/runtime.md"
+      ],
+      "finding": "Benchmarks existentes dão método; estabelecer novas medições apenas para workloads entregues.",
+      "runtime_qualification": "NOT_EVALUATED"
+    },
+    {
+      "id": "A19",
+      "classification": "ESTENDER",
+      "source_paths": [
+        "docs/audit80/REPORT.md"
+      ],
+      "finding": "Relatório por perfil e revisão deve manter claims e limitações explícitos.",
+      "runtime_qualification": "NOT_EVALUATED"
+    }
+  ],
+  "related_snapshot": {
+    "repository": "FermiHart/Beyond_BDM",
+    "branch": "codex/gui20-phase1",
+    "commit": "050ba81e15dcd5304d2f833f4897964813f67e2f",
+    "boundary": "UNWIRED",
+    "jash_pin": "6c8f61ada6385dbb75a6547fc263ecf2bea5d666",
+    "scope": "This snapshot only; main is a different revision."
+  },
+  "findings": [
+    {
+      "id": "A00-F01",
+      "severity": "documentation/source-provenance",
+      "status": "OPEN",
+      "owner_wave": "A01",
+      "description": "CAP table comments reference docs/CAP-METHODS.tsv and tools/gen_cap_table.py, absent from the standalone baseline tree."
+    },
+    {
+      "id": "A00-F02",
+      "severity": "contract-documentation",
+      "status": "OPEN",
+      "owner_wave": "A02",
+      "description": "Public embed header candidate wording and preserved-ABI documentation need reconciliation; no binary break inferred."
+    },
+    {
+      "id": "A00-F03",
+      "severity": "integration-scope",
+      "status": "OPEN",
+      "owner_wave": "A09",
+      "description": "Jash map is proposed/historical; ADR-042 and UNWIRED boundary define the scoped integration work."
+    }
+  ]
+}
