@@ -1,157 +1,189 @@
 <!doctype html>
+<!-- SPDX-License-Identifier: LicenseRef-SPL-1.0 -->
+<!-- Copyright (c) 2026, F E R M I ∞ H A R T <contact@fermihart.com> -->
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Axial — code that answers for what it does</title>
-<meta name="description" content="Axial is a small capability-native language for the age of agents. Every cell declares what it can touch, what it can cost, and what it proved. Agents write. Humans review and seal. The system enforces.">
-<meta name="theme-color" content="#05070A">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%2305070A'/%3E%3Cpath d='M8 2v12M2 8h12' stroke='%235EE1FF'/%3E%3C/svg%3E">
-<link rel="stylesheet" href="css/site.css">
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#070a12">
+  <meta name="description" content="Axial makes code answer before it gets power: inspectable contracts, explicit effect grants, VM fuel, checked laws, signed artifacts and replay. Watch the real C99 toolchain run.">
+  <link rel="canonical" href="https://fermihart.github.io/axial/">
+  <meta property="og:title" content="Axial — Before code gets power, make it answer.">
+  <meta property="og:description" content="Real contracts. Explicit grants. Metered VM work. Signed artifacts. Watch the C99 toolchain accept, execute, replay—and refuse.">
+  <meta property="og:url" content="https://fermihart.github.io/axial/">
+  <meta property="og:image" content="https://fermihart.github.io/axial/assets/runtime-guards.png">
+  <title>Axial — Before code gets power, make it answer.</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath fill='%23070a12' d='M0 0h24v24H0z'/%3E%3Cpath d='m12 3 8 5v8l-8 5-8-5V8zM12 3v18M4 8l8 5 8-5' fill='none' stroke='%2365e3ef'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="css/site.css">
 </head>
 <body>
-
-<div id="aurora" aria-hidden="true"></div>
-
-<nav id="topnav" aria-label="primary">
-  <a class="wordmark" href="#top">AXIAL<span class="wm-dot">●</span></a>
-  <div class="nav-links">
-    <a href="#cell">The Cell</a>
-    <a href="#three">Three Ideas</a>
-    <a href="#artifact">One File</a>
-    <a href="#start">Start</a>
-    <a class="nav-cta" href="#verify">Verify</a>
-  </div>
-</nav>
-
-<header id="top" class="hero wrap">
-  <p class="kicker">A LANGUAGE FOR THE AGE OF AGENTS</p>
-  <h1>Code that answers<br>for what <span class="grad">it does.</span></h1>
-  <p class="hero-statement">Agents write more code every day than humans do. Axial makes every line of it answer for itself.</p>
-  <p class="lede">What if the code carried its own proof? Checked before it runs. Sealed into the artifact. Verified every time it loads. What if reviewing agent-written code took one screen instead of one weekend?</p>
-  <div class="cta-row">
-    <a class="btn btn-primary" href="#start">Run it in 60 seconds</a>
-    <a class="btn btn-ghost" href="#verify">Don't trust us — verify</a>
-  </div>
-  <p class="trio">Agents write. Humans review and seal. The system enforces.</p>
-
-  <div class="metrics" aria-label="Axial in numbers">
-    <div class="metric"><b>1</b><span>screen to review any cell</span></div>
-    <div class="metric"><b>1</b><span>file to deploy anywhere</span></div>
-    <div class="metric"><b>4</b><span>symbols in the C API</span></div>
-    <div class="metric"><b>0</b><span>dependencies. C99 only</span></div>
-    <div class="metric"><b>0</b><span>ambient authority, ever</span></div>
-    <div class="metric t-pass"><b>67/67</b><span>original golden checks</span></div>
-  </div>
-  <p class="metrics-note">Run <code>make gate-fast</code> for the original goldens. The full <code>make gate</code> adds the 40-wave audit regressions and requires Python 3 and local Unix IPC.</p>
-</header>
-
-<main>
-<section id="cell" class="wrap">
-  <p class="kicker">SAY HELLO TO THE CELL</p>
-  <h2>Four lines. The whole truth.<br>Nothing <span class="grad">but the truth.</span></h2>
-  <div class="code-grid">
-    <pre class="code"><code>cell greet : fn(out: cap io.Write) -&gt; u64
-  fuel 10_000
-{
-  out.write("beyond&gt; ")?
-  ret 0
-}</code></pre>
-    <div class="code-notes">
-      <p><b>Line 1 is the blast radius.</b> The name, the function, the one capability it may touch, the one thing it may return. There is nowhere to hide — the grammar has no syntax for hiding.</p>
-      <p><b>Line 2 is the budget.</b> Ten thousand fuel. Not a suggestion. When it runs out, the run ends as a sealed verdict — never a 3&nbsp;AM page.</p>
-      <p><b>The body cannot outgrow the header.</b> Two independent walls — the checker and the runtime — enforce the same promise. If it's not in the signature, it cannot happen.</p>
+  <a class="skip-link" href="#main">Skip to content</a>
+  <div class="aurora" aria-hidden="true"></div>
+  <nav class="topnav" aria-label="Main navigation">
+    <a class="wordmark" href="#top">AXIAL<span aria-hidden="true">◇</span></a>
+    <div class="nav-links">
+      <a href="#watch">In action</a>
+      <a href="#cell">The contract</a>
+      <a href="#policy">The decisions</a>
+      <a class="nav-cta" href="https://github.com/fermihart/axial">Read the source ↗</a>
     </div>
-  </div>
-  <p class="lede">No hidden imports. No ambient filesystem. No network that snuck in. No bill you didn't approve. <b>That's not a guideline. That's the language.</b></p>
-</section>
+  </nav>
 
-<section id="three" class="wrap">
-  <p class="kicker">THREE IDEAS. THAT'S IT.</p>
-  <h2>Simple enough to hold<br>in your <span class="grad">head.</span></h2>
-  <div class="law-grid">
-    <article><span>01 / AUTHORITY</span><h3>The signature is the blast radius.</h3><p>Types, error sets, fuel budget, every capability — declared up front, in the open. Review concentrates on the contract, because the body can't exceed it.</p></article>
-    <article><span>02 / BUDGET</span><h3>Every run has a price.</h3><p>Every instruction costs a deterministic number of fuel. A runaway computation doesn't hang your machine — it ends. Boring. Predictable. Beautiful.</p></article>
-    <article><span>03 / PROOF</span><h3>No green proof, no artifact.</h3><p><code>axi seal</code> runs every proof on the real VM. One red law, one trap, zero proofs — nothing is emitted. The gate doesn't negotiate.</p></article>
-  </div>
-</section>
+  <header id="top" class="hero wrap">
+    <div class="hero-grid">
+      <div>
+        <p class="eyebrow">A LANGUAGE FOR THE AGE OF AGENTS</p>
+        <h1>Before code gets power,<br><span class="gradient">make it answer.</span></h1>
+        <p class="hero-statement">Writing the function is getting easier.<br>Knowing what it can do should not get harder.</p>
+        <p class="lede">Axial puts the questions where you can inspect them: what effects are declared, what the operator grants, how much VM work is allowed, who signed the bytes, and which executable laws passed.</p>
+        <div class="cta-row">
+          <a class="button primary" href="#watch">Watch it run <span aria-hidden="true">↓</span></a>
+          <a class="button secondary" href="#start">Build it yourself</a>
+        </div>
+        <p class="hero-note">Agents write. Humans set the limits. Axial checks the contract.</p>
+      </div>
+      <picture class="hero-art">
+        <source media="(max-width: 640px)" srcset="assets/hero-cell-mobile.svg">
+        <img src="assets/hero-cell.svg" width="1200" height="640" fetchpriority="high" alt="Axial contract geometry joins types, capabilities, fuel, executable laws, signatures, and replay in a cell">
+      </picture>
+    </div>
+    <div class="facts" aria-label="Implementation facts">
+      <div><span>IMPLEMENTATION</span><strong>C99</strong><small>Standard host libraries. Vendored crypto.</small></div>
+      <div><span>ARTIFACT</span><strong>Signed AXB v7</strong><small>Operator-selected producer trust.</small></div>
+      <div><span>EXECUTION</span><strong>Metered fuel</strong><small>A deterministic VM instruction budget.</small></div>
+      <div><span>STATUS</span><strong>Language beta</strong><small>Boundaries are part of the contract.</small></div>
+    </div>
+  </header>
 
-<section id="artifact" class="wrap">
-  <p class="kicker">AND ONE MORE THING…</p>
-  <h2>The artifact is <span class="grad">one file.</span></h2>
-  <p class="lede">Bytecode. Capability manifest. Proof record. Signature. Together, in a single <code>.axb</code>. Deploy means copying it — to a server, a shell, a sovereign OS. It runs, or it refuses <b>with a reason a machine can repair</b>. A flipped byte is a refusal, never silent drift.</p>
-  <pre class="check"><code>AXI-R008 main:0: fuel exhausted: spent 100 of 100, next op needs 1
-  | fix: raise that outer budget or make the cell cheaper</code></pre>
-  <p class="lede">Every error. One cause. One location. One mechanical fix. Agents don't guess anymore — they apply. And every effect lands in a <b>hash-chained ledger</b>, one ordered receipt per action. <i>"What did this run do?"</i> finally has a cryptographic answer.</p>
-  <div class="chain" aria-label="The Axial pipeline">
-    <span><b>write</b><small>canonical grammar</small></span><i>→</i>
-    <span><b>check</b><small>types + caps</small></span><i>→</i>
-    <span><b>seal</b><small>proofs must be green</small></span><i>→</i>
-    <span><b>sign</b><small>attribute authorship</small></span><i>→</i>
-    <span><b>run</b><small>fueled + logged</small></span><i>→</i>
-    <span><b>replay</b><small>bit-identical</small></span>
-  </div>
-</section>
+  <main id="main">
+    <section id="watch" class="wrap section">
+      <div class="section-heading">
+        <div><p class="eyebrow">THE ARTIFACT IS THE ARGUMENT</p><h2>Watch it accept.<br>Watch it <span class="gradient">refuse.</span></h2></div>
+        <p class="lede">A false law. A passing law. An explicit grant. A bound replay. A loop that runs out of fuel. One changed bit. These are real commands, not imagined product states.</p>
+      </div>
+      <figure class="demo" data-demo>
+        <picture>
+          <source media="(prefers-reduced-motion: reduce)" srcset="assets/runtime-guards.png">
+          <img src="assets/axial-in-action.gif" data-animation="assets/axial-in-action.gif" data-poster="assets/runtime-guards.png" width="1320" height="960" decoding="async" alt="Real Axial command session: inspect, refuse a false law, seal, verify, execute, replay with a separate recorder key, refuse missing authority, stop a fuel-bound loop, and reject tampered bytes">
+        </picture>
+        <div class="demo-toolbar"><span>ACTUAL CLI · PUBLIC TEST-VECTOR KEYS · PACED CAPTURE</span><button type="button" data-toggle hidden>Pause animation</button><a href="assets/axial-in-action.gif">Open full size ↗</a></div>
+        <figcaption>Captured from the compiled toolchain through a real shell PTY. Typing and pauses are paced for readability. Green footer verdicts are assertions by the capture driver, not extra output invented for Axial.</figcaption>
+      </figure>
+      <div class="triptych">
+        <article><span>01 / INSPECT</span><h3>Read the terms.</h3><p>Types, capability requirements and fuel are derived into an inspectable interface. The body is no substitute for a clear contract.</p></article>
+        <article><span>02 / ADMIT</span><h3>Ask both questions.</h3><p><code>verify</code> checks the selected producer signature. <code>check-seal</code> re-executes checked laws. Authorship is not the same as checked behavior.</p></article>
+        <article><span>03 / EXECUTE</span><h3>Keep the boundary.</h3><p>A declared effect still needs an operator grant. Fuel meters VM work. A recorder has its own trust identity, distinct from the producer.</p></article>
+      </div>
+    </section>
 
-<section id="start" class="wrap">
-  <p class="kicker">SEE IT. THEN BELIEVE IT.</p>
-  <h2>Sixty seconds.<br>No excuses.</h2>
-  <p class="lede">No dependencies beyond a C compiler. No network. No account.</p>
-  <pre class="check"><code>make dev                          # builds ./build/axi — C99 only
+    <section id="cell" class="wrap section">
+      <p class="eyebrow">SMALL ENOUGH TO INSPECT</p>
+      <h2>The contract belongs<br><span class="gradient">next to the code.</span></h2>
+      <div class="code-grid">
+        <pre class="code"><code>cell hello : fn(a: u64, b: u64) -&gt; u64
+  fuel 10_000
+  pure
+{
+  let n = a + b
+  ret n
+}</code></pre>
+        <div class="code-notes">
+          <p><b>A real source example.</b> This is <code>examples/hello.axi</code>, not syntax invented for a landing page.</p>
+          <p><b>An explicit budget.</b> Instruction fuel gives VM work a deterministic price. A budget is part of the interface, not a comment hoping someone will read it.</p>
+          <p><b>A useful distinction.</b> The interface helps focus review. It does not establish correctness for every input or certify the embedding host.</p>
+        </div>
+      </div>
+      <details class="evidence"><summary>Inspect the real derived policy contract <span aria-hidden="true">↗</span></summary><a href="assets/cell-contract.png"><img src="assets/cell-contract.png" width="1320" height="960" loading="lazy" alt="Actual axi iface output for the example policy"></a></details>
+    </section>
+
+    <section id="artifact" class="wrap section">
+      <p class="eyebrow">ONE MODULE. EXPLICIT TRUST.</p>
+      <h2>Ship the artifact.<br><span class="gradient">Not a promise.</span></h2>
+      <p class="lede">Bytecode, interface metadata, a producer signature and—when sealed—a checked-law certificate travel in one <code>.axb</code>. Trust anchors remain outside the module. Replay evidence is a separate signed episode.</p>
+      <div class="pipeline" aria-label="Toolchain steps"><span>write</span><i>→</i><span>check</span><i>→</i><span>seal</span><i>→</i><span>verify</span><i>→</i><span>run</span><i>→</i><span>replay</span></div>
+      <div class="artifact-grid">
+        <article class="statement"><span>BEHAVIOR</span><h3>A passing law is an executed check.</h3><p><code>seal</code> runs the <code>law_*</code> cells. False, trapped or absent laws prevent publication of a new checked artifact. These are stated executable cases, not formal mathematical proofs of all behavior.</p></article>
+        <article class="statement"><span>AUTHORSHIP</span><h3>A valid signature identifies a producer.</h3><p>It authenticates bytes under the operator's selected key. It does not prove the signer is benevolent, that the policy is wise, or that the host will honor a decision.</p></article>
+      </div>
+      <a class="guard-image" href="assets/runtime-guards.png"><img src="assets/runtime-guards.png" width="1320" height="960" loading="lazy" alt="Real diagnostics refusing an ungranted effect, exhausted fuel and a modified signed artifact"></a>
+    </section>
+
+    <section id="policy" class="wrap section">
+      <div class="section-heading">
+        <div><p class="eyebrow">PUT A DECISION AT THE BOUNDARY</p><h2>Five requests.<br><span class="gradient">Visible answers.</span></h2></div>
+        <p class="lede">The real C embedding demo evaluates a sample policy and reports its decision and fuel. It keeps the unknown-command default visible, too. No cherry-picked verdicts.</p>
+      </div>
+      <figure class="demo" data-demo>
+        <picture>
+          <source media="(prefers-reduced-motion: reduce)" srcset="assets/policy.png">
+          <img src="assets/policy-in-action.gif" data-animation="assets/policy-in-action.gif" data-poster="assets/policy.png" width="1320" height="960" loading="lazy" alt="Actual policy evaluation: workspace request allowed, outside request denied, secret-name export denied, safe export allowed, unknown builtin allowed">
+        </picture>
+        <div class="demo-toolbar"><span>INTERNAL EMBEDDING DEMO · FIVE ASSERTED CASES</span><button type="button" data-toggle hidden>Pause animation</button><a href="assets/policy-in-action.gif">Open full size ↗</a></div>
+        <figcaption>The displayed <code>sed</code> command selects the real verdict section; it does not rewrite results. <code>rm</code>/<code>export</code> are evaluated requests, not host commands being executed or intercepted. This sample is not a hardened filesystem policy.</figcaption>
+      </figure>
+      <p class="scope-note">This demonstration uses the internal compatibility API. The declared public v1 embedding profile is pure/CAP-free, with a four-function C surface. An embedding host must enforce the returned decision. <a href="https://github.com/fermihart/axial/blob/main/docs/BETA-LANGUAGE.md">Read the declared scope ↗</a></p>
+    </section>
+
+    <section id="start" class="wrap section start">
+      <p class="eyebrow">NO CLOUD ACCOUNT. NO PACKAGE REGISTRY.</p>
+      <h2>Build it.<br><span class="gradient">Ask it questions.</span></h2>
+      <p class="lede">A C99 compiler, the standard host libraries and vendored cryptography build the product. POSIX tools run the original golden gate and demos. Source-identity and full audit gates also require Python 3.</p>
+      <pre class="code"><code>git clone https://github.com/fermihart/axial.git
+cd axial
+make dev
 ./build/axi check examples/hello.axi
-./build/axi iface examples/policy.axi   # read the whole contract
-
+./build/axi iface examples/policy.axi
+make gate-fast
 make demo &amp;&amp; sh scripts/jash_policy_demo.sh
-# rm inside workspace   -&gt; ALLOW (fuel=51)
-# rm outside workspace  -&gt; DENY  (fuel=51)
-# export secret name    -&gt; DENY
-# unknown builtin       -&gt; ALLOW
+sh scripts/demo-supply-chain.sh</code></pre>
+      <p class="scope-note"><code>make gate-fast</code> runs the 67 original host goldens. The full <code>make gate</code> additionally exercises compiler, numeric, runtime, local-authority, worker and ABI/identity audit checks. Its authority fixtures require real UID transitions; unavailable tests fail rather than becoming skipped passes. Read the <a href="https://github.com/fermihart/axial/blob/main/docs/audit80/gates.md">host requirements</a> before selecting an explicit privileged runner. This page does not claim that the media capture ran the full audit.</p>
+      <p class="scope-note">The <a href="https://github.com/fermihart/axial/blob/main/docs/audit80/REPORT.md">80-wave audit</a> and <a href="https://github.com/fermihart/axial/blob/main/docs/audit80/migration.md">migration notes</a> remain authoritative. Old CHECKED seals require re-execution and resealing under the corrected checker identity; CLI input/quota limits are documented there. The media helper separately asserts the seal, grant, fuel, tamper and replay cases shown here.</p>
+      <details class="reproduce"><summary>Reproduce the recordings</summary><p>Install the normal build tools plus Python 3, Pillow, <code>pyte</code>, Bash, Fontconfig and DejaVu Sans Mono. The helper reruns the host gate and captures the real CLI with private test workspaces.</p><pre class="code"><code>python3 tools/presentation.py
+python3 tools/presentation.py --check</code></pre><p>Only curated media are published. Raw transcripts, test keys, modules and episodes stay local. Source fingerprints and shared-capture checks reject stale or mixed media. Regeneration reproduces behavior, not necessarily identical animation timing or bytes.</p></details>
+    </section>
 
-make gate-fast                     # 67 original golden checks</code></pre>
-  <p class="metrics-note">The entire C embedding API is four symbols — <code>abi_version</code>, <code>context_create</code>, <code>context_destroy</code>, <code>eval</code>. That's not minimalism as fashion. That's minimalism as attack surface.</p>
-</section>
+    <section id="boundary" class="wrap section boundary">
+      <p class="eyebrow">THE BOUNDARY IS PART OF THE PRODUCT</p>
+      <h2>Ambition is not<br><span class="gradient">a release claim.</span></h2>
+      <p class="lede">This is the language/toolchain beta. It contains the grammar, checker, compiler, bytecode, VM, fuel, effects, signing, sealing, replay and embedding implementations. It does not establish boot-rooted attestation, universal host mutation mediation, confidential receipts, an externally certified trusted runner or production readiness.</p>
+      <p class="scope-note">VM fuel is not a universal wall-clock or host-process limit. Checked laws are executable validation, not a proof of arbitrary program correctness. Signatures need an operator's trust anchor. Keep the declared embedding profile in view.</p>
+      <div class="cta-row"><a class="button primary" href="https://github.com/fermihart/axial">Read the code ↗</a><a class="button secondary" href="https://github.com/fermihart/axial/blob/main/docs/OVERVIEW.md">Explore the design</a></div>
+      <p class="closing">Let agents move fast.<br><strong>Keep authority deliberate.</strong></p>
+    </section>
+  </main>
 
-<section id="verify" class="wrap">
-  <p class="kicker">DUE DILIGENCE</p>
-  <h2>Don't trust this page.</h2>
-  <p class="lede">Seriously. Don't. Trust is the old model — trust the package, trust the registry, trust the install script. Axial was built for people who stopped trusting. So verify instead. Clone it. Build it. Run its gate. On your machine, your verdict.</p>
-  <pre class="check"><code>git clone https://github.com/FermiHart/axial.git &amp;&amp; cd axial
-make dev &amp;&amp; make gate          # full audit gate; Python 3 required</code></pre>
-  <div class="status-table" aria-label="Scope honesty">
-    <div class="status-row status-head"><span>Layer</span><span>Boundary</span><span>State</span></div>
-    <div class="status-row"><b>Language</b><span>Grammar, types, bytecode, VM, fuel, effects, ledger, replay, sealing, C API</span><span class="state state-witnessed">GATED</span></div>
-    <div class="status-row"><b>Supply chain</b><span>write → check → seal → sign → verify → run, single-file deploy</span><span class="state state-witnessed">GATED</span></div>
-    <div class="status-row"><b>Boot-rooted attestation</b><span>End-to-end provenance from this tree alone</span><span class="state state-building">DIRECTION</span></div>
-    <div class="status-row"><b>Universal mediation</b><span>A policy plane over every host mutation</span><span class="state state-building">DIRECTION</span></div>
-  </div>
-  <p class="metrics-note">We'd rather promise little and prove all of it. Details: <code>docs/BETA-LANGUAGE.md</code>. License: Sovereign Public License 1.0.</p>
-</section>
-</main>
+  <footer class="wrap">
+    <a class="wordmark" href="#top">AXIAL<span aria-hidden="true">◇</span></a>
+    <p>F E R M I ∞ H A R T · <a href="mailto:contact@fermihart.com">contact@fermihart.com</a></p>
+    <p><a href="https://github.com/fermihart/axial/blob/main/LICENSE">Sovereign Public License 1.0</a> · <code>LicenseRef-SPL-1.0</code></p>
+    <p><a href="https://github.com/fermihart/axial#readme">Repository guide</a> · <a href="https://github.com/fermihart/axial/blob/main/docs/SPEC-GRAMMAR.md">Grammar</a> · <a href="https://github.com/fermihart/axial/blob/main/docs/BETA-LANGUAGE.md">Beta scope</a></p>
+  </footer>
 
-<footer class="wrap">
-  <p class="foot-mark">AXIAL<span class="wm-dot">●</span></p>
-  <p>Agents write. Humans review and seal. The system enforces.</p>
-  <div class="foot-links">
-    <a href="#cell">the cell</a> ·
-    <a href="#three">three ideas</a> ·
-    <a href="#artifact">one file</a> ·
-    <a href="#start">start</a> ·
-    <a href="#verify">verify</a>
-  </div>
-  <span>Sovereign Public License 1.0 · <code>LicenseRef-SPL-1.0</code></span>
-</footer>
-
-<script>
-(function () {
-  var nav = document.getElementById('topnav');
-  function onScroll() {
-    if (window.scrollY > 24) { nav.classList.add('scrolled'); }
-    else { nav.classList.remove('scrolled'); }
-  }
-  window.addEventListener('scroll', onScroll, { passive: true });
-  onScroll();
-})();
-</script>
-
+  <script>
+  (function () {
+    'use strict';
+    var reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    document.querySelectorAll('[data-demo]').forEach(function (figure) {
+      var image = figure.querySelector('img');
+      var source = figure.querySelector('source');
+      var button = figure.querySelector('[data-toggle]');
+      var playing = !reduced.matches;
+      function update(play) {
+        playing = play;
+        var url = play ? image.dataset.animation : image.dataset.poster;
+        source.srcset = url;
+        image.src = url;
+        button.textContent = play ? 'Pause animation' : 'Play animation';
+        button.setAttribute('aria-pressed', String(play));
+      }
+      button.hidden = false;
+      update(playing);
+      button.addEventListener('click', function () { update(!playing); });
+      reduced.addEventListener('change', function (event) {
+        if (event.matches) update(false);
+      });
+    });
+  })();
+  </script>
 </body>
 </html>

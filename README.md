@@ -1,112 +1,171 @@
-# Axial
+<!-- SPDX-License-Identifier: LicenseRef-SPL-1.0 -->
+<!-- Copyright (c) 2026, F E R M I ∞ H A R T <contact@fermihart.com> -->
 
-### Code that answers for what it does.
+<p align="center">
+  <picture>
+    <source media="(max-width: 600px)" srcset="website/assets/hero-cell-mobile.svg">
+    <img src="website/assets/hero-cell.svg" width="100%" alt="Axial contract geometry: types, capabilities, fuel, executable laws, signatures, and replay meet in one cell">
+  </picture>
+</p>
 
-> Agents write. Humans review and seal. The system enforces.
+<h1 align="center">Axial</h1>
+<p align="center">
+  <strong>Code that answers. Before it gets power.</strong><br>
+  Agents write. Humans set the limits. Axial checks the contract.
+</p>
+<p align="center">
+  <a href="#watch-the-contract-become-an-artifact">WATCH IT RUN</a> ·
+  <a href="#build-it-ask-it-questions">BUILD IT</a> ·
+  <a href="https://fermihart.github.io/axial/">OPEN THE WEBSITE</a> ·
+  <a href="docs/SPEC-GRAMMAR.md">READ THE LANGUAGE</a> ·
+  <a href="website/index.html">STANDALONE PAGE SOURCE</a>
+</p>
 
-[![License: SPL-1.0](https://img.shields.io/badge/License-SPL--1.0-5EE1FF?style=flat-square)](LICENSE)
-[![C99](https://img.shields.io/badge/C99-zero_deps-8A7CFF?style=flat-square)](Makefile)
-[![Gate](https://img.shields.io/badge/gate-67%2F67-green?style=flat-square)](tools/check.sh)
+Agents can write a function faster than you can finish reading it.
+That is extraordinary. It also changes the question that matters.
 
----
+**Not just: does this code work?**
 
-There's a moment happening right now. Agents write more code every day than humans do. And every line of it runs somewhere — with keys, with network, with your filesystem one typo away.
+**What will it be allowed to do when it runs?**
 
-We asked a different question.
+Which effects can it request? How much VM work can it spend? Who signed
+these exact bytes? Which executable laws passed before publication?
+Can you replay a recorded invocation under the right trust anchors?
 
-**What if the code carried its own proof?**
+Axial makes those questions part of the engineering surface: inspectable
+contracts, explicit effect grants, deterministic instruction fuel, signed
+artifacts, and executable law checks. A small C99 toolchain for a world
+where producing code is easy—and granting it authority should be deliberate.
 
-Not a comment. Not a promise. A proof — checked before it runs, sealed into the artifact, verified every time it loads. What if reviewing agent-written code took one screen instead of one weekend? What if deploying it meant copying *one file* — and a flipped byte meant refusal, not silent drift?
+## Watch the contract become an artifact.
 
-That's Axial.
+<p align="center">
+  <picture>
+    <source media="(prefers-reduced-motion: reduce)" srcset="website/assets/runtime-guards.png">
+    <img src="website/assets/axial-in-action.gif" width="100%" alt="Real Axial CLI capture: inspect a contract, refuse a false law, seal and verify a passing artifact, execute it, require an effect grant, replay with a separate recorder key, and reject fuel exhaustion and tampered bytes">
+  </picture>
+</p>
 
----
+<p align="center"><em>Actual compiled CLI output from an actual shell session.
+Typing and pauses are paced for readability. The keys are public test
+vectors, not production credentials. <a href="website/assets/axial-in-action.gif">Open the full animation</a>.</em></p>
 
-## Say hello to the cell.
+| Ask the question | Watch the answer |
+|---|---|
+| What is the contract? | `axi iface` derives types, capability requirements and fuel declarations. |
+| Did the law pass? | A false `law_*` returns a diagnostic and emits no new artifact; a green case seals. |
+| Who signed these bytes? | `axi verify` checks against an explicitly selected producer key. |
+| Were the checked laws re-run? | `axi check-seal` re-executes the certificate's laws. |
+| Was the effect granted? | A declared but ungranted `io.Write` is refused. |
+| Can this run be reconstructed? | A distinct recorder identity signs an episode; replay checks its bound invocation and result. |
+| What happens at the boundary? | A loop stops at its VM fuel ceiling. A one-bit modified artifact is refused. |
 
-Everything in Axial is a **cell**. One function. Its contract. Its budget. Its proof. Hashed together, sealed forever.
+## Small enough to inspect. Precise enough to question.
+
+The unit is a **cell**: a function with a declared interface and execution
+budget. Here is a real source example from this tree:
 
 ```axi
-cell greet : fn(out: cap io.Write) -> u64
+cell hello : fn(a: u64, b: u64) -> u64
   fuel 10_000
+  pure
 {
-  out.write("beyond> ")?
-  ret 0
+  let n = a + b
+  ret n
 }
 ```
 
-Read that again. Slowly.
+No invented syntax. Run `axi check examples/hello.axi`, then inspect a
+larger contract with `axi iface examples/policy.axi`.
 
-In four lines you know *everything this code is allowed to do*. Not what the docs say. Not what the author intended. What it **can** do. The body cannot outgrow the header — two independent walls, the checker and the runtime, enforce the same promise.
+<details>
+<summary><strong>Open the actual derived contract</strong></summary>
 
-**No hidden imports. No ambient filesystem. No network that snuck in. No bill you didn't approve.** If it's not in the signature, it cannot happen. That's not a guideline. That's the language.
+<img src="website/assets/cell-contract.png" width="100%" alt="Actual axi iface output showing the policy's decision type, fs.Read capability and fuel declarations">
 
-## Three ideas. That's it.
+</details>
 
-**1. The signature is the blast radius.**
-Types, error sets, fuel budget, every capability — declared up front, in the open. Review concentrates on the contract, because the body can't exceed it. One screen tells you the whole story.
+The interface helps focus review. It does not tell you that the function
+is correct for every input, that its policy is wise, or that a host adapter
+is trustworthy. Those are different questions—and Axial keeps them distinct.
 
-**2. Every run has a budget.**
-Every instruction has a deterministic price. A runaway computation doesn't hang your machine at 3 AM — it ends as a sealed verdict: *fuel exhausted*. Boring. Predictable. Beautiful.
+## A signature is not a passing law.
 
-**3. No green proof, no artifact.**
-`axi seal` runs every proof cell on the real VM. All green? You get your artifact. One red law, one trap, zero proofs? **Nothing is emitted.** There is no partial seal, no "ship it anyway" mode. The gate doesn't negotiate.
+**Authorship and checked behavior are not interchangeable.**
 
-## And one more thing…
+`axi seal` executes the `law_*` cells on the VM before emitting a checked,
+signed artifact. A false law, a trapping law, or no laws means refusal.
+`axi verify` checks producer authentication; `axi check-seal` re-executes
+the checked laws. Signed but unchecked artifacts are a separate state.
 
-The artifact is **one file**.
+These are **executable checks over stated cases**, not formal mathematical
+proofs of all behavior. A signature authenticates an artifact under the
+operator's selected key; it does not make the signer benevolent.
 
-Bytecode. Capability manifest. Proof record. Signature. Together. Deploy means copying it. Copy it to a server, a shell, a sovereign OS — it runs, or it refuses *with a reason a machine can repair*:
+The module travels as one `.axb` file. Trust anchors remain external and
+explicit. Replay evidence is a separate signed episode, with a recorder
+identity distinct from the producer.
 
-```
-AXI-R008 main:0: fuel exhausted: spent 100 of 100, next op needs 1
-  | fix: raise that outer budget or make the cell cheaper
-```
+## Power is granted. Not guessed.
 
-Every error has one cause, one location, one mechanical fix. Agents don't guess. They apply.
+A capability declaration is only one side of the decision. In the CLI
+effect path, the operator must also grant the effect. A module requesting
+`io.Write` does not automatically receive it.
 
-And every effect it ever performs lands in a **hash-chained ledger** — one ordered receipt line per action. "What did this run do?" finally has a cryptographic answer.
+Fuel gives VM instruction work a deterministic price. Exhaustion is a
+diagnostic, not an indefinitely running VM loop. Host calls and integrations
+still have their own assumptions: fuel is not a universal wall-clock or
+host-process security boundary.
 
-## See it. Then believe it.
+<p align="center">
+  <a href="website/assets/runtime-guards.png"><img src="website/assets/runtime-guards.png" width="100%" alt="Actual CLI refusals for a missing capability grant, exhausted instruction fuel, and a one-bit modified signed artifact"></a>
+</p>
 
-Sixty seconds. No dependencies beyond a C compiler. No network. No account. No excuses.
+## Five decisions. A real embedding demo.
+
+<p align="center">
+  <picture>
+    <source media="(prefers-reduced-motion: reduce)" srcset="website/assets/policy.png">
+    <img src="website/assets/policy-in-action.gif" width="100%" alt="The real C embedding demo evaluates five policy cases, including allowed workspace removal, denied outside-workspace removal, and denied secret-name export">
+  </picture>
+</p>
+
+The sample evaluates five requests and reports both decisions and fuel.
+The visible `sed` command selects the verdict section; it does not rewrite
+the results. `rm` and `export` are **requests evaluated by the example**,
+not host commands being executed or intercepted by this recording.
+
+This demo uses the internal compatibility embedding API. The declared
+[public v1 embedding profile](docs/BETA-LANGUAGE.md) is pure/CAP-free and
+has a [four-function C surface](include/axial/axi_embed_v1.h). Do not confuse
+the two. An embedding host must actually honor a policy's decision; the
+example is not a universal command sandbox or hardened filesystem policy.
+
+## Build it. Ask it questions.
+
+The product uses a C99 compiler, the standard host libraries, and vendored
+cryptography. No package registry, cloud service, or account is required
+to build and run it. The original golden gate and demos use POSIX build
+tools. Source-identity and full audit gates also require Python 3.
 
 ```sh
-make dev                          # builds ./build/axi — C99 only
-./build/axi check examples/hello.axi
-./build/axi iface examples/policy.axi   # read the whole contract
-
-./build/axi asm tests/run/fib.axs -o /tmp/fib.axb --signing-key <seed>
-./build/axi run /tmp/fib.axb fib 10 --trusted-key <key>
-# u64 55
-
-make gate-fast                     # 67 original golden checks
-make gate AUTHORITY_RUNNER=sudo    # full host gate; see UID requirements below
-make release                       # separate build-release/axi, portable -O2
-```
-
-Want the full story — embed it in C, sign a policy, watch a shell ask permission?
-
-```sh
-make demo && sh scripts/jash_policy_demo.sh
-# rm inside workspace   -> ALLOW (fuel=51)
-# rm outside workspace  -> DENY  (fuel=51)
-# export secret name    -> DENY
-```
-
-Four symbols. That's the entire C API: `abi_version`, `context_create`, `context_destroy`, `eval`. See `include/axial/axi_embed_v1.h`.
-
-## Don't trust this page.
-
-Seriously. Don't.
-
-Trust is the old model — trust the package, trust the registry, trust the install script. Axial was built for people who stopped trusting. So verify instead:
-
-```sh
-git clone https://github.com/FermiHart/axial.git && cd axial
+git clone https://github.com/fermihart/axial.git
+cd axial
 make dev
-make gate AUTHORITY_RUNNER=sudo
+./build/axi check examples/hello.axi
+./build/axi iface examples/policy.axi
+make gate-fast
+make demo && sh scripts/jash_policy_demo.sh
+sh scripts/demo-supply-chain.sh
 ```
+
+`make gate-fast` runs the **67 original host golden checks**: lexer, parser,
+canonical form, types, interfaces, hash vectors, bytecode round trips and
+runtime cases. It is not the full audit or a security certification. The media
+capture separately asserts the seal, grant, replay, tamper and fuel cases
+shown above.
+
+### Full audit and migration contracts
 
 The original 67 goldens remain available through `make gate-fast`. The full
 `make gate` also covers signed CLI effects/replay, compiler quotas, exact
@@ -121,7 +180,8 @@ already has suitable credentials, use the default `AUTHORITY_RUNNER=direct`.
 An unavailable required test fails explicitly. All fixtures use public
 deterministic test identities. [Gate commands and scope](docs/audit80/gates.md).
 
-## 80-wave audit
+<details>
+<summary><strong>80-wave audit: retained implementation and migration notes</strong></summary>
 
 The [W41–W80 report](docs/audit80/REPORT.md) continues the
 [first 40 waves](docs/audit40/REPORT.md), with checkpoints every ten waves.
@@ -146,27 +206,56 @@ commands have a default 256-MiB invocation quota, configurable with
 [migration notes](docs/audit80/migration.md) before recompiling old decimal
 literals, escaped strings or CHECKED artifacts.
 
-## The honest fine print (short)
+</details>
 
-This tree is the **language beta**: grammar, types, bytecode, VM, fuel, effects, ledger, replay, sealing, and the C embed API — validated by golden suites on the host.
+<details>
+<summary><strong>Reproduce the captures instead of trusting the pictures</strong></summary>
 
-It is not yet end-to-end attestation to a boot root, not yet a universal policy plane, not yet a production trusted runner. Those are direction, not claims. We'd rather promise little and prove all of it.
+Presentation tooling additionally needs Python 3, Pillow, `pyte`, Bash,
+Fontconfig and DejaVu Sans Mono:
+
+```sh
+python3 tools/presentation.py
+python3 tools/presentation.py --check
+```
+
+The helper reruns the host gate, uses a private workspace and test-vector
+identities, drives the real CLI, and validates the expected successes and
+refusals before rendering. It rejects stale source fingerprints or mixed
+capture sessions. Raw transcripts, modules, episodes and key files are not
+published. Regeneration reproduces the behavior, not necessarily identical
+animation timings or media bytes.
+
+</details>
+
+## The boundary is part of the product.
+
+This is the **language/toolchain beta**. The tree contains the grammar,
+checker, compiler, bytecode, VM, fuel, effect machinery, signed modules,
+sealing, replay and embedding implementations.
+
+It does **not** establish boot-rooted attestation, universal mediation of
+host mutations, confidential receipts, an externally certified trusted
+runner, or production readiness. Keep the declared embedding profile and
+its limits in view. Read [BETA-LANGUAGE.md](docs/BETA-LANGUAGE.md),
+[OVERVIEW.md](docs/OVERVIEW.md), and [the normative grammar](docs/SPEC-GRAMMAR.md).
+
+**Let agents move fast. Keep authority deliberate.**
 
 ## Inside the box
 
-| Path | What |
+| Path | Purpose |
 |---|---|
-| `src/` | The language: lexer, parser, canonical form, types, bytecode, VM, fuel, effects, ledger, replay, sealing, embed |
-| `include/axial/` | Public C embed header (frozen v1 ABI) |
-| `abi/` | Pinned ABI profile (`amd64-sysv-lp64`, 4 symbols) |
-| `vendor/` | Vendored crypto (Ed25519, SHA-256) — zero external deps |
-| `examples/` | Minimal current-syntax cells |
-| `scripts/` | Policy demo + sealed supply-chain demo |
-| `docs/` | `SPEC-GRAMMAR.md` (normative), `BETA-LANGUAGE.md` (scope), `OVERVIEW.md` |
-| `tests/` | Golden fixtures across 10 suites |
-| `tools/` | Original goldens, source-identity guard and reproducible audit benchmarks |
-| `website/` | This story as a page. Open `website/index.html`. Static, no build, no trackers. |
+| `src/` | Language, compiler, VM, signatures, effects, replay and embedding implementations |
+| `include/axial/`, `abi/` | Public C header and declared ABI profile |
+| `vendor/` | Vendored cryptographic implementation |
+| `examples/`, `tests/` | Source examples, golden fixtures and additional focused cases |
+| `scripts/` | Policy and signed supply-chain demos |
+| `tools/check.sh` | Public host gate |
+| `tools/presentation.py` | Real-command capture and curated media validation |
+| `website/` | Standalone responsive presentation; static files, no trackers or external requests |
 
 ## License
 
-Sovereign Public License 1.0 — see [`LICENSE`](LICENSE). Use it, ship it, build on it. Just keep the notice. `LicenseRef-SPL-1.0`.
+Sovereign Public License 1.0: [LICENSE](LICENSE), `LicenseRef-SPL-1.0`.
+The original copyright and permission notice are retained.

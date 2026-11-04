@@ -1,0 +1,63 @@
+# SPDX-License-Identifier: LicenseRef-SPL-1.0
+# Copyright (c) 2026, F E R M I ∞ H A R T <contact@fermihart.com>
+name: Publish Axial site
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: axial-pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Check out the published revision
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Check static resources and source-bound art
+        run: |
+          python3 - <<'PY'
+          from html.parser import HTMLParser
+          from pathlib import Path
+          import runpy
+          site = Path('website').resolve()
+          class Resources(HTMLParser):
+              def handle_starttag(self, tag, attributes):
+                  for key, value in attributes:
+                      if key not in ('src', 'srcset', 'href') or not value:
+                          continue
+                      if value.startswith(('https:', 'mailto:', 'data:', '#')):
+                          continue
+                      path = (site / value.split('#')[0]).resolve()
+                      assert path.is_relative_to(site) and path.is_file(), value
+          Resources().feed((site / 'index.html').read_text())
+          identity = runpy.run_path(str(Path('tools/presentation.py').resolve()))['fingerprint']()
+          for name in ('hero-cell.svg', 'hero-cell-mobile.svg'):
+              assert 'source-id:' + identity in (site / 'assets' / name).read_text(), name
+          print('PASS: local site resources and source-bound art')
+          PY
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@45bfe0192ca1faeb007ade9deae92b16b8254a0d # v6.0.0
+      - name: Upload the standalone static site
+        uses: actions/upload-pages-artifact@fc324d3547104276b827a68afc52ff2a11cc49c9 # v5.0.0
+        with:
+          path: website
+      - name: Deploy
+        id: deployment
+        uses: actions/deploy-pages@368f82528645a54fb793d4d04e342629a3f51346 # v5.0.1
