@@ -20,9 +20,9 @@ test('per actor and total quotas persist over repeated batches',()=>{
 test('UTF8 byte bounds and queue bounds fail without mutation',()=>{
  const q=make(); assert.equal(q.enqueue('a','😀'.repeat(5)).code,'AXB-ITEM-BYTES');
  for(let i=0;i<4;i++) assert.equal(q.enqueue('a','x'.repeat(16)).ok,true);
- assert.equal(q.enqueue('a','x').code,'AXB-QUEUE-BYTES'); assert.equal(q.snapshot().queuedBytes,64);
+ assert.equal(q.enqueue('b','x').code,'AXB-QUEUE-BYTES'); assert.equal(q.snapshot().queuedBytes,64);
  const c=make(); for(let i=0;i<8;i++) c.enqueue('a','');
- assert.equal(c.enqueue('a','').code,'AXB-QUEUE-COUNT');
+ assert.equal(c.enqueue('b','').code,'AXB-QUEUE-COUNT');
 });
 test('invalid identities, payloads and costs do not execute or enter queue',()=>{
  const q=make(); let called=false; const p={toString(){called=true;return '{}'}};
@@ -48,4 +48,23 @@ test('configuration and batch sizes cannot bypass hard bounds',()=>{
 });
 test('prototype names are not configuration limits',()=>{
  for(const key of ['toString','constructor','__proto__']) assert.throws(()=>B.create(JSON.parse('{"'+key+'":1}')));
+});
+
+test('pending actor caps protect queue capacity and release after selection',()=>{
+ const q=B.create({queueItems:8,queueBytes:64,itemBytes:16,tickUnits:6,actorUnits:3,
+  actorQueueItems:2,actorQueueBytes:20});
+ assert.equal(q.enqueue('a','x'.repeat(16)).ok,true);
+ assert.equal(q.enqueue('a','x'.repeat(5)).code,'AXB-ACTOR-QUEUE-BYTES');
+ assert.equal(q.enqueue('a','x'.repeat(4)).ok,true);
+ assert.equal(q.enqueue('a','').code,'AXB-ACTOR-QUEUE-COUNT');
+ assert.equal(q.enqueue('b','{}').ok,true);
+ q.beginTick(0);assert.equal(q.takeBatch().items.length,3);
+ assert.equal(q.snapshot().queuedActors,0);
+ assert.equal(q.enqueue('a','x'.repeat(16)).ok,true);
+});
+test('pending actor limits survive tick reset and reject invalid configuration',()=>{
+ const q=B.create({actorQueueItems:1});q.enqueue('a','{}');q.beginTick(0);q.beginTick(1);
+ assert.equal(q.enqueue('a','{}').code,'AXB-ACTOR-QUEUE-COUNT');
+ for(const options of [{actorQueueItems:0},{actorQueueBytes:0},{queueItems:2,actorQueueItems:3},
+  {queueBytes:20,itemBytes:10,actorQueueBytes:21}]) assert.throws(()=>B.create(options),TypeError);
 });

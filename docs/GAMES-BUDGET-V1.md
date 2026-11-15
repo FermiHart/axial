@@ -48,3 +48,20 @@ It also routes forged claims and legitimate server facts into the compiled polic
 These are integration pilots with the actual VM, not deployed game endpoints.
 An `allow` remains an intent: the host must atomically revalidate state revisions
 before changing ownership, opening a door or awarding anything.
+
+## Per-actor pending capacity and synthetic workload
+
+Pending queues also enforce `actorQueueItems` and `actorQueueBytes`, defaulting to
+min(32, queueItems) and min(32,768, queueBytes). These are **pending** limits independent
+of execution-per-tick quotas: advancing ticks does not erase pending accounting.
+Selecting an item releases its pending capacity; this does not refund execution
+budget. Actors cannot individually occupy the entire default global queue. Small
+custom global queues may equal the actor cap; set a smaller explicit actor cap when
+requiring reserved room for other actors. Sybil identities still require host controls.
+
+`node tools/games-budget-bench.cjs` exercises 1,000 distinct synthetic NPC actors for
+100 ticks, 100,000 commands total. Output includes p50/p95/p99 per enqueue, per batch
+and per tick (including harness), sampled process heap, and asserted queue bounds.
+It has no VM evaluation, world simulation, socket or renderer work. It is not a claim
+about RustRoots production, browser or phone performance. Harness timing arrays and
+uncontrolled GC affect memory figures; sampled heap is not a maximum allocation cap.
