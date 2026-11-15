@@ -29,7 +29,7 @@ function runGate({sanitize = false, leakDetection = true} = {}) {
   };
   try {
     const before = identity.coreDigest();
-    const flags = ['-std=c99', '-Wall', '-Wextra', '-Werror', '-O1', '-D_POSIX_C_SOURCE=200809L'];
+    const flags = ['-std=c99', '-Wall', '-Wextra', '-Werror', '-O1', '-D_POSIX_C_SOURCE=200809L', '-D_DARWIN_C_SOURCE'];
     if (sanitize) flags.push('-g', '-fsanitize=address,undefined', '-fno-omit-frame-pointer', '-fno-pie');
     const linker = sanitize ? ['-fsanitize=address,undefined', '-no-pie'] : [];
     run('make', ['-j4', `BUILD=${build}`, `HOSTCC=${compiler}`, `CFLAGS=${flags.join(' ')}`, `LDFLAGS=${linker.join(' ')}`, 'dev']);

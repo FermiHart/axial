@@ -5,7 +5,7 @@
 HOSTCC ?= cc
 PYTHON ?= python3
 CPPFLAGS ?=
-CFLAGS ?= -std=c99 -Wall -Wextra -Werror -O1 -D_POSIX_C_SOURCE=200809L
+CFLAGS ?= -std=c99 -Wall -Wextra -Werror -O1 -D_POSIX_C_SOURCE=200809L -D_DARWIN_C_SOURCE
 LDFLAGS ?=
 LDLIBS ?= -lm
 BUILD ?= build

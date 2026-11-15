@@ -38,7 +38,7 @@ function build() {
     .filter(n => n.endsWith('.c') && n !== 'axi_main.c' && n !== 'axi_dossier_main.c')
     .sort().map(n => path.join('build', 'src', n.replace(/\.c$/, '.o')));
   run(process.env.HOSTCC || 'cc', ['-std=c99', '-O1', '-Wall', '-Wextra', '-Werror',
-    '-D_POSIX_C_SOURCE=200809L', '-Isrc', '-Iinclude', '-Ivendor',
+    '-D_POSIX_C_SOURCE=200809L', '-D_DARWIN_C_SOURCE', '-Isrc', '-Iinclude', '-Ivendor',
     '-DAXIAL_PORTABLE_CORE_DIGEST="' + digest + '"',
     'tools/portable-decision-export.c', ...objects, 'build/vendor/ed25519.o', '-lm', '-o', binary]);
   return binary;

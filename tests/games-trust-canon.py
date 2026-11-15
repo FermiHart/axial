@@ -4,7 +4,7 @@ root = pathlib.Path(__file__).resolve().parents[1]
 with tempfile.TemporaryDirectory() as temp:
     lib = pathlib.Path(temp) / 'canon.so'
     subprocess.run(['cc', '-std=c99', '-Wall', '-Wextra', '-Werror', '-shared', '-fPIC',
-                    '-D_POSIX_C_SOURCE=200809L', '-I'+str(root/'src'), '-I'+str(root/'include'), '-I'+str(root/'vendor'),
+                    '-D_POSIX_C_SOURCE=200809L', '-D_DARWIN_C_SOURCE', '-I'+str(root/'src'), '-I'+str(root/'include'), '-I'+str(root/'vendor'),
                     *[str(p) for p in (root/'src').glob('*.c') if p.name not in ('axi_main.c','axi_dossier_main.c')],
                     str(root/'vendor/ed25519.c'), '-lm', '-o', str(lib)], check=True)
     fn = ctypes.CDLL(str(lib)).axi_trust_canon_v1_root

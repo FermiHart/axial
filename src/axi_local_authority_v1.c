@@ -1,5 +1,6 @@
 #include "axi_local_authority_internal.h"
 #include "axi_local_store_v1.h"
+#include "axi_stat_time.h"
 #include "axi_alloc.h"
 #include "axi_hash.h"
 #include "axi_local_epoch_v1.h"
@@ -222,8 +223,8 @@ static int same_file(const struct stat *a, const struct stat *b)
     return a->st_dev == b->st_dev && a->st_ino == b->st_ino
         && a->st_size == b->st_size && a->st_uid == b->st_uid
         && a->st_mode == b->st_mode && a->st_nlink == b->st_nlink
-        && a->st_mtim.tv_sec == b->st_mtim.tv_sec && a->st_mtim.tv_nsec == b->st_mtim.tv_nsec
-        && a->st_ctim.tv_sec == b->st_ctim.tv_sec && a->st_ctim.tv_nsec == b->st_ctim.tv_nsec;
+        && AXI_STAT_MTIME(a).tv_sec == AXI_STAT_MTIME(b).tv_sec && AXI_STAT_MTIME(a).tv_nsec == AXI_STAT_MTIME(b).tv_nsec
+        && AXI_STAT_CTIME(a).tv_sec == AXI_STAT_CTIME(b).tv_sec && AXI_STAT_CTIME(a).tv_nsec == AXI_STAT_CTIME(b).tv_nsec;
 }
 
 int axi_local_authority_previous_locked(const axi_local_authority_v1 *owner,
@@ -247,10 +248,10 @@ int axi_local_authority_previous_locked(const axi_local_authority_v1 *owner,
     }
     if (fstat(fd, &before) != 0 || before.st_size < 0
             || (uintmax_t)before.st_size > sizeof bytes
-            || before.st_mtim.tv_sec < 0 || before.st_mtim.tv_nsec < 0
-            || before.st_mtim.tv_nsec >= 1000000000L
-            || (uintmax_t)before.st_mtim.tv_sec >
-                (UINT64_MAX - (uint64_t)before.st_mtim.tv_nsec) / UINT64_C(1000000000)) goto done;
+            || AXI_STAT_MTIME(&before).tv_sec < 0 || AXI_STAT_MTIME(&before).tv_nsec < 0
+            || AXI_STAT_MTIME(&before).tv_nsec >= 1000000000L
+            || (uintmax_t)AXI_STAT_MTIME(&before).tv_sec >
+                (UINT64_MAX - (uint64_t)AXI_STAT_MTIME(&before).tv_nsec) / UINT64_C(1000000000)) goto done;
     length = (size_t)before.st_size;
     while (n < length) {
         got = read(fd, bytes + n, length - n);
@@ -264,8 +265,8 @@ int axi_local_authority_previous_locked(const axi_local_authority_v1 *owner,
                          &named, AT_SYMLINK_NOFOLLOW) != 0 || !same_file(&after, &named)) goto done;
     staged.device = (uint64_t)before.st_dev; staged.inode = (uint64_t)before.st_ino;
     staged.size = length;
-    staged.mtime_ns = (uint64_t)before.st_mtim.tv_sec * UINT64_C(1000000000)
-                     + (uint64_t)before.st_mtim.tv_nsec;
+    staged.mtime_ns = (uint64_t)AXI_STAT_MTIME(&before).tv_sec * UINT64_C(1000000000)
+                     + (uint64_t)AXI_STAT_MTIME(&before).tv_nsec;
     axi_sha256(bytes, length, staged.sha256);
     rc = AXI_LOCAL_AUTHORITY_V1_OK;
 done:

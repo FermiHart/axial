@@ -235,9 +235,9 @@ test('v1 exporter artifact remains byte-identical and profiles refuse each other
   const legacyRuntime = require('../runtime/portable-pure-v1.js');
   legacyTool.build();
   const bytes = legacyTool.exportPolicy(path.join(__dirname, 'portable-policy', 'access.axi'));
-  // Reviewed GCC domain initializer fix: only compilerSourceDigest changed.
+  // Reviewed GCC/Darwin portability fixes: only compilerSourceDigest changed.
   // Policy source, interface/body hashes and bytecode remain identical.
-  assert.equal(digest(bytes), '66203c27448f653fd8a63f787a6a629782141fc518b9b131c46aff22823116b7');
+  assert.equal(digest(bytes), '3934f07ed55afbe847c035f16c85e8ee4c2aa89c648670345bc8f54f8d6cc122');
   const legacy = JSON.parse(bytes);
   assert.equal(legacyRuntime.validate(legacy), true); assert.equal(runtime.validate(legacy), false);
   assert.equal(legacyRuntime.validate(program), false);
