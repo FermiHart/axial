@@ -255,6 +255,20 @@ its limits in view. Read [BETA-LANGUAGE.md](docs/BETA-LANGUAGE.md),
 | `tools/presentation.py` | Real-command capture and curated media validation |
 | `website/` | Standalone responsive presentation; static files, no trackers or external requests |
 
+## Portable policies for web consumers
+
+The experimental [portable pure v1 profile](docs/PORTABLE-PURE-V1.md) lets a
+JavaScript host execute a small boolean policy compiled by the real Axial C
+toolchain. Its first consumer is RustRoots vehicle delivery. The policy stays
+in the consumer repository; the generic exporter, bounded bytecode runtime and
+native differential corpus stay in Axial.
+
+This profile admits one pure boolean cell with explicit fuel and no calls or
+effects. It is a separate build artifact, not signed AXB, CHECKED admission or
+the frozen embed-v1 ABI. The host owns artifact trust and every world mutation.
+Run `make gate-portable` with Node.js and the existing C99 toolchain to compare
+the portable runtime with the C VM and exercise malformed input boundaries.
+
 ## License
 
 Sovereign Public License 1.0: [LICENSE](LICENSE), `LicenseRef-SPL-1.0`.

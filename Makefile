@@ -134,6 +134,11 @@ gate: gate-identity gate-fast gate-cli gate-audit gate-frontend gate-numeric gat
 # Build probes only; measurements are opt-in and have no speed thresholds.
 bench: $(BUILD)/audit40/embed $(BUILD)/audit40/seal $(BUILD)/audit40/runtime_bench
 
+# A separate consumer profile; the native gate keeps its original requirements.
+.PHONY: gate-portable
+gate-portable:
+	node --test --test-concurrency=1 tests/portable-policy-differential.cjs tests/portable-policy-adversarial.cjs
+
 clean:
 	rm -rf $(BUILD)
 
