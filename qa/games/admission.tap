@@ -1,0 +1,18 @@
+✔ pinned compiler program admits and allows, with trusted binding (2.207466ms)
+✔ mutated code cannot authenticate itself with declared hashes (0.234434ms)
+✔ manifest is copied and old versions are not admitted by a new loader (0.232701ms)
+✔ opaque handles cannot be forged, copied, or used on another loader (0.5867ms)
+✔ revocation blocks both new and existing handles (0.41632ms)
+✔ raw byte sizes and UTF8 are bounded before parse (0.708308ms)
+✔ input mutation after admission cannot change policy (0.513803ms)
+✔ unknown, duplicate, and malformed trust entries fail closed (0.488086ms)
+✔ fuel exhaustion remains a trap, never permission (0.603044ms)
+✔ bit mutation corpus cannot pass digest admission (8.330192ms)
+ℹ tests 10
+ℹ suites 0
+ℹ pass 10
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 149.103779
