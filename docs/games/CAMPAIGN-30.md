@@ -14,9 +14,9 @@ anti-cheat protection of an attacker-controlled client, or a new C bytecode ABI.
 | 5 | Adversarial mutation, forgery, fuel and bounds gate | 10 tests, admission.tap |
 | 6–10 | Reference revision/CAS, idempotency, binding, reentrancy, contention tests | 16 in-memory + 10 SQLite tests; single-resource durable adapter |
 | 11–15 | Quantitative checked arithmetic and compiler integration | modular i64 compiler profile + checked host helper; 16,500 native VM comparisons |
-| 16–20 | Quotas, batch and representative measurements | per-actor pending limits + 100k-operation model; synthetic 1,000-actor workload measured, engine workload pending |
-| 21–25 | Fuzz/differential and cross-platform validation | seeded corpus and C helper oracle implemented; platform/sanitizer matrix pending |
-| 26–30 | Pilots, SDK lifecycle, rollout and integration | three compiled fixture pilots tested; SDK boundary documented; real engine rollout pending |
+| 16–20 | Quotas, batch and representative measurements | implemented: per-actor quotas, independent 100k-operation model, measured 100k admitted-policy workload and immutable preparation; final CI required |
+| 21–25 | Fuzz/differential and cross-platform validation | implemented: seeded native differential, hostile bytes, regressions and verified Linux x64/ARM64 + Darwin ARM64; latest checkpoint CI required |
+| 26–30 | Pilots, SDK lifecycle, rollout and integration | compiled pilots + durable single-resource reference + persistent revocation tested; actual consumer adoption/rollout pending |
 
 Waves are accepted only against named evidence, not by counting commits.
 A helper/reference fixture is not a finished production integration.
@@ -60,9 +60,11 @@ The optional Node SQLite adapter commits one resource and its idempotency receip
 in the same transaction and passed restart/lost-response/two-process contention.
 It still is not a multiresource production database or deployed game authority.
 
-Current acceptance: waves 1–15 closed within the explicit narrow profiles above;
-16–30 remain partial until representative runtime workloads, broad platform
-validation and consumer rollout. Node SQLite requires a supported Node runtime.
+Current acceptance: waves 1–15 closed within the explicit narrow profiles above.
+Waves 16–25 now have implementation and bounded host/runtime evidence listed below;
+accept their latest checkpoint only after its required CI concludes successfully.
+Waves 26–30 remain partial until actual consumer adoption and rollout. Node SQLite
+requires a supported Node runtime.
 
 ## Follow-on local validation
 
@@ -80,5 +82,24 @@ fixtures, full-width seeded inputs and bounded fuel, plus 512 malformed opcode
 refusals. Plain and explicit ASan/UBSan-without-leaks runs passed locally.
 LeakSanitizer was blocked by ptrace here; CI is configured to attempt the full
 sanitizer gate, but is not yet verified. A runnable admitted-policy/SQLite pilot
-adds eight lifecycle tests; it is not an adopted RustRoots service. Therefore
-waves 16–30 remain partial, rather than being marked complete by fixture counts.
+adds eight lifecycle tests; it is not an adopted RustRoots service. This evidence does not by itself complete the consumer rollout block.
+
+## Latest measured optimization and lifecycle
+
+`prepare` owns a validated immutable decision-program snapshot. Public `evaluate`
+continues validating untrusted programs; admission still hashes exact bytes, checks
+revocation on every call and validates facts/fuel. The identical 100,000-decision
+workload retained every allow/deny/fuel-trap count. Local paired and warmed
+alternating measurements are preserved in `docs/games/evidence/`, not generalized
+to phone/engine capacity. Budgeted runs execute the same total decisions across
+more ticks, explicitly trading frequency/queue delay rather than claiming speedup.
+
+Optional SQLite persisted revocation is monotonic, serializes with execution and
+survives process restart. Existing committed receipts replay unchanged. The mode is
+part of the database binding, so no implicit downgrade or migration is accepted.
+New CLI demo databases opt in; existing API defaults remain compatible.
+
+Prior commit `6ae98f1f4c44f7753396b7babd614b0ad74b4ab1` passed all four remote
+workflows, including actual macOS ARM64 execution and Linux sanitizers. That does
+not substitute for checking the new prepared/revocation checkpoint. Local final
+combined gate passed 133 tests with zero skips, plus the runnable demo.

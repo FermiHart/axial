@@ -1,0 +1,121 @@
+{
+  "node": "v24.22.1",
+  "platform": "linux",
+  "arch": "x64",
+  "sourceSha256": "77cf8cceb432593025a8879fa42d8697e79f5b2f01b090360c96a5516f0ff96b",
+  "compilerSourceDigest": "7af6561792ccdb138a5b0c63ad15eb46c8ea57465a69aac1f0d14cfee7e3b03a",
+  "runs": [
+    {
+      "pair": 0,
+      "order": [
+        "public",
+        "prepared"
+      ],
+      "results": [
+        {
+          "mode": "public",
+          "iterations": 20000,
+          "counts": {
+            "allow": 1177,
+            "deny": 17646,
+            "trap": 1177
+          },
+          "fuelUsed": 142351,
+          "microseconds": {
+            "median": 14.630999999894811,
+            "p99": 96.87299999995957
+          }
+        },
+        {
+          "mode": "prepared",
+          "iterations": 20000,
+          "counts": {
+            "allow": 1177,
+            "deny": 17646,
+            "trap": 1177
+          },
+          "fuelUsed": 142351,
+          "microseconds": {
+            "median": 1.852999999982785,
+            "p99": 3.244999999992615
+          }
+        }
+      ]
+    },
+    {
+      "pair": 1,
+      "order": [
+        "prepared",
+        "public"
+      ],
+      "results": [
+        {
+          "mode": "prepared",
+          "iterations": 20000,
+          "counts": {
+            "allow": 1177,
+            "deny": 17646,
+            "trap": 1177
+          },
+          "fuelUsed": 142351,
+          "microseconds": {
+            "median": 1.8330000000332802,
+            "p99": 3.325000000018008
+          }
+        },
+        {
+          "mode": "public",
+          "iterations": 20000,
+          "counts": {
+            "allow": 1177,
+            "deny": 17646,
+            "trap": 1177
+          },
+          "fuelUsed": 142351,
+          "microseconds": {
+            "median": 14.611999999942782,
+            "p99": 84.33399999989888
+          }
+        }
+      ]
+    },
+    {
+      "pair": 2,
+      "order": [
+        "public",
+        "prepared"
+      ],
+      "results": [
+        {
+          "mode": "public",
+          "iterations": 20000,
+          "counts": {
+            "allow": 1177,
+            "deny": 17646,
+            "trap": 1177
+          },
+          "fuelUsed": 142351,
+          "microseconds": {
+            "median": 14.942000000019107,
+            "p99": 59.12699999998949
+          }
+        },
+        {
+          "mode": "prepared",
+          "iterations": 20000,
+          "counts": {
+            "allow": 1177,
+            "deny": 17646,
+            "trap": 1177
+          },
+          "fuelUsed": 142351,
+          "microseconds": {
+            "median": 1.8630000001849112,
+            "p99": 3.264999999828433
+          }
+        }
+      ]
+    }
+  ],
+  "caveat": "Shared host Node CPU microbenchmark; warmup plus alternating order, no admission parsing, no FPS/capacity guarantee."
+}

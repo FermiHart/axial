@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: LicenseRef-SPL-1.0
 // Trusted Node host boundary. Never use a client supplied trust manifest.
 const {createHash} = require('node:crypto');
-const {TextDecoder} = require('node:util');
+const {TextDecoder, types} = require('node:util');
 const decisionVM = require('./portable-decision-v2.js');
 const numericVM = require('./portable-numeric-v1.js');
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -20,23 +20,27 @@ function createPinnedAdmission(manifest, vm) {
     const entry = trusted.get(id);
     if (!entry || revoked.has(id) || !Buffer.isBuffer(bytes) || bytes.length > 65536) return null;
     // Copy before hashing/parsing, and reject shared backing memory.
-    if (bytes.buffer instanceof SharedArrayBuffer) return null;
+    if (types.isSharedArrayBuffer(bytes.buffer)) return null;
     const copy = Buffer.from(bytes);
     if (hash(copy) !== entry.digest) return null;
     let program;
     try { program = JSON.parse(new TextDecoder('utf-8', {fatal: true}).decode(copy)); } catch (_) { return null; }
-    if (!vm.validate(program)) return null;
+    // Only the decision profile supplies an owned immutable prepared snapshot.
+    // The numeric profile retains its existing validation/evaluation path.
+    const prepared = vm === decisionVM ? vm.prepare(program) : null;
+    if (vm === decisionVM ? !prepared : !vm.validate(program)) return null;
     const handle = Object.freeze(Object.create(null));
-    handles.set(handle, {entry, program});
+    handles.set(handle, {entry, program: prepared ? null : program, prepared});
     return handle;
   }
   function evaluate(handle, factsBytes, options = {fuel: 4096}) {
     const admitted = handles.get(handle);
     const refused = Object.freeze({ok:false, allowed:false, outcome:'refused', code:'AXG-ADMISSION', decision:null});
-    if (!admitted || revoked.has(admitted.entry.id) || !Buffer.isBuffer(factsBytes) || factsBytes.length > 4096 || factsBytes.buffer instanceof SharedArrayBuffer) return refused;
+    if (!admitted || revoked.has(admitted.entry.id) || !Buffer.isBuffer(factsBytes) || factsBytes.length > 4096 || types.isSharedArrayBuffer(factsBytes.buffer)) return refused;
     let facts;
     try { facts = JSON.parse(new TextDecoder('utf-8', {fatal:true}).decode(Buffer.from(factsBytes))); } catch (_) { return refused; }
-    const result = vm.evaluate(admitted.program, facts, options);
+    const result = admitted.prepared ? admitted.prepared.evaluate(facts, options)
+      : vm.evaluate(admitted.program, facts, options);
     return Object.freeze({...result, policy: admitted.entry});
   }
   // Revocation is monotonic for this loader; reload requires trusted host setup.

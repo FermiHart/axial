@@ -1,0 +1,80 @@
+{
+  "workload": "1000 actors x 100 ticks; queue + admitted native-compiled inventory policy",
+  "node": "v24.22.1",
+  "platform": "linux",
+  "arch": "x64",
+  "actors": 1000,
+  "ticks": 100,
+  "policy": {
+    "profile": "axial.portable-decision.v2",
+    "sourceSha256": "77cf8cceb432593025a8879fa42d8697e79f5b2f01b090360c96a5516f0ff96b",
+    "compilerSourceDigest": "7af6561792ccdb138a5b0c63ad15eb46c8ea57465a69aac1f0d14cfee7e3b03a",
+    "artifactDigest": "f1cea5d5d0b653b3c322be1412bc27e30ef1f86b91d87daf3c376f159490ae21",
+    "artifactBytes": 1027
+  },
+  "buildAndExportMilliseconds": 181.71179600000002,
+  "counts": {
+    "evaluations": 100000,
+    "allow": 5883,
+    "deny": 88234,
+    "fuelTrap": 5883
+  },
+  "microseconds": {
+    "admission": {
+      "samples": 100,
+      "p50": 51.76699999998391,
+      "p95": 241.7769999999848,
+      "p99": 719.7030000000098,
+      "max": 1025.6250000000193
+    },
+    "enqueue": {
+      "samples": 100000,
+      "p50": 0.49099999995405597,
+      "p95": 1.1420000000157415,
+      "p99": 3.084999999998672,
+      "max": 672.1630000000118
+    },
+    "batch": {
+      "samples": 100,
+      "p50": 378.1890000000203,
+      "p95": 694.7459999999523,
+      "p99": 872.618999999986,
+      "max": 1211.84999999997
+    },
+    "evaluation": {
+      "samples": 100000,
+      "p50": 3.015000000004875,
+      "p95": 6.488999999987755,
+      "p99": 22.333000000003267,
+      "max": 3405.9669999999187
+    },
+    "tickIncludingHarness": {
+      "samples": 100,
+      "p50": 8096.651000000065,
+      "p95": 13861.307000000012,
+      "p99": 26343.457000000002,
+      "max": 27306.94999999997
+    }
+  },
+  "heap": {
+    "samples": 102,
+    "startBytes": 8631544,
+    "endBytes": 59697632,
+    "sampledPeakBytes": 59697632,
+    "note": "Process heap includes benchmark timing arrays and assertions; GC uncontrolled, no heap cap proven."
+  },
+  "queue": {
+    "peakItems": 1000,
+    "peakPayloadBytes": 97318,
+    "limits": {
+      "queueItems": 2048,
+      "queueBytes": 524288,
+      "itemBytes": 256,
+      "tickUnits": 4096,
+      "actorUnits": 8,
+      "actorQueueItems": 32,
+      "actorQueueBytes": 32768
+    }
+  },
+  "caveat": "Synthetic Node CPU test only. No RustRoots world, mobile/browser, network, renderer, server transaction or concurrent workers. No production capacity claim."
+}

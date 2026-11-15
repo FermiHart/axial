@@ -5,7 +5,7 @@ const {createAdmission}=require('../../runtime/games-admission-v1.cjs');
 const {create}=require('../../runtime/games-authority-sqlite-v1.cjs');
 const label=v=>typeof v==='string' && /^[A-Za-z0-9_.:-]{1,96}$/.test(v) && !/[\r\n]/.test(v);
 const refuse=reason=>Object.freeze({ok:false,code:'PILOT_INPUT',reason});
-function createInventoryPilot({filename,policyBytes,trustedEntry,initialResourcesJson,fuel=64,maxReceipts=4096}) {
+function createInventoryPilot({filename,policyBytes,trustedEntry,initialResourcesJson,fuel=64,maxReceipts=4096,persistedRevocation=false}) {
   if(!Number.isSafeInteger(fuel)||fuel<0||fuel>64)throw TypeError('fuel bound');
   if(!trustedEntry || trustedEntry.schema!=='inventory.facts.v1' || trustedEntry.version!==1)throw TypeError('pilot schema');
   trustedEntry=Object.freeze({...trustedEntry});
@@ -14,7 +14,7 @@ function createInventoryPilot({filename,policyBytes,trustedEntry,initialResource
   if(!handle)throw Error('Policy admission refused');
   let revoked=false;
   const authority=create({filename,worldId:'inventory-pilot',policyDigest:trustedEntry.digest,schemaVersion:1,
-    resourcesJson:initialResourcesJson,maxReceipts,
+    resourcesJson:initialResourcesJson,maxReceipts,persistedRevocation,
     decide:({command,resource})=>{
       if(revoked)return {allow:false,reason:'policy-revoked'};
       // Facts reconstructed from the resource inside the SQLite transaction.
@@ -45,7 +45,10 @@ function createInventoryPilot({filename,policyBytes,trustedEntry,initialResource
       policyDigest:trustedEntry.digest,schemaVersion:1,payload:q.action==='reserve'?{}:{target:q.target}}));
   }
   function observe(id){return authority.inspect(id);}
-  function revoke(){revoked=true;return loader.revoke(trustedEntry.id);}
+  function revoke(){
+    if(persistedRevocation){const result=authority.revokePolicy();if(!result.ok)return result;revoked=true;loader.revoke(trustedEntry.id);return result;}
+    revoked=true;return loader.revoke(trustedEntry.id);
+  }
   return Object.freeze({submit,observe,revoke,close:()=>authority.close()});
 }
 module.exports={createInventoryPilot};
@@ -54,7 +57,7 @@ if(require.main===module){
   const compiler=require('../../tools/portable-decision-build.cjs'),{hash}=require('../../runtime/games-admission-v1.cjs');
   compiler.build();const policyBytes=Buffer.from(compiler.exportPolicy(path.join(__dirname,'inventory.axi')));
   const directory=fs.mkdtempSync(path.join(os.tmpdir(),'axial-inventory-pilot-'));
-  const pilot=createInventoryPilot({filename:path.join(directory,'pilot.sqlite'),policyBytes,
+  const pilot=createInventoryPilot({filename:path.join(directory,'pilot.sqlite'),policyBytes,persistedRevocation:true,
     trustedEntry:{id:'inventory',schema:'inventory.facts.v1',version:1,digest:hash(policyBytes)},
     initialResourcesJson:JSON.stringify([{id:'car',revision:0,state:{owner:'alice',reserved:false}}])});
   try{

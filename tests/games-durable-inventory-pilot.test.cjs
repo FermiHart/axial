@@ -39,3 +39,7 @@ test('bounded input and fuel trap fail closed',{skip:!available},t=>{
 test('receipt capacity preserves exact replay instead of evicting',{skip:!available},t=>{
  const {p}=setup(t,{maxReceipts:1}),r=p.submit(alice,request());assert.equal(p.submit(alice,request({commandId:'two',expectedRevision:1})).code,'RECEIPT_CAPACITY');assert.deepEqual(p.submit(alice,request()),JSON.parse(JSON.stringify(r)));
 });
+test('opt-in pilot revocation survives restart and denies fresh effects',{skip:!available},t=>{
+ const {p,config}=setup(t,{persistedRevocation:true});assert.equal(p.revoke().code,'REVOKED');p.close();
+ const reopened=createInventoryPilot(config);t.after(()=>reopened.close());const r=reopened.submit(alice,request());assert.equal(r.code,'DENY');assert.equal(r.reason,'policy-revoked');assert.equal(reopened.observe('car').revision,0);
+});

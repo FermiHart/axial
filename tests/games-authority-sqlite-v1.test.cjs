@@ -53,3 +53,38 @@ test('rollback atomicity on SQL receipt failure',{skip:!available},t=>{
 test('reentrancy and closed handle refuse without mutation',{skip:!available},t=>{
  const db=fixture(t);let a;a=create({...opts(db),decide:()=>{assert.equal(a.execute(cmd({commandId:'nested'})).code,'BUSY');assert.equal(a.close(),false);return {allow:true,reason:'ok'}}});assert.equal(a.execute(cmd()).ok,true);a.close();assert.equal(a.execute(cmd()).code,'CLOSED');
 });
+test('opt-in revocation persists across reopen; committed receipts remain replayable',{skip:!available},t=>{
+ const db=fixture(t);let a=create({...opts(db),persistedRevocation:true});const r=a.execute(cmd());assert.equal(a.revokePolicy().code,'REVOKED');a.close();
+ a=create({...opts(db),persistedRevocation:true});assert.deepEqual(a.execute(cmd()),JSON.parse(JSON.stringify(r)));
+ const denied=a.execute(cmd({commandId:'after-revoke',expectedRevision:1}));assert.equal(denied.code,'DENY');assert.equal(denied.reason,'policy-revoked');assert.equal(a.inspect('car').revision,1);a.close();
+ assert.throws(()=>create(opts(db)),/binding/);
+});
+test('revocation is observed by already-open second instance without callbacks',{skip:!available},t=>{
+ const db=fixture(t);const a=create({...opts(db),persistedRevocation:true});let calls=0;
+ const b=create({...opts(db),persistedRevocation:true,decide:()=>{calls++;return {allow:true,reason:'ok'}}});
+ assert.equal(a.revokePolicy().ok,true);assert.equal(b.execute(cmd()).reason,'policy-revoked');assert.equal(calls,0);assert.equal(b.inspect('car').revision,0);b.close();a.close();
+});
+test('revocation lock contention refuses, rollback preserves policy until successful retry',{skip:!available},t=>{
+ const db=fixture(t);const a=create({...opts(db),persistedRevocation:true,busyTimeoutMs:1});const {DatabaseSync}=require('node:sqlite');const d=new DatabaseSync(db);
+ d.exec('BEGIN IMMEDIATE');assert.equal(a.revokePolicy().code,'BUSY');d.exec('ROLLBACK');
+ d.exec("CREATE TRIGGER fail_revoke BEFORE UPDATE ON axial_policy_state BEGIN SELECT RAISE(ABORT,'forced revocation failure'); END;");
+ assert.equal(a.revokePolicy().code,'STORAGE');assert.equal(d.prepare('SELECT revoked FROM axial_policy_state WHERE id=1').get().revoked,0);
+ d.exec('DROP TRIGGER fail_revoke');assert.equal(a.revokePolicy().code,'REVOKED');assert.equal(a.execute(cmd()).reason,'policy-revoked');d.close();a.close();
+});
+test('old databases require explicit migration rather than silently enabling mode',{skip:!available},t=>{
+ const db=fixture(t);const a=create(opts(db));assert.equal(a.revokePolicy().code,'REVOCATION_DISABLED');a.close();
+ assert.throws(()=>create({...opts(db),persistedRevocation:true}),/binding/);create(opts(db)).close();
+});
+test('player command cannot toggle persisted policy state',{skip:!available},t=>{
+ const db=fixture(t);const a=create({...opts(db),persistedRevocation:true});a.revokePolicy();
+ assert.equal(a.execute(cmd({revoked:false})).code,'INPUT');assert.equal(a.execute(cmd()).reason,'policy-revoked');a.close();
+});
+test('persisted revocation refuses in fresh Node process after administrator exits',{skip:!available},t=>{
+ const db=fixture(t),a=create({...opts(db),persistedRevocation:true});assert.equal(a.revokePolicy().ok,true);a.close();
+ const script=`const {create}=require(${JSON.stringify(require.resolve('../runtime/games-authority-sqlite-v1.cjs'))});
+ const a=create({filename:process.argv[1],worldId:'game',policyDigest:'a'.repeat(64),schemaVersion:1,resourcesJson:'[]',persistedRevocation:true,
+ decide:()=>{throw Error('must not evaluate revoked')},reduce:()=>{throw Error('must not reduce')}});
+ console.log(JSON.stringify({result:a.execute(process.argv[2]),resource:a.inspect('car')}));a.close();`;
+ const child=spawnSync(process.execPath,['-e',script,db,cmd()],{encoding:'utf8'});assert.equal(child.status,0,child.stderr);
+ const output=JSON.parse(child.stdout);assert.equal(output.result.reason,'policy-revoked');assert.equal(output.resource.revision,0);
+});

@@ -65,3 +65,33 @@ forced receipt INSERT failure with full rollback, reentrancy and closed handles.
 When `node:sqlite` is unavailable, these tests explicitly skip; that is not a pass
 of durable behavior. CI should run this suite on Node 24 (or another supported
 version) in addition to existing portable gates.
+
+## Optional persisted revocation lifecycle
+
+Pass `persistedRevocation:true` when creating a **new** authority database to opt in.
+The setting is included in its persistent binding. Reopening with the option off,
+or enabling it on an existing legacy DB without an explicit migration, fails with
+binding mismatch. This prototype deliberately provides no automatic migration,
+policy replacement, un-revoke operation or administrative network endpoint.
+
+The trusted host receives `revokePolicy()`. It serializes on `BEGIN IMMEDIATE`, marks
+the policy revoked monotonically and commits. `REVOKED` means this database durably
+records the revocation under the same storage assumptions as other commits. `BUSY`
+or `STORAGE` is not success; retry/inspect operationally rather than announcing it.
+A failed rollback quarantines the handle. Repeated successful revocation is harmless.
+Never expose this method through untrusted command dispatch or accept a client
+revocation flag. Its caller is a trusted deployment administrator, not a player.
+
+Every new command reads this state inside its transaction before policy callbacks.
+A revoked policy returns a persisted `DENY / policy-revoked`, without effects.
+Already committed/refused receipts are returned **before** this check: replay reports
+historical truth and never reexecutes effects. Concurrent writers are ordered by
+SQLite's transaction lock. A command committed before revocation stays committed;
+a new command beginning after revocation committed cannot produce effects. Other
+already-open adapter instances observe the persisted state on their next command.
+
+The receipt bound remains fail-closed. Authenticated denied requests can fill that
+bound: deployment must enforce per-actor/request quotas and an explicit retention
+protocol. Command IDs form a global namespace in this prototype; generate host-bound
+names or suitable unique identifiers and enforce actor binding to prevent collision
+or deliberate squatting. This helper does not supply that network admission layer.

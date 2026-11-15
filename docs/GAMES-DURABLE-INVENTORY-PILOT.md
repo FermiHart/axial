@@ -62,3 +62,28 @@ The generic scheduler is not wired into this pilot, and its actor identity must
 also come from authenticated infrastructure. Revocation is process-local: reopening
 with the same trusted manifest readmits the policy. Durable policy revocation and
 manifest rollback prevention require the deployment's version/revocation store.
+
+## Opt-in durable revocation
+
+Pass `persistedRevocation:true` in factory configuration to use the SQLite adapter's
+monotonic persisted policy lifecycle. The pilot's host-only `revoke()` then returns
+an `{ok, code}` result: only `REVOKED` establishes success. A storage or contention
+failure leaves the local admission loader unchanged, so failures cannot masquerade
+as a completed durable revocation. New commands in all instances read the persisted
+state transactionally; restart does not readmit effects merely by reusing the same
+manifest. Existing committed receipts still replay unchanged.
+
+Default `false` preserves the earlier process-local behavior and return value.
+This mode is fixed in database metadata; changing it requires an explicit migration,
+not silently reopening the same file with different options. No migration or
+un-revoke is implemented. The JavaScript administration method must not be exposed
+to players. This is still not remote identity or a production control plane.
+
+Receipt storage can be saturated by otherwise well-formed denied commands. Apply
+external authenticated rate limits and command ID namespace controls; the example
+has no rate limiter or per-player quota. Global IDs must not be blindly accepted
+from clients without collision/squatting controls. See the SQLite reference notes.
+
+For a new deployment, explicitly choose `persistedRevocation:true` as the CLI
+demo does. The API default stays false solely for backward compatibility; existing
+databases require the documented explicit migration, not a mode toggle.

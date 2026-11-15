@@ -1,7 +1,7 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 640" width="1200" height="640" role="img" aria-labelledby="title desc">
 <!-- Copyright (c) 2026, F E R M I ∞ H A R T &lt;contact@fermihart.com&gt; -->
 <!-- SPDX-License-Identifier: LicenseRef-SPL-1.0 -->
-<metadata>source-id:86fdb01fff3bdb5629a274a36bfe0c00e87c50c12c765d88846ec25f7a572bd3</metadata>
+<metadata>source-id:46e053238e72e262c846979b57ef2fa90ce9da0e916e621530824d07f56f0b8c</metadata>
 <title id="title">Axial: code that answers before it gets power</title>
 <desc id="desc">A contract cell joins types, capabilities, fuel, checked laws, signatures and replay. Decorative source-derived geometry, not a security attestation.</desc>
 <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#070a12"/><stop offset=".6" stop-color="#111426"/><stop offset="1" stop-color="#071c21"/></linearGradient><pattern id="grid" width="32" height="32" patternUnits="userSpaceOnUse"><path d="M32 0H0V32" fill="none" stroke="#8794b8" stroke-opacity=".07"/></pattern></defs>
@@ -44,30 +44,30 @@
 <text x="786" y="381" fill="#65e3ef" font-family="DejaVu Sans Mono,monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="1">SIGN</text>
 <circle cx="785.71" cy="175.50" r="7" fill="#65e3ef"/>
 <text x="786" y="204" fill="#65e3ef" font-family="DejaVu Sans Mono,monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="1">REPLAY</text>
-<circle cx="1141.00" cy="264.00" r="4" fill="#a4afff"/>
-<circle cx="1134.12" cy="316.28" r="3" fill="#ffcc66"/>
-<circle cx="1113.94" cy="365.00" r="4" fill="#65e3ef"/>
-<circle cx="1081.84" cy="406.84" r="3" fill="#d58cff"/>
-<circle cx="1040.00" cy="438.94" r="2" fill="#d58cff"/>
-<circle cx="991.28" cy="459.12" r="4" fill="#d58cff"/>
-<circle cx="939.00" cy="466.00" r="2" fill="#d58cff"/>
+<circle cx="1141.00" cy="264.00" r="3" fill="#a4afff"/>
+<circle cx="1134.12" cy="316.28" r="4" fill="#65e3ef"/>
+<circle cx="1113.94" cy="365.00" r="4" fill="#d58cff"/>
+<circle cx="1081.84" cy="406.84" r="4" fill="#d58cff"/>
+<circle cx="1040.00" cy="438.94" r="3" fill="#a4afff"/>
+<circle cx="991.28" cy="459.12" r="2" fill="#a4afff"/>
+<circle cx="939.00" cy="466.00" r="3" fill="#a4afff"/>
 <circle cx="886.72" cy="459.12" r="4" fill="#a4afff"/>
-<circle cx="838.00" cy="438.94" r="4" fill="#ffcc66"/>
-<circle cx="796.16" cy="406.84" r="2" fill="#a4afff"/>
-<circle cx="764.06" cy="365.00" r="4" fill="#65e3ef"/>
-<circle cx="743.88" cy="316.28" r="3" fill="#d58cff"/>
-<circle cx="737.00" cy="264.00" r="4" fill="#d58cff"/>
-<circle cx="743.88" cy="211.72" r="4" fill="#a4afff"/>
-<circle cx="764.06" cy="163.00" r="2" fill="#65e3ef"/>
-<circle cx="796.16" cy="121.16" r="2" fill="#65e3ef"/>
-<circle cx="838.00" cy="89.06" r="3" fill="#65e3ef"/>
-<circle cx="886.72" cy="68.88" r="3" fill="#65e3ef"/>
-<circle cx="939.00" cy="62.00" r="4" fill="#65e3ef"/>
-<circle cx="991.28" cy="68.88" r="3" fill="#ffcc66"/>
-<circle cx="1040.00" cy="89.06" r="4" fill="#65e3ef"/>
-<circle cx="1081.84" cy="121.16" r="3" fill="#a4afff"/>
-<circle cx="1113.94" cy="163.00" r="2" fill="#ffcc66"/>
-<circle cx="1134.12" cy="211.72" r="3" fill="#65e3ef"/>
+<circle cx="838.00" cy="438.94" r="4" fill="#65e3ef"/>
+<circle cx="796.16" cy="406.84" r="3" fill="#a4afff"/>
+<circle cx="764.06" cy="365.00" r="3" fill="#d58cff"/>
+<circle cx="743.88" cy="316.28" r="4" fill="#d58cff"/>
+<circle cx="737.00" cy="264.00" r="2" fill="#d58cff"/>
+<circle cx="743.88" cy="211.72" r="4" fill="#d58cff"/>
+<circle cx="764.06" cy="163.00" r="4" fill="#d58cff"/>
+<circle cx="796.16" cy="121.16" r="3" fill="#ffcc66"/>
+<circle cx="838.00" cy="89.06" r="2" fill="#65e3ef"/>
+<circle cx="886.72" cy="68.88" r="4" fill="#ffcc66"/>
+<circle cx="939.00" cy="62.00" r="4" fill="#a4afff"/>
+<circle cx="991.28" cy="68.88" r="4" fill="#a4afff"/>
+<circle cx="1040.00" cy="89.06" r="3" fill="#ffcc66"/>
+<circle cx="1081.84" cy="121.16" r="4" fill="#a4afff"/>
+<circle cx="1113.94" cy="163.00" r="4" fill="#a4afff"/>
+<circle cx="1134.12" cy="211.72" r="2" fill="#ffcc66"/>
 <path d="M939,207L990,237V291L939,321L888,291V237Z" fill="#111b25" stroke="#ffcc66" stroke-width="1.5"/>
 <text x="939" y="261" fill="#f5f1df" font-family="DejaVu Sans Mono,monospace" font-size="19" font-weight="700" text-anchor="middle" letter-spacing="0">CELL</text>
 <text x="939" y="284" fill="#ffcc66" font-family="DejaVu Sans Mono,monospace" font-size="11" font-weight="700" text-anchor="middle" letter-spacing="0">.AXB / V7</text>
@@ -84,5 +84,5 @@
 <text x="910" y="507" fill="#8794b8" font-family="DejaVu Sans Mono,monospace" font-size="11" font-weight="700" text-anchor="start" letter-spacing="1">CORE GOLDENS</text>
 <text x="910" y="538" fill="#65fbd2" font-family="DejaVu Sans Mono,monospace" font-size="24" font-weight="700" text-anchor="start" letter-spacing="0">67 / 67</text>
 <text x="60" y="610" fill="#8794b8" font-family="DejaVu Sans Mono,monospace" font-size="12" font-weight="400" text-anchor="start" letter-spacing="0">LANGUAGE BETA / SPL-1.0 / EXECUTABLE LAW CHECKS</text>
-<text x="1140" y="610" fill="#8794b8" font-family="DejaVu Sans Mono,monospace" font-size="10" font-weight="400" text-anchor="end" letter-spacing="0">SOURCE / 86FDB01FFF3BDB5629A274A3</text>
+<text x="1140" y="610" fill="#8794b8" font-family="DejaVu Sans Mono,monospace" font-size="10" font-weight="400" text-anchor="end" letter-spacing="0">SOURCE / 46E053238E72E262C846979B</text>
 </svg>

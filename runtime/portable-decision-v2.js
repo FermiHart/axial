@@ -115,11 +115,9 @@
       bodyHash: p ? p.bodyHash : null, entry: p ? p.entry : null,
       decision: decision ? Object.freeze(decision) : null});
   }
-  function evaluate(program, facts, options) {
-    let p = null;
+  // Only called with an owned, recursively frozen validated snapshot.
+  function execute(p, facts, options) {
     try {
-      p = snapshot(program);
-      if (!p) return result(null, false, false, 'refused', 'AXP-P001');
       const opts = record(options, ['fuel']);
       if (!opts || !boundedInteger(opts.fuel, MAX_FUEL)) return result(p, false, false, 'refused', 'AXP-F001');
       const values = record(facts, p.params);
@@ -175,8 +173,25 @@
       return result(null, false, false, 'refused', 'AXP-I001');
     }
   }
+  function evaluate(program, facts, options) {
+    try {
+      const p = snapshot(program);
+      if (!p) return result(null, false, false, 'refused', 'AXP-P001');
+      return execute(p, facts, options);
+    } catch (_) { return result(null, false, false, 'refused', 'AXP-I001'); }
+  }
+  // Preparation confers no authority: admission/revocation remain host checks.
+  // No program reference or unchecked entry point escapes this closure.
+  function prepare(program) {
+    try {
+      const p = snapshot(program);
+      if (!p) return null;
+      const run = Object.freeze(function (facts, options) { return execute(p, facts, options); });
+      return Object.freeze({evaluate: run});
+    } catch (_) { return null; }
+  }
   function validate(program) {
     try { return snapshot(program) !== null; } catch (_) { return false; }
   }
-  return Object.freeze({profile: PROFILE, maxFuel: MAX_FUEL, evaluate, validate});
+  return Object.freeze({profile: PROFILE, maxFuel: MAX_FUEL, evaluate, validate, prepare});
 });
