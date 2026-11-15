@@ -103,3 +103,18 @@ Prior commit `6ae98f1f4c44f7753396b7babd614b0ad74b4ab1` passed all four remote
 workflows, including actual macOS ARM64 execution and Linux sanitizers. That does
 not substitute for checking the new prepared/revocation checkpoint. Local final
 combined gate passed 133 tests with zero skips, plus the runnable demo.
+
+## Accepted checkpoint after remote verification
+
+At `aa3003f34b969bcfbc1184c26fbc508048e245b9`, all four remote workflows
+concluded success: Games 43717201551, Portable consumer 43717201546,
+Pages 43717201544 and Audit 43717201608. Games exercised Linux Node 20/22/24,
+Linux ARM64 and macOS 15 ARM64; Node 24 Linux/macOS logs report 133 passed,
+zero skipped. Linux numeric ASan/UBSan ran with leakDetection=true.
+
+Waves 16–25 are accepted within the bounded host/runtime and test-matrix scope
+above, bringing accepted work to 25/30. No claim of game/client protection,
+phone performance or generalized proof of VM correctness follows from those tests.
+Waves 26–30 remain partial until coordinated consumer adoption and rollout.
+See [consumer rollout contract](CONSUMER-ROLLOUT.md) for the verified current
+consumer, migration constraints, rollback and required revalidation.
