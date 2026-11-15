@@ -19,6 +19,8 @@ jobs:
         run: node tools/portable-decision-build.cjs
       - name: Game adapters and portable regression
         run: node --test tests/games-*.test.cjs tests/invocation-context*.cjs tests/portable-decision*.cjs
+      - name: Trust canon byte regression
+        run: python3 tests/games-trust-canon.py
       - name: Seeded hostile input corpus
         run: node tools/games-fuzz.cjs
       - name: Informational local microbenchmark

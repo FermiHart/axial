@@ -1,0 +1,75 @@
+python3 tools/axi-checker-identity.py --check
+checker identity: 718e37b00389f63cfe3ff517641e5126b872a4efeeb32b71678e7294fd758224 (126 source files); public v1 ABI pins PASS
+cc  -std=c99 -Wall -Wextra -Werror -O1 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build/src/axi_bc.o src/axi_bc.c
+cc  -std=c99 -Wall -Wextra -Werror -O1 -D_POSIX_C_SOURCE=200809L -Isrc -Iinclude -Ivendor -MMD -MP -c -o build/src/axi_dossier.o src/axi_dossier.c
+cc  -o build/axi build/src/axi_admission_v1.o build/src/axi_aer1.o build/src/axi_aer1_verify.o build/src/axi_aer2_v1.o build/src/axi_ag1_core_v1.o build/src/axi_ag1_v1.o build/src/axi_alloc.o build/src/axi_arena.o build/src/axi_bc.o build/src/axi_builtin.o build/src/axi_ca43_47_core.o build/src/axi_canon.o build/src/axi_cap_infer.o build/src/axi_cap_table.o build/src/axi_codegen.o build/src/axi_compile_budget.o build/src/axi_contract.o build/src/axi_coverage_v1.o build/src/axi_delegation_v1.o build/src/axi_diag.o build/src/axi_dossier.o build/src/axi_effect.o build/src/axi_embed.o build/src/axi_embed_v1.o build/src/axi_extdec_v1.o build/src/axi_gateway_v1.o build/src/axi_handle_table.o build/src/axi_hash.o build/src/axi_iface.o build/src/axi_jm1_v1.o build/src/axi_json.o build/src/axi_lex.o build/src/axi_local_action_v1.o build/src/axi_local_admission_v1.o build/src/axi_local_attempt_v1.o build/src/axi_local_authority_v1.o build/src/axi_local_consumer_v1.o build/src/axi_local_diag_v1.o build/src/axi_local_epoch_v1.o build/src/axi_mem_account.o build/src/axi_numeric.o build/src/axi_osif.o build/src/axi_parse.o build/src/axi_platform_posix.o build/src/axi_policy_lint.o build/src/axi_replay.o build/src/axi_replay_v4.o build/src/axi_resource_envelope.o build/src/axi_rf1_pin_v1.o build/src/axi_rollout_v1.o build/src/axi_selective_disclosure_v1.o build/src/axi_sign.o build/src/axi_time_lease_v1.o build/src/axi_trace.o build/src/axi_trust_canon_v1.o build/src/axi_trust_v1.o build/src/axi_types.o build/src/axi_u64.o build/src/axi_vm.o build/vendor/ed25519.o build/src/axi_main.o -lm
+AXI=/workspace/scratch/a836694571eb/axial-games-work/build/axi sh tools/check.sh
+PASS lex/basic.axi
+PASS lex/diag.axi
+PASS lex/ops.axi
+PASS parse/basic.axi
+PASS parse/full.axi
+PASS parse/policy_explicit_cap.axi
+PASS parse/policy_minimal.axi
+PASS parse/policy_under.axi
+PASS parse/recover.axi
+PASS canon/comments.axi
+PASS canon/good.axi
+PASS canon/line_cap.axi
+PASS canon/messy.axi
+PASS canon/policy_canon.axi
+PASS canon/trivia_overflow.axi
+PASS types/builtin_cap_mismatch.axi
+PASS types/builtin_fs_exists.axi
+PASS types/builtin_json_policy.axi
+PASS types/call_window_17.axi
+PASS types/calls.axi
+PASS types/cap_method_swapped.axi
+PASS types/cap_method_unknown.axi
+PASS types/caps.axi
+PASS types/coercion.axi
+PASS types/green.axi
+PASS types/infer_cap_method.axi
+PASS types/infer_cap_mismatch.axi
+PASS types/infer_cycle.axi
+PASS types/infer_policy_bound.axi
+PASS types/infer_policy_violation.axi
+PASS types/infer_transitive.axi
+PASS types/names.axi
+PASS types/policy_else_nonbool.axi
+PASS types/proof_impure_call.axi
+PASS types/proof_pure_call.axi
+PASS types/pure.axi
+PASS types/scope_leak_else.axi
+PASS types/scope_leak_post_if.axi
+PASS types/union_payload_bytes.axi
+PASS types/union_payload_cap.axi
+PASS types/unions.axi
+PASS iface/ax-err.axi
+PASS iface/ax-fuel.axi
+PASS iface/ax-pname.axi
+PASS iface/ax-pure.axi
+PASS iface/ax-ret.axi
+PASS iface/v1.axi
+PASS iface/v2-breaking.axi
+PASS iface/v2-compatible.axi
+PASS iface/v2-identical.axi
+PASS hash/vectors
+PASS bc/bad-op.axs
+PASS bc/bad-shape.axs
+PASS bc/good.axs
+PASS bc/uchk.axs
+PASS run/bad-divzero
+PASS run/bad-eff
+PASS run/bad-falloff
+PASS run/bad-kinds
+PASS run/call
+PASS run/fib
+PASS run/fuel-out
+PASS run/fuel-report
+PASS run/mem-out
+PASS run/mem-report
+PASS run/uchk-err
+PASS run/uchk-ok
+axial check: 67 PASS, 0 FAIL
+trust canon: 256 SHA256 reference comparisons and refusals PASS

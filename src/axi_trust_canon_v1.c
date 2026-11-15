@@ -11,7 +11,10 @@ int axi_trust_canon_v1_root(const uint8_t page[4096], uint8_t root[32],
     /* AXI-INV-218: spell the domain length out. sizeof("...") counts
      * the NUL and once smuggled a second zero into the digest; the
      * Python differential caught it in the lab (AXV3-04). */
-    static const uint8_t dom[16] = "SINGUOS-TRUST-v1";
+    static const uint8_t dom[16] = {
+        'S', 'I', 'N', 'G', 'U', 'O', 'S', '-',
+        'T', 'R', 'U', 'S', 'T', '-', 'v', '1'
+    };
     uint8_t cat[16 + 1 + AXI_TRUST_CANON_V1_COVERED_SIZE];
     if (!page || !root
         || page_len != AXI_TRUST_CANON_V1_PAGE_SIZE) {
