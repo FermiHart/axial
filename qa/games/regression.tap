@@ -1,0 +1,44 @@
+✔ invocation handles bind one owner, epoch, request, actor, resource and action (1.803535ms)
+✔ each live request has its own monotonic observation; reissue only supersedes that request (0.327724ms)
+✔ consumption is one use and retirement cannot be promoted into execution (0.259764ms)
+✔ rotation invalidates old handles without resetting observation revisions (0.502893ms)
+✔ capacity refuses new pending requests without evicting current handles (0.225022ms)
+✔ bindings and configuration reject accessors, exotic prototypes, extras and unbounded strings (0.860441ms)
+✔ reentrant binding descriptors cannot consume the same handle twice or bypass invalidation (0.578766ms)
+✔ every reentrant binding observation rechecks private state before a check or consumption (3.027534ms)
+✔ snapshot fields, serialized context and identical owner labels never forge a live handle (0.338691ms)
+✔ older observations of another live request remain valid while reissue isolates supersession (0.291631ms)
+✔ preview retirement cannot execute; a fresh request can commit and a failed effect cannot rearm (0.258963ms)
+✔ capacity exhaustion leaves every pending handle and revision unchanged (0.983573ms)
+✔ invalid bindings do not spend a handle and plain data is read without getters (2.726118ms)
+{"profile":"axial.portable-decision.v2","sourceSha256":"0a8f69ef72d8ac98483ad2ca6612ee2961db0cc398f822da1011be891ae0e34f","combinations":8,"nativeComparisons":528,"allows":56,"denials":415,"exhausted":57}
+✔ v2 source and compiler identity are exact and export is deterministic (21.046998ms)
+✔ all bool combinations, exact typed reasons and prefix fuel budgets match the C VM (19.440223ms)
+✔ multiple failed facts return the first reason specified by the compiled policy (7.189292ms)
+✔ reordered opaque reasons and bool literals are executed, not reconstructed from facts (17.63161ms)
+✔ unknown result shapes, payloads, atoms and constants are refused before execution (1.195787ms)
+✔ invalid return kinds, halt and falloff never fabricate a decision (0.378239ms)
+✔ closed opcode, register, instruction count and forward jump bounds remain enforced (0.929413ms)
+✔ strict facts, explicit fuel, getters and mutable nested objects fail closed (0.772561ms)
+✔ native checker/exporter refuses bool, payload returns, dotted atoms and wider programs (33.750407ms)
+✔ canonical source gate is enforced by both coordinator and native exporter (4.55547ms)
+✔ v1 exporter artifact remains byte-identical and profiles refuse each other (159.558763ms)
+✔ standalone browser runtime yields the exact decision without code generation (3.01168ms)
+✔ native decision reasons and precedence agree for every combination of the compiled fixture (6.959033ms)
+✔ declared atoms come from the executed constant, with no reason reconstructed from facts (0.416816ms)
+✔ return contracts refuse extra union arms, payloads, undeclared atoms and ambiguous errors (2.011613ms)
+✔ UNIT is the native success value; booleans and numerics cannot substitute for it (0.790969ms)
+✔ ERR moves and comparisons preserve atom identity even when registers alias (1.606394ms)
+✔ fuel exhaustion never retains a previous reason or permit (1.371206ms)
+✔ v2 collections, integers and forward-only code retain bounded admission (0.764659ms)
+✔ getters and unknown fields cannot create a typed decision (1.65841ms)
+✔ one invocation snapshots error atoms without caching caller-owned mutable programs (0.453981ms)
+✔ browser realm produces the same typed reason without ambient I/O or dynamic code (2.468127ms)
+ℹ tests 35
+ℹ suites 0
+ℹ pass 35
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 522.255499

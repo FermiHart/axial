@@ -1,0 +1,25 @@
+name: Games adapters
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  node:
+    strategy:
+      matrix:
+        node: [20, 22, 24]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '${{ matrix.node }}'
+      - name: Native compiler fixture
+        run: node tools/portable-decision-build.cjs
+      - name: Game adapters and portable regression
+        run: node --test tests/games-*.test.cjs tests/invocation-context*.cjs tests/portable-decision*.cjs
+      - name: Seeded hostile input corpus
+        run: node tools/games-fuzz.cjs
+      - name: Informational local microbenchmark
+        run: node tools/games-benchmark.cjs

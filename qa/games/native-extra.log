@@ -1,0 +1,9 @@
+python3 tools/axi-checker-identity.py --check
+checker identity: 8304f6da573d02f6cd3975b19a4c93b12b786c8cab793acee104808b9b0b9a71 (126 source files); public v1 ABI pins PASS
+HOSTCC='cc' CPPFLAGS='' CFLAGS='-std=c99 -Wall -Wextra -Werror -O1 -D_POSIX_C_SOURCE=200809L' LDFLAGS='' LDLIBS='-lm' PYTHON='python3' AXI_TEST_BUILD='/workspace/scratch/a836694571eb/axial-games-work/build/audit80-numeric' sh tests/audit80/numeric.sh /workspace/scratch/a836694571eb/axial-games-work/build/axi
+numeric W63: PASS (3785 exact-integer reader fixtures)
+numeric W65: PASS (8318 rational-interval canonical fixtures and exact round trips)
+numeric W63: PASS (3785 exact-integer reader fixtures)
+numeric W68: PASS (5 locale names, 2 with a non-dot separator, 20 locale/rounding combinations; fenv preserved)
+numeric W68: PASS (1 MiB midpoint tails, sticky rounding, long magnitudes, leading zeroes and refusal atomicity)
+numeric W66: PASS (46 signed literal cases, aliases, fixed points, raw pools, VM zero contract and refusals)

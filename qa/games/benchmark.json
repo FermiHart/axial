@@ -1,0 +1,13 @@
+{
+  "node": "v24.22.1",
+  "platform": "linux",
+  "arch": "x64",
+  "evaluations": 10000,
+  "measure": "milliseconds per evaluation averaged over 100-call batches, includes parse/snapshot",
+  "batchMeanP50": 0.017251080000000342,
+  "batchMeanP95": 0.02647944999999993,
+  "batchMeanP99": 0.10019874999999999,
+  "heapUsed": 12953240,
+  "schedulerItems": 1000,
+  "productionBenchmark": false
+}

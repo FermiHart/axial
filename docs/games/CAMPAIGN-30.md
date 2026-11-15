@@ -12,11 +12,11 @@ anti-cheat protection of an attacker-controlled client, or a new C bytecode ABI.
 | 3 | Admit actual SHA256 bytes against external trusted manifest | games-admission-v1 |
 | 4 | Opaque handles and monotonic loader revocation | games-admission-v1 |
 | 5 | Adversarial mutation, forgery, fuel and bounds gate | 10 tests, admission.tap |
-| 6–10 | Reference revision/CAS, idempotency, binding, reentrancy, contention tests | 13 tests; in-memory scope only |
+| 6–10 | Reference revision/CAS, idempotency, binding, reentrancy, contention tests | 16 tests; in-memory scope only |
 | 11–15 | Quantitative checked arithmetic and compiler integration | host helper tested; compiler integration pending |
 | 16–20 | Quotas, batch and representative measurements | scheduler tested; realistic workloads pending |
-| 21–25 | Fuzz/differential and cross-platform validation | pending |
-| 26–30 | Pilots, SDK lifecycle, rollout and integration | pending |
+| 21–25 | Fuzz/differential and cross-platform validation | seeded corpus and C helper oracle implemented; platform/sanitizer matrix pending |
+| 26–30 | Pilots, SDK lifecycle, rollout and integration | three compiled fixture pilots tested; real engine rollout pending |
 
 Waves are accepted only against named evidence, not by counting commits.
 A helper/reference fixture is not a finished production integration.
@@ -38,3 +38,15 @@ sandbox. Trusted host API calls/configuration must not be malicious Proxies.
 
 No changes to RustRoots are made here. Its parallel Mordomo integration must
 explicitly adopt these adapters after its own tests and version lock update.
+
+## Partial-work evidence (not completed-wave claims)
+
+- Checked numeric host helper with 11,362 C __int128 oracle cases. This is not
+  parity with the native modular Axial arithmetic or a compiler-integrated profile.
+- Three compiled .axi fixture pilots (door, inventory, race), 3,168 native/JS
+  comparisons; these have no production effects or network server.
+- Bounded scheduler and 1,000-item synthetic workload. Benchmark is Node x64 only.
+- 10,000 byte mutations and 10,000 garbage facts, seeded, not coverage-guided fuzz.
+- Node 20/22/24 CI is configured but remote result must be checked separately.
+
+Do not present the remaining blocks as completed on these partial proofs.
