@@ -1,0 +1,24 @@
+✔ commit and exact replay return same receipt without duplicate effect (3.504605ms)
+✔ same command id with other actor/payload is refused (0.62991ms)
+✔ two buyers cannot both buy last unit with same revision (0.504195ms)
+✔ binding rejects world/policy/schema mismatch without mutation (0.930314ms)
+✔ denial and trap do not run reducer or change state (0.808474ms)
+✔ reducer failure cannot partially commit; failure receipt replays (0.441061ms)
+✔ callback snapshots are immutable and reducer output is copied (0.513569ms)
+✔ reentrancy is refused before a second command can mutate (0.770748ms)
+✔ bounded receipts fail closed, retain accepted command replay (0.527349ms)
+✔ malformed oversized and nested data are rejected (0.659384ms)
+✔ semantic payload order produces same replay identity (0.438427ms)
+✔ safe revision limit fails closed (0.443264ms)
+✔ async reducer and non-record state refuse without commit (2.010179ms)
+✔ async callbacks are refused at creation before invocation (0.48729ms)
+✔ rejected native promises are observed without commit or process failure (118.185646ms)
+✔ arbitrary thenable is never assimilated (0.511685ms)
+ℹ tests 16
+ℹ suites 0
+ℹ pass 16
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 326.508707

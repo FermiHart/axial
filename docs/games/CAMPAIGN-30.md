@@ -12,9 +12,9 @@ anti-cheat protection of an attacker-controlled client, or a new C bytecode ABI.
 | 3 | Admit actual SHA256 bytes against external trusted manifest | games-admission-v1 |
 | 4 | Opaque handles and monotonic loader revocation | games-admission-v1 |
 | 5 | Adversarial mutation, forgery, fuel and bounds gate | 10 tests, admission.tap |
-| 6–10 | Revision/CAS, idempotency and authority reference | in progress |
-| 11–15 | Quantitative checked arithmetic and compiler integration | in progress |
-| 16–20 | Quotas, batch and representative measurements | in progress |
+| 6–10 | Reference revision/CAS, idempotency, binding, reentrancy, contention tests | 13 tests; in-memory scope only |
+| 11–15 | Quantitative checked arithmetic and compiler integration | host helper tested; compiler integration pending |
+| 16–20 | Quotas, batch and representative measurements | scheduler tested; realistic workloads pending |
 | 21–25 | Fuzz/differential and cross-platform validation | pending |
 | 26–30 | Pilots, SDK lifecycle, rollout and integration | pending |
 
