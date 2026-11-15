@@ -2,7 +2,7 @@ name: Portable policy consumer gate
 on:
   push:
     branches: [main]
-    paths: ['src/**', 'vendor/**', 'include/**', 'runtime/**', 'tools/portable-policy*', 'tests/portable-policy*', 'tests/portable-policy/**', '.github/workflows/portable-policy.yml']
+    paths: ['src/**', 'vendor/**', 'include/**', 'runtime/**', 'tools/portable-policy*', 'tools/portable-decision*', 'tests/portable-policy*', 'tests/portable-policy/**', 'tests/portable-decision*', 'tests/portable-decision/**', 'tests/invocation-context*', 'Makefile', '.github/workflows/portable-policy.yml']
   pull_request:
   workflow_dispatch:
 permissions:
@@ -20,3 +20,5 @@ jobs:
           node-version: '24'
       - name: C reference and portable execution contract
         run: make gate-portable
+      - name: Typed decisions and single-use invocation contexts
+        run: make gate-decision

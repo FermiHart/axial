@@ -269,6 +269,16 @@ the frozen embed-v1 ABI. The host owns artifact trust and every world mutation.
 Run `make gate-portable` with Node.js and the existing C99 toolchain to compare
 the portable runtime with the C VM and exercise malformed input boundaries.
 
+The separate [portable decision v2 profile](docs/PORTABLE-DECISION-V2.md)
+preserves a native `ok | err.Reason` result, so consumers receive the exact
+reason returned by compiled Axial code. The v1 profile remains unchanged.
+The [invocation context helper](docs/INVOCATION-CONTEXT-V1.md) gives a host
+versioned observations and private, single-use tickets for binding a decision
+to one request. Hosts must still recheck their authoritative state immediately
+before applying effects; an observation revision is not a world-state version.
+Run `make gate-decision` for native/portable decision parity, hostile artifact
+cases, and context lifecycle and reentrancy regressions.
+
 ## License
 
 Sovereign Public License 1.0: [LICENSE](LICENSE), `LicenseRef-SPL-1.0`.
