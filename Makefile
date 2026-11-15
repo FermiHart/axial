@@ -137,11 +137,14 @@ bench: $(BUILD)/audit40/embed $(BUILD)/audit40/seal $(BUILD)/audit40/runtime_ben
 # A separate consumer profile; the native gate keeps its original requirements.
 .PHONY: gate-portable
 gate-portable:
+	# The adversarial suite needs its oracle regardless of test discovery order.
+	node tools/portable-policy-build.cjs
 	node --test --test-concurrency=1 tests/portable-policy-differential.cjs tests/portable-policy-adversarial.cjs
 
 # Typed decision results and host-local invocation contexts are separately gated.
 .PHONY: gate-decision
 gate-decision:
+	node tools/portable-decision-build.cjs
 	node --test --test-concurrency=1 tests/portable-decision-differential.cjs tests/portable-decision-wave2-adversarial.cjs tests/invocation-context-v1.test.cjs tests/invocation-context-wave2-adversarial.cjs
 
 clean:
