@@ -16,9 +16,11 @@ jobs:
         with:
           node-version: '${{ matrix.node }}'
       - name: Native compiler fixture
-        run: node tools/portable-decision-build.cjs
+        run: |
+          node tools/portable-decision-build.cjs
+          node tools/portable-numeric-build.cjs
       - name: Game adapters and portable regression
-        run: node --test tests/games-*.test.cjs tests/invocation-context*.cjs tests/portable-decision*.cjs
+        run: node --test --test-concurrency=1 tests/games-*.test.cjs tests/invocation-context*.cjs tests/portable-decision*.cjs tests/portable-numeric*.test.cjs
       - name: Trust canon byte regression
         run: python3 tests/games-trust-canon.py
       - name: Seeded hostile input corpus

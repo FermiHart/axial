@@ -12,11 +12,11 @@ anti-cheat protection of an attacker-controlled client, or a new C bytecode ABI.
 | 3 | Admit actual SHA256 bytes against external trusted manifest | games-admission-v1 |
 | 4 | Opaque handles and monotonic loader revocation | games-admission-v1 |
 | 5 | Adversarial mutation, forgery, fuel and bounds gate | 10 tests, admission.tap |
-| 6–10 | Reference revision/CAS, idempotency, binding, reentrancy, contention tests | 16 tests; in-memory scope only |
-| 11–15 | Quantitative checked arithmetic and compiler integration | host helper tested; compiler integration pending |
+| 6–10 | Reference revision/CAS, idempotency, binding, reentrancy, contention tests | 16 in-memory + 10 SQLite tests; single-resource durable adapter |
+| 11–15 | Quantitative checked arithmetic and compiler integration | modular i64 compiler profile + checked host helper; 16,500 native VM comparisons |
 | 16–20 | Quotas, batch and representative measurements | scheduler tested; realistic workloads pending |
 | 21–25 | Fuzz/differential and cross-platform validation | seeded corpus and C helper oracle implemented; platform/sanitizer matrix pending |
-| 26–30 | Pilots, SDK lifecycle, rollout and integration | three compiled fixture pilots tested; real engine rollout pending |
+| 26–30 | Pilots, SDK lifecycle, rollout and integration | three compiled fixture pilots tested; SDK boundary documented; real engine rollout pending |
 
 Waves are accepted only against named evidence, not by counting commits.
 A helper/reference fixture is not a finished production integration.
@@ -50,3 +50,15 @@ explicitly adopt these adapters after its own tests and version lock update.
 - Node 20/22/24 CI is configured but remote result must be checked separately.
 
 Do not present the remaining blocks as completed on these partial proofs.
+
+## Second implementation block
+
+Portable numeric v1 now compiles real .axi through the C compiler and matches
+native i64 modular arithmetic; checked/fixed-point host helpers remain distinct.
+The optional Node SQLite adapter commits one resource and its idempotency receipt
+in the same transaction and passed restart/lost-response/two-process contention.
+It still is not a multiresource production database or deployed game authority.
+
+Current acceptance: waves 1–15 closed within the explicit narrow profiles above;
+16–30 remain partial until representative runtime workloads, broad platform
+validation and consumer rollout. Node SQLite requires a supported Node runtime.

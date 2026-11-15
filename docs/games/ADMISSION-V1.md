@@ -17,3 +17,9 @@ admission speedup; benchmarks must account for validation and parsing.
 
 Run: `node tools/portable-decision-build.cjs` then
 `node --test tests/games-admission-v1.test.cjs`.
+
+`createNumericAdmission` is the explicit separate loader for
+`axial.portable-numeric.v1`. Its facts use canonical decimal i64 strings;
+results are values, not allow decisions. Do not use JavaScript truthiness to
+interpret a numeric result as permission. The original createAdmission only
+admits decision-v2, and each handle remains private to its loader.

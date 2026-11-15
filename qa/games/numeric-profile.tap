@@ -1,0 +1,13 @@
+✔ real compiler words and native VM agree for signed numeric profile (358.266682ms)
+✔ native wrap differs intentionally from checked host helper (29.586552ms)
+✔ strict structure, i64 fact encoding, opcodes and control bounds fail closed (11.478087ms)
+✔ malformed register kinds trap rather than coerce (7.577678ms)
+✔ standalone browser realm and profile separation (12.235519ms)
+ℹ tests 5
+ℹ suites 0
+ℹ pass 5
+ℹ fail 0
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 728.134207

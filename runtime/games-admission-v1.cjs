@@ -3,11 +3,12 @@
 // Trusted Node host boundary. Never use a client supplied trust manifest.
 const {createHash} = require('node:crypto');
 const {TextDecoder} = require('node:util');
-const vm = require('./portable-decision-v2.js');
+const decisionVM = require('./portable-decision-v2.js');
+const numericVM = require('./portable-numeric-v1.js');
 const hash = bytes => createHash('sha256').update(bytes).digest('hex');
 const token = /^[A-Za-z0-9_.:-]{1,96}$/;
 function name(s) { return typeof s === 'string' && token.test(s) && !/[\r\n]/.test(s); }
-function createAdmission(manifest) {
+function createPinnedAdmission(manifest, vm) {
   if (!Array.isArray(manifest) || manifest.length > 256) throw new TypeError('manifest');
   const trusted = new Map(), handles = new WeakMap(), revoked = new Set();
   for (const row of manifest) {
@@ -42,4 +43,6 @@ function createAdmission(manifest) {
   function revoke(id) { if (!trusted.has(id)) return false; revoked.add(id); return true; }
   return Object.freeze({admit, evaluate, revoke});
 }
-module.exports = Object.freeze({createAdmission, hash});
+const createAdmission = manifest => createPinnedAdmission(manifest, decisionVM);
+const createNumericAdmission = manifest => createPinnedAdmission(manifest, numericVM);
+module.exports = Object.freeze({createAdmission, createNumericAdmission, hash});
