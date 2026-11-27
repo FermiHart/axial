@@ -66,29 +66,42 @@
       "id": "W04",
       "title": "Scope gate regression coverage",
       "acceptance": "Test the documentation/header guard with isolated ordinary fixtures and check its failure reporting.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "tests/assurance40/scope_guard.py",
+        ".github/workflows/scope.yml",
+        "Four isolated cases; hosted execution pending."
+      ]
     },
     {
       "id": "W05",
       "title": "Governance checkpoint",
       "acceptance": "Record release administration requirements, maintainer ownership and review dependencies without asserting unavailable owner controls.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/GOVERNANCE.md",
+        "Source-based governance requirements reviewed; no claim of owner administration."
+      ]
     },
     {
       "id": "W06",
       "title": "Crypto source attribution inventory",
       "acceptance": "Record exact vendor files, digests and source notices, and identify provenance items still needing independent review.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/VENDOR-INVENTORY.md",
+        "Three exact Git blob digests checked via Git tree; SHA-256 content digests pending separately."
+      ]
     },
     {
       "id": "W07",
       "title": "Upstream provenance review",
       "acceptance": "Compare documented origins against available authoritative upstream records; preserve license notices and report uncertainty.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "BLOCKED",
+      "evidence": [
+        "docs/assurance40/VENDOR-INVENTORY.md",
+        "Official upstream project and version corroborate lineage only; immutable original bytes and independent delta review missing."
+      ]
     },
     {
       "id": "W08",
