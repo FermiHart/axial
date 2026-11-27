@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "kind": "axial-build-evidence",
+  "profile": "ordinary-c99-same-runner",
+  "signed": false,
+  "description": "Unsigned offline metadata; normative reader tools/assurance_capsule.py. No runtime authority.",
+  "fields": {
+    "revision": {
+      "commit": "40 lowercase hexadecimal Git object ID",
+      "tree": "40 lowercase hexadecimal Git object ID"
+    },
+    "results": {
+      "two_build_digest_comparison": [
+        "match",
+        "mismatch"
+      ]
+    },
+    "evidence": [
+      {
+        "path": "build.json",
+        "sha256": "64 lowercase hexadecimal SHA-256 of exact evidence bytes"
+      }
+    ]
+  },
+  "limits": [
+    "No signature, no authority, no independent provenance",
+    "Same runner; no separate host reproducibility",
+    "No production inputs, binary upload, or trust anchor"
+  ]
+}

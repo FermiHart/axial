@@ -1,0 +1,479 @@
+{
+  "campaign": "AXIAL-SOVEREIGN-ASSURANCE-W01-W40-20261127",
+  "branch": "audit/axial-assurance-20261127",
+  "pr": 3,
+  "baseline": {
+    "commit": "d2ed63af63624fbdab51bcf2fb60465ed29b6b84",
+    "tree": "bf35ad414ff25c9f70ed5eb8a6315c9ba542990d",
+    "main": "0e53839844362d736680b0ac54973b6c1c30d3e9",
+    "workflow_runs": [
+      46000508778,
+      46000508749,
+      46000508658,
+      46000508741,
+      46000482116,
+      46000482205,
+      46000481987
+    ],
+    "conclusion": "success",
+    "scope": "PR/non-main subset; not full trusted-main authority qualification"
+  },
+  "states": [
+    "PLANNED",
+    "IMPLEMENTED",
+    "VERIFIED",
+    "BLOCKED"
+  ],
+  "report_every": 10,
+  "reported_checkpoints": [
+    "W10",
+    "W20",
+    "W30",
+    "W40"
+  ],
+  "waves": [
+    {
+      "id": "W01",
+      "title": "Campaign baseline and acceptance ledger",
+      "acceptance": "Pin the reviewed baseline, scope, workflow results and 40 ordered acceptance criteria.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/PLAN.md",
+        "docs/assurance40/STATUS.json",
+        "baseline workflow runs",
+        "Reviewed 40 ordered IDs and matching baseline successful workflow IDs via GitHub API, 2026-11-27; documentation acceptance only."
+      ]
+    },
+    {
+      "id": "W02",
+      "title": "Scope documentation reconciliation",
+      "acceptance": "Cross-reference the normative ADR, beta boundary and campaign evidence; preserve L1 and distinguish experimental profiles.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/SCOPE.md",
+        "docs/CLAIMS.md",
+        "docs/BETA-LANGUAGE.md",
+        "docs/ADR-AXIAL-0001.md",
+        "Static reconciliation of source scope; no runtime qualification."
+      ]
+    },
+    {
+      "id": "W03",
+      "title": "Structured claim index",
+      "acceptance": "Create a versioned machine-readable claim inventory using stable existing claim IDs where applicable; check references and status vocabulary.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/CLAIMS.json",
+        "Seven source table rows parsed, references checked against pinned tree and statuses checked against vocabulary in connector session."
+      ]
+    },
+    {
+      "id": "W04",
+      "title": "Scope gate regression coverage",
+      "acceptance": "Test the documentation/header guard with isolated ordinary fixtures and check its failure reporting.",
+      "state": "VERIFIED",
+      "evidence": [
+        "tests/assurance40/scope_guard.py",
+        ".github/workflows/scope.yml",
+        "Four isolated cases; hosted execution pending.",
+        "https://github.com/FermiHart/axial/actions/runs/46001741430 job 140514839158: isolated scope_guard step success."
+      ]
+    },
+    {
+      "id": "W05",
+      "title": "Governance checkpoint",
+      "acceptance": "Record release administration requirements, maintainer ownership and review dependencies without asserting unavailable owner controls.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/GOVERNANCE.md",
+        "Source-based governance requirements reviewed; no claim of owner administration."
+      ]
+    },
+    {
+      "id": "W06",
+      "title": "Crypto source attribution inventory",
+      "acceptance": "Record exact vendor files, digests and source notices, and identify provenance items still needing independent review.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/VENDOR-INVENTORY.md",
+        "Three exact Git blob digests checked via Git tree; SHA-256 content digests pending separately."
+      ]
+    },
+    {
+      "id": "W07",
+      "title": "Upstream provenance review",
+      "acceptance": "Compare documented origins against available authoritative upstream records; preserve license notices and report uncertainty.",
+      "state": "BLOCKED",
+      "evidence": [
+        "docs/assurance40/VENDOR-INVENTORY.md",
+        "Official upstream project and version corroborate lineage only; immutable original bytes and independent delta review missing."
+      ]
+    },
+    {
+      "id": "W08",
+      "title": "Standard signature conformance",
+      "acceptance": "Use published standard positive known-answer vectors on local test fixtures; record results and exact scope.",
+      "state": "VERIFIED",
+      "evidence": [
+        "tests/assurance40/public_vectors.c",
+        ".github/workflows/assurance-vectors.yml",
+        "RFC 8032 §7.1 public vectors 1–3; CI execution pending.",
+        "https://github.com/FermiHart/axial/actions/runs/46001741391 four compiler/dispatch jobs completed with positive vector step success."
+      ]
+    },
+    {
+      "id": "W09",
+      "title": "Hash conformance",
+      "acceptance": "Validate standard SHA-256 and SHA-512 known-answer vectors in supported implementation profiles.",
+      "state": "VERIFIED",
+      "evidence": [
+        "tests/assurance40/public_vectors.c",
+        ".github/workflows/assurance-vectors.yml",
+        "Three SHA-256 and three SHA-512 positive examples; CI execution pending.",
+        "https://github.com/FermiHart/axial/actions/runs/46001741391 four compiler/dispatch jobs completed with positive vector step success; actual hardware dispatch not confirmed from job status alone."
+      ]
+    },
+    {
+      "id": "W10",
+      "title": "Crypto review checkpoint",
+      "acceptance": "Record conformance evidence and unresolved independent review requirements; do not certify security or alter cryptographic algorithms automatically.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/W10-CHECKPOINT.md",
+        "Preliminary checkpoint; collect real runs before verification.",
+        "docs/assurance40/W10-CHECKPOINT.md",
+        "Reviewed hosted job/step outcomes; W07 and independent crypto review remain outstanding."
+      ]
+    },
+    {
+      "id": "W11",
+      "title": "Compiler portability matrix",
+      "acceptance": "Qualify ordinary builds on available supported GCC and Clang versions with pinned inputs.",
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "docs/assurance40/COMPILER-ABI.md",
+        ".github/workflows/assurance-compiler.yml",
+        "Existing hosted ordinary gates succeeded; expanded GCC/Clang O1/O2 and version evidence pending.",
+        "https://github.com/FermiHart/axial/actions/runs/46010895638: four ordinary GCC/Clang O1/O2 jobs passed including source/toolchain recording; exact compiler version stdout and immutable image/package pins not independently retrieved. W11 remains partial.",
+        "Actual versions confirmed; immutable toolchain pin unavailable; docs/assurance40/BUILD-FOLLOWUP.md"
+      ]
+    },
+    {
+      "id": "W12",
+      "title": "Warning baseline",
+      "acceptance": "Measure and document additional compiler warning classes; make narrowly scoped nonsemantic fixes when supported.",
+      "state": "VERIFIED",
+      "evidence": [
+        ".github/workflows/assurance-compiler.yml",
+        "Two informational warning-count jobs implemented; no measurements claimed until logs/results obtained.",
+        "https://github.com/FermiHart/axial/actions/runs/46010895638: both warning measurement steps succeeded; numeric totals not retrieved, no zero-warning claim.",
+        "Hosted logs GCC 1 / Clang 5 diagnostics; docs/assurance40/BUILD-FOLLOWUP.md"
+      ]
+    },
+    {
+      "id": "W13",
+      "title": "Memory accounting",
+      "acceptance": "Qualify leak detection for supported ordinary workloads and separate process-tracing limitations.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/COMPILER-ABI.md",
+        "https://github.com/FermiHart/axial/actions/runs/46001741433 job 140514957090 leak-fast step passed; https://github.com/FermiHart/axial/actions/runs/46001741509 job 140514839338 numeric sanitizer step passed. Limited workloads only."
+      ]
+    },
+    {
+      "id": "W14",
+      "title": "Optimized build parity",
+      "acceptance": "Compare ordinary golden behavior across supported optimization profiles.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/COMPILER-ABI.md",
+        "https://github.com/FermiHart/axial/actions/runs/46001741433 normal/release gate jobs passed the same checked-in goldens at O1/O2; optimized UBSan fast gate also succeeded. Expanded matrix pending."
+      ]
+    },
+    {
+      "id": "W15",
+      "title": "Portable architecture evidence",
+      "acceptance": "Record available native CI architecture results, distinguish portable consumer evidence from full C ABI qualification.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/COMPILER-ABI.md",
+        "https://github.com/FermiHart/axial/actions/runs/46001741509 five native compiler fixture and adapter jobs passed, including Ubuntu ARM/macOS. No full C ABI claim."
+      ]
+    },
+    {
+      "id": "W16",
+      "title": "Public ABI evidence",
+      "acceptance": "Verify exact frozen header and existing layout/symbol contract without expanding the ABI.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/COMPILER-ABI.md",
+        ".github/workflows/assurance-compiler.yml",
+        "Frozen header and existing layout gate passed; explicit object prefix symbol comparison pending.",
+        "https://github.com/FermiHart/axial/actions/runs/46010895638: all four ordinary jobs passed frozen layout/header and public embed prefix symbol comparison."
+      ]
+    },
+    {
+      "id": "W17",
+      "title": "Contract inventory",
+      "acceptance": "Index documented contract interfaces and their existing test entry points.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/CONTRACTS.md",
+        "Source contract and test pointers reconciled with tracked tree; documentation acceptance."
+      ]
+    },
+    {
+      "id": "W18",
+      "title": "Decision semantic parity",
+      "acceptance": "Run existing approved local policy conformance fixtures across supported reference and portable implementations.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/CONTRACTS.md",
+        "https://github.com/FermiHart/axial/actions/runs/46001741560 job 140514840514 both existing portable/reference and typed-decision steps passed; no new adversarial runs."
+      ]
+    },
+    {
+      "id": "W19",
+      "title": "Admission contract review",
+      "acceptance": "Document expected decision semantics and existing regression coverage; flag gaps for separate maintainer review.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/CONTRACTS.md",
+        "Admission documentation and existing fixture coverage reconciled; gaps reserved for maintainer."
+      ]
+    },
+    {
+      "id": "W20",
+      "title": "Contract checkpoint",
+      "acceptance": "Reconcile source, documented boundaries and verified tests; no promotion of experimental authority.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/W20-CHECKPOINT.md",
+        "Checkpoint assembled; expanded compiler evidence pending.",
+        "https://github.com/FermiHart/axial/actions/runs/46010895638: integrated checkpoint reconciled; W11/W12 remain partial and W07 blocked; no experimental authority promoted."
+      ]
+    },
+    {
+      "id": "W21",
+      "title": "Identity roles",
+      "acceptance": "Document producer, checker, recorder, operator and host responsibilities and existing fixture boundaries.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/IDENTITY-GOVERNANCE.md",
+        "Documentation-only review of existing Axial ADR/A01/consumer rollout/release gate/invocation context; no consumer or production credential access."
+      ]
+    },
+    {
+      "id": "W22",
+      "title": "Test credential handling",
+      "acceptance": "Review test-only identity documentation and safe fixture storage; avoid production credentials or signing keys.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/IDENTITY-GOVERNANCE.md",
+        "Documentation-only review of existing Axial ADR/A01/consumer rollout/release gate/invocation context; no consumer or production credential access."
+      ]
+    },
+    {
+      "id": "W23",
+      "title": "Trust lifecycle requirements",
+      "acceptance": "Specify reviewable rotation, expiration and revocation requirements without modifying live trust policy.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/IDENTITY-GOVERNANCE.md",
+        "Documentation-only review of existing Axial ADR/A01/consumer rollout/release gate/invocation context; no consumer or production credential access."
+      ]
+    },
+    {
+      "id": "W24",
+      "title": "Consumer responsibility profiles",
+      "acceptance": "Record the actual Jash, Beyond and RustRoots integration scope without writing to consumer repositories.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/IDENTITY-GOVERNANCE.md",
+        "Documentation-only review of existing Axial ADR/A01/consumer rollout/release gate/invocation context; no consumer or production credential access."
+      ]
+    },
+    {
+      "id": "W25",
+      "title": "Trust governance checkpoint",
+      "acceptance": "Collect decisions and remaining owner-side dependencies; no external trust-anchor promotion.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/IDENTITY-GOVERNANCE.md",
+        "Documentation-only review of existing Axial ADR/A01/consumer rollout/release gate/invocation context; no consumer or production credential access."
+      ]
+    },
+    {
+      "id": "W26",
+      "title": "Build metadata capture",
+      "acceptance": "Capture revision, compiler, target and flags as deterministic metadata.",
+      "state": "VERIFIED",
+      "evidence": [
+        ".github/workflows/assurance-build.yml",
+        "Exact checkout, compiler/linker, target, flags and source epoch capture implemented; CI output pending.",
+        "Observed exact metadata job 140571091454; docs/assurance40/BUILD-OBSERVED.json"
+      ]
+    },
+    {
+      "id": "W27",
+      "title": "Build reproducibility",
+      "acceptance": "Compare independent ordinary local or hosted builds with fixed source and toolchain inputs; preserve differences.",
+      "state": "IMPLEMENTED",
+      "evidence": [
+        ".github/workflows/assurance-build.yml",
+        "Two fresh ordinary build directories on one runner; results pending. Separate fixed-toolchain host remains required.",
+        "Same-runner identical digest observed; separate fixed-toolchain host unavailable."
+      ]
+    },
+    {
+      "id": "W28",
+      "title": "Component inventory",
+      "acceptance": "Produce source-derived dependency and license inventory suitable for an SBOM.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/COMPONENTS.json",
+        "15 tracked file identities checked against tree 56660c4f91698f0d80afc667242c5da6a88828be; source inventory only, not complete binary SBOM."
+      ]
+    },
+    {
+      "id": "W29",
+      "title": "Artifact manifest",
+      "acceptance": "Generate deterministic digests for explicitly selected nonsecret build outputs.",
+      "state": "VERIFIED",
+      "evidence": [
+        ".github/workflows/assurance-build.yml",
+        "Explicit axi and source notice SHA-256 manifest implemented; observed digests pending.",
+        "Two observed artifact hashes and four explicit source hashes; docs/assurance40/BUILD-OBSERVED.json"
+      ]
+    },
+    {
+      "id": "W30",
+      "title": "Distribution evidence checkpoint",
+      "acceptance": "Document verification procedure and owner-controlled signing requirements; do not sign or publish releases.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/W30-CHECKPOINT.md",
+        "Verification procedure and owner-controlled signing documented; execution evidence pending.",
+        "Observed evidence and owner signing boundary reconciled; independent host pending."
+      ]
+    },
+    {
+      "id": "W31",
+      "title": "Evidence capsule schema",
+      "acceptance": "Define a versioned manifest for revision, profile, test results and evidence digests.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/CAPSULE-SCHEMA.json; documentation acceptance"
+      ]
+    },
+    {
+      "id": "W32",
+      "title": "Evidence capsule producer",
+      "acceptance": "Implement deterministic local metadata packaging with no secret or production input.",
+      "state": "VERIFIED",
+      "evidence": [
+        "tools/assurance_capsule.py; hosted fixture pending",
+        "Deterministic round trip fixture and real metadata producer succeeded on both push and PR build jobs.",
+        "docs/assurance40/FINAL-EVIDENCE.json",
+        "docs/assurance40/W40-CHECKPOINT.md"
+      ]
+    },
+    {
+      "id": "W33",
+      "title": "Evidence capsule reader",
+      "acceptance": "Validate schema and reference integrity in local ordinary fixtures; do not treat unsigned metadata as authorization.",
+      "state": "VERIFIED",
+      "evidence": [
+        "tests/assurance40/capsule.py; hosted fixture pending",
+        "Three ordinary offline tests passed on both jobs; producer and reader reported consistency match. Unsigned metadata conveys no authority or provenance.",
+        "docs/assurance40/FINAL-EVIDENCE.json",
+        "docs/assurance40/W40-CHECKPOINT.md"
+      ]
+    },
+    {
+      "id": "W34",
+      "title": "Evidence capsule CI integration",
+      "acceptance": "Produce nonsecret evidence artifacts in read-only CI with bounded retention.",
+      "state": "VERIFIED",
+      "evidence": [
+        ".github/workflows/assurance-build.yml; metadata retention; hosted result pending",
+        "Both read-only jobs uploaded exactly two metadata files; seven-day retention in workflow; artifact IDs 15212813268 and 15214360208 confirmed.",
+        "docs/assurance40/FINAL-EVIDENCE.json",
+        "docs/assurance40/W40-CHECKPOINT.md"
+      ]
+    },
+    {
+      "id": "W35",
+      "title": "Evidence capsule documentation",
+      "acceptance": "Provide example and limits; distinguish integrity, provenance and independent trust.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/CAPSULE.md and examples/build.json"
+      ]
+    },
+    {
+      "id": "W36",
+      "title": "Integrated gate inventory",
+      "acceptance": "Reconcile current required checks and their exact names and host constraints.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/FINAL-GATES.md; observed job names, required check configuration not established"
+      ]
+    },
+    {
+      "id": "W37",
+      "title": "Qualification run",
+      "acceptance": "Observe actual available CI results for the candidate; record skipped, unavailable and failing checks explicitly.",
+      "state": "VERIFIED",
+      "evidence": [
+        "Prior candidate observed; final capsule candidate pending",
+        "13/13 workflows succeeded for exact tested head; observed job counts and conditional skips retained in FINAL-EVIDENCE.json; not trusted-main.",
+        "docs/assurance40/FINAL-EVIDENCE.json",
+        "docs/assurance40/W40-CHECKPOINT.md"
+      ]
+    },
+    {
+      "id": "W38",
+      "title": "Migration review",
+      "acceptance": "Check documentation for ABI, checker identity, and compatibility implications of the candidate.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/FINAL-GATES.md; ADR D08/D15 and beta scope reviewed"
+      ]
+    },
+    {
+      "id": "W39",
+      "title": "Release readiness review",
+      "acceptance": "Compile remaining owner-side signing, review, branch protection and distribution actions without changing them.",
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/FINAL-GATES.md; owner-side requirements documented"
+      ]
+    },
+    {
+      "id": "W40",
+      "title": "Final campaign acceptance",
+      "acceptance": "Produce the exact commit, gate evidence, outcomes and unresolved blockers; retain PR draft for maintainer acceptance.",
+      "state": "VERIFIED",
+      "evidence": [
+        "Final candidate implementation checkpoint; final hosted evidence pending.",
+        "Final acceptance record and exact tested revision, observed gates, unresolved dependencies and draft status reconciled. Documentary closure only; not certification.",
+        "docs/assurance40/FINAL-EVIDENCE.json",
+        "docs/assurance40/W40-CHECKPOINT.md"
+      ]
+    }
+  ],
+  "final_acceptance": {
+    "date": "2026-11-27",
+    "tested_head": "d0db85ef99b45cd3abd8405a9ec1a50172fd5294",
+    "tested_tree": "b3e8a56def82748269615f0a1f0b7dff94eae33a",
+    "record": "docs/assurance40/W40-CHECKPOINT.md",
+    "counts": {
+      "VERIFIED": 37,
+      "BLOCKED": 1,
+      "IMPLEMENTED": 2
+    },
+    "disposition": "CAMPAIGN_CLOSED_WITH_RETAINED_LIMITATIONS",
+    "scope": "PR/non-main ordinary qualification only; no production certification; final record is documentation-only successor of tested candidate"
+  }
+}

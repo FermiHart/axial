@@ -1,5 +1,9 @@
 # Axial — product overview
 
+This describes the standalone implementation and its research profiles, not
+an extension of the frozen L1 public embed authority. See the
+[claims and evidence index](CLAIMS.md) for scope, limits and verification entry points.
+
 ## The unit
 
 The compilation unit is a **cell**: one function, its signature, its

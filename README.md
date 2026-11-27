@@ -37,6 +37,8 @@ contracts, explicit effect grants, deterministic instruction fuel, signed
 artifacts, and executable law checks. A small C99 toolchain for a world
 where producing code is easy—and granting it authority should be deliberate.
 
+**Scope:** L1 is the frozen pure/CAP-free public embedding profile. The standalone CLI and host authority experiments below have separate evidence boundaries; they are not L1 authority guarantees or production qualification. See [claims and evidence](docs/CLAIMS.md) and [release criteria](docs/RELEASE-GATE.md).
+
 ## Watch the contract become an artifact.
 
 <p align="center">

@@ -1,0 +1,32 @@
+name: Axial assurance public vectors
+on:
+  push:
+    branches: ['audit/axial-assurance-20261127']
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: axial-public-vectors-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  vectors:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+        software: [0, 1]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Source identity
+        run: |
+          git rev-parse HEAD
+          sha256sum vendor/ed25519.c vendor/ed25519.h vendor/sha256_ni.h
+          ${{ matrix.cc }} --version
+      - name: Compile and exercise positive vectors
+        run: |
+          ${{ matrix.cc }} -std=c99 -O2 -Wall -Wextra -DSHA256NI_FORCE_SOFTWARE=${{ matrix.software }} -Ivendor tests/assurance40/public_vectors.c vendor/ed25519.c -o "$RUNNER_TEMP/axial-public-vectors"
+          "$RUNNER_TEMP/axial-public-vectors"
