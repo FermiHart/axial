@@ -24,6 +24,7 @@ jobs:
           b="$(mktemp -d "$RUNNER_TEMP/axial-b.XXXXXX")"
           make -j2 BUILD="$a" HOSTCC=gcc CPPFLAGS='' CFLAGS="$flags" LDFLAGS='' LDLIBS='-lm' dev
           make -j2 BUILD="$b" HOSTCC=gcc CPPFLAGS='' CFLAGS="$flags" LDFLAGS='' LDLIBS='-lm' dev
+          mkdir -p "$RUNNER_TEMP/axial-capsule"
           python3 - "$a" "$b" "$flags" <<'PY'
           import hashlib, json, os, pathlib, subprocess, sys
           a, b, flags = sys.argv[1:]
@@ -48,8 +49,27 @@ jobs:
           }
           report = json.dumps(manifest, sort_keys=True, indent=2)
           print(report)
+          (pathlib.Path(os.environ["RUNNER_TEMP"]) / "axial-capsule" / "build.json").write_text(report + "\n", encoding="utf-8")
           with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as out:
               out.write("## Ordinary build evidence (unsigned)\n\n```json\n" + report + "\n```\n")
           if left != right:
               raise SystemExit("two-build digest mismatch; both hashes retained above")
           PY
+      - name: Evidence capsule fixture and consistency checks
+        if: always()
+        shell: bash
+        run: |
+          set -eu
+          python3 tests/assurance40/capsule.py
+          python3 tools/assurance_capsule.py produce "$RUNNER_TEMP/axial-capsule"
+          python3 tools/assurance_capsule.py verify "$RUNNER_TEMP/axial-capsule"
+      - name: Retain unsigned metadata only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: axial-build-evidence-${{ github.run_id }}-${{ github.run_attempt }}
+          path: |
+            ${{ runner.temp }}/axial-capsule/build.json
+            ${{ runner.temp }}/axial-capsule/capsule.json
+          if-no-files-found: error
+          retention-days: 7

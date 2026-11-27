@@ -1,0 +1,29 @@
+{
+  "artifact": {
+    "build_a_sha256": "e039bf5f713773d9e1281ff77a698aad75cad641456d57b447537af82e6a3ec2",
+    "build_b_sha256": "e039bf5f713773d9e1281ff77a698aad75cad641456d57b447537af82e6a3ec2",
+    "equal": true,
+    "path": "axi"
+  },
+  "compiler": "gcc (Ubuntu 13.3.0-6ubuntu2~24.04.1) 13.3.0\nCopyright (C) 2023 Free Software Foundation, Inc.\nThis is free software; see the source for copying conditions.  There is NO\nwarranty; not even for MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.",
+  "flags": {
+    "CFLAGS": "-std=c99 -Wall -Wextra -Werror -O1 -D_POSIX_C_SOURCE=200809L -D_DARWIN_C_SOURCE",
+    "CPPFLAGS": "",
+    "LDFLAGS": "",
+    "LDLIBS": "-lm"
+  },
+  "host_arch": "x86_64",
+  "linker": "GNU ld (GNU Binutils for Ubuntu) 2.42\nCopyright (C) 2024 Free Software Foundation, Inc.\nThis program is free software; you may redistribute it under the terms of\nthe GNU General Public License version 3 or (at your option) a later version.\nThis program has absolutely no warranty.",
+  "schema_version": 1,
+  "scope": "two fresh ordinary C99 build directories on one hosted runner",
+  "source_commit": "cf792be2a91489d52978bc62cfffcd07cd746a26",
+  "source_date_epoch": "1795790543",
+  "source_sha256": {
+    "LICENSE": "85b07776fcf23582d395ea9ffc33b98022cbddeb743ff2305fc8412238ac8302",
+    "vendor/ed25519.c": "904afde2ac021dbf067127d994863d40f617160463150dc7bbab33719c7013df",
+    "vendor/ed25519.h": "1529e386356831503446bd4ede9961361d6920649f4a8dc98b43af260cd8c269",
+    "vendor/sha256_ni.h": "fad6afea2b09116e6611461454e00558e5839a017ff36453ca1786c82fc1cac4"
+  },
+  "source_tree": "3efbdf4427ae8c34d2028761312cb3a5a66d9111",
+  "target": "x86_64-linux-gnu"
+}

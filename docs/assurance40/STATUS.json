@@ -27,7 +27,8 @@
   "report_every": 10,
   "reported_checkpoints": [
     "W10",
-    "W20"
+    "W20",
+    "W30"
   ],
   "waves": [
     {
@@ -152,18 +153,20 @@
         "docs/assurance40/COMPILER-ABI.md",
         ".github/workflows/assurance-compiler.yml",
         "Existing hosted ordinary gates succeeded; expanded GCC/Clang O1/O2 and version evidence pending.",
-        "https://github.com/FermiHart/axial/actions/runs/46010895638: four ordinary GCC/Clang O1/O2 jobs passed including source/toolchain recording; exact compiler version stdout and immutable image/package pins not independently retrieved. W11 remains partial."
+        "https://github.com/FermiHart/axial/actions/runs/46010895638: four ordinary GCC/Clang O1/O2 jobs passed including source/toolchain recording; exact compiler version stdout and immutable image/package pins not independently retrieved. W11 remains partial.",
+        "Actual versions confirmed; immutable toolchain pin unavailable; docs/assurance40/BUILD-FOLLOWUP.md"
       ]
     },
     {
       "id": "W12",
       "title": "Warning baseline",
       "acceptance": "Measure and document additional compiler warning classes; make narrowly scoped nonsemantic fixes when supported.",
-      "state": "IMPLEMENTED",
+      "state": "VERIFIED",
       "evidence": [
         ".github/workflows/assurance-compiler.yml",
         "Two informational warning-count jobs implemented; no measurements claimed until logs/results obtained.",
-        "https://github.com/FermiHart/axial/actions/runs/46010895638: both warning measurement steps succeeded; numeric totals not retrieved, no zero-warning claim."
+        "https://github.com/FermiHart/axial/actions/runs/46010895638: both warning measurement steps succeeded; numeric totals not retrieved, no zero-warning claim.",
+        "Hosted logs GCC 1 / Clang 5 diagnostics; docs/assurance40/BUILD-FOLLOWUP.md"
       ]
     },
     {
@@ -303,10 +306,11 @@
       "id": "W26",
       "title": "Build metadata capture",
       "acceptance": "Capture revision, compiler, target and flags as deterministic metadata.",
-      "state": "IMPLEMENTED",
+      "state": "VERIFIED",
       "evidence": [
         ".github/workflows/assurance-build.yml",
-        "Exact checkout, compiler/linker, target, flags and source epoch capture implemented; CI output pending."
+        "Exact checkout, compiler/linker, target, flags and source epoch capture implemented; CI output pending.",
+        "Observed exact metadata job 140571091454; docs/assurance40/BUILD-OBSERVED.json"
       ]
     },
     {
@@ -316,7 +320,8 @@
       "state": "IMPLEMENTED",
       "evidence": [
         ".github/workflows/assurance-build.yml",
-        "Two fresh ordinary build directories on one runner; results pending. Separate fixed-toolchain host remains required."
+        "Two fresh ordinary build directories on one runner; results pending. Separate fixed-toolchain host remains required.",
+        "Same-runner identical digest observed; separate fixed-toolchain host unavailable."
       ]
     },
     {
@@ -333,91 +338,113 @@
       "id": "W29",
       "title": "Artifact manifest",
       "acceptance": "Generate deterministic digests for explicitly selected nonsecret build outputs.",
-      "state": "IMPLEMENTED",
+      "state": "VERIFIED",
       "evidence": [
         ".github/workflows/assurance-build.yml",
-        "Explicit axi and source notice SHA-256 manifest implemented; observed digests pending."
+        "Explicit axi and source notice SHA-256 manifest implemented; observed digests pending.",
+        "Two observed artifact hashes and four explicit source hashes; docs/assurance40/BUILD-OBSERVED.json"
       ]
     },
     {
       "id": "W30",
       "title": "Distribution evidence checkpoint",
       "acceptance": "Document verification procedure and owner-controlled signing requirements; do not sign or publish releases.",
-      "state": "IMPLEMENTED",
+      "state": "VERIFIED",
       "evidence": [
         "docs/assurance40/W30-CHECKPOINT.md",
-        "Verification procedure and owner-controlled signing documented; execution evidence pending."
+        "Verification procedure and owner-controlled signing documented; execution evidence pending.",
+        "Observed evidence and owner signing boundary reconciled; independent host pending."
       ]
     },
     {
       "id": "W31",
       "title": "Evidence capsule schema",
       "acceptance": "Define a versioned manifest for revision, profile, test results and evidence digests.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/CAPSULE-SCHEMA.json; documentation acceptance"
+      ]
     },
     {
       "id": "W32",
       "title": "Evidence capsule producer",
       "acceptance": "Implement deterministic local metadata packaging with no secret or production input.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "tools/assurance_capsule.py; hosted fixture pending"
+      ]
     },
     {
       "id": "W33",
       "title": "Evidence capsule reader",
       "acceptance": "Validate schema and reference integrity in local ordinary fixtures; do not treat unsigned metadata as authorization.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "tests/assurance40/capsule.py; hosted fixture pending"
+      ]
     },
     {
       "id": "W34",
       "title": "Evidence capsule CI integration",
       "acceptance": "Produce nonsecret evidence artifacts in read-only CI with bounded retention.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "IMPLEMENTED",
+      "evidence": [
+        ".github/workflows/assurance-build.yml; metadata retention; hosted result pending"
+      ]
     },
     {
       "id": "W35",
       "title": "Evidence capsule documentation",
       "acceptance": "Provide example and limits; distinguish integrity, provenance and independent trust.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/CAPSULE.md and examples/build.json"
+      ]
     },
     {
       "id": "W36",
       "title": "Integrated gate inventory",
       "acceptance": "Reconcile current required checks and their exact names and host constraints.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/FINAL-GATES.md; observed job names, required check configuration not established"
+      ]
     },
     {
       "id": "W37",
       "title": "Qualification run",
       "acceptance": "Observe actual available CI results for the candidate; record skipped, unavailable and failing checks explicitly.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "Prior candidate observed; final capsule candidate pending"
+      ]
     },
     {
       "id": "W38",
       "title": "Migration review",
       "acceptance": "Check documentation for ABI, checker identity, and compatibility implications of the candidate.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/FINAL-GATES.md; ADR D08/D15 and beta scope reviewed"
+      ]
     },
     {
       "id": "W39",
       "title": "Release readiness review",
       "acceptance": "Compile remaining owner-side signing, review, branch protection and distribution actions without changing them.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/FINAL-GATES.md; owner-side requirements documented"
+      ]
     },
     {
       "id": "W40",
       "title": "Final campaign acceptance",
       "acceptance": "Produce the exact commit, gate evidence, outcomes and unresolved blockers; retain PR draft for maintainer acceptance.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "Final candidate implementation checkpoint; final hosted evidence pending."
+      ]
     }
   ]
 }
