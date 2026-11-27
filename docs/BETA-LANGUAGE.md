@@ -29,3 +29,6 @@ receipts and no external relying-party validation.
 
 - `make gate` green in this tree.
 - No byte of the header, ABI ID or symbol allowlist changed.
+
+Campaign evidence: [scope reconciliation](assurance40/SCOPE.md). The architecture
+[ADR](ADR-AXIAL-0001.md) is a revised proposal, not an expansion of L1.

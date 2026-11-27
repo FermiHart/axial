@@ -1,0 +1,94 @@
+{
+  "schema": "axial.assurance.claims.v1",
+  "source": "docs/CLAIMS.md",
+  "source_revision": "a6241ee2f58df4f0fea970bafbb6ed898a38fa50",
+  "status_vocabulary": [
+    "IMPLEMENTED",
+    "HISTORICALLY_TESTED",
+    "QUALIFIED",
+    "NOT_APPROVED"
+  ],
+  "note": "IDs ASSURANCE-C01 through C07 identify these seven index rows only, not replacements for older integration claim IDs. Status is not release qualification.",
+  "claims": [
+    {
+      "id": "ASSURANCE-C01",
+      "claim": "Frozen four-function public embed v1, pure and CAP-free",
+      "scope": "L1, amd64-sysv-lp64",
+      "evidence": "[BETA-LANGUAGE](BETA-LANGUAGE.md), `make gate`, `tests/audit40/abi.c`, `tests/audit40/embed.c`, `python3 tools/check-release-scope.py`",
+      "limit": "No new ABI profile or host effect authority",
+      "status": "IMPLEMENTED",
+      "references": [
+        "docs/BETA-LANGUAGE.md",
+        "tests/audit40/abi.c",
+        "tests/audit40/embed.c"
+      ]
+    },
+    {
+      "id": "ASSURANCE-C02",
+      "claim": "Language, types, contracts and deterministic VM instruction fuel",
+      "scope": "L1 language/toolchain",
+      "evidence": "`make gate-fast`, `make gate-frontend`, `make gate-numeric`",
+      "limit": "Instruction budget is not a wall-clock or complete host resource envelope",
+      "status": "IMPLEMENTED",
+      "references": []
+    },
+    {
+      "id": "ASSURANCE-C03",
+      "claim": "Artifact signatures and checked executable laws",
+      "scope": "Standalone CLI research surface",
+      "evidence": "`make gate-cli`, `make gate`, [audit80 gates](audit80/gates.md)",
+      "limit": "Selected trust anchors; checked cases are not formal proofs or external certification",
+      "status": "IMPLEMENTED",
+      "references": [
+        "docs/audit80/gates.md"
+      ]
+    },
+    {
+      "id": "ASSURANCE-C04",
+      "claim": "Explicit effect grants, signed episode recording and replay",
+      "scope": "Experimental standalone CLI / host fixtures, outside L1 embed guarantee",
+      "evidence": "`make gate-cli`, `make gate`, [audit80 report](audit80/REPORT.md)",
+      "limit": "No universal mediation, confidential receipts or relying-party validation",
+      "status": "IMPLEMENTED",
+      "references": [
+        "docs/audit80/REPORT.md"
+      ]
+    },
+    {
+      "id": "ASSURANCE-C05",
+      "claim": "Host-local authority",
+      "scope": "Separate opt-in Linux host research profile",
+      "evidence": "`make gate-authority` on a supported isolated host; [gate scope](audit80/gates.md)",
+      "limit": "Build-only and PR checks are not authority qualification",
+      "status": "IMPLEMENTED",
+      "references": [
+        "docs/audit80/gates.md"
+      ]
+    },
+    {
+      "id": "ASSURANCE-C06",
+      "claim": "Portable policy, typed decisions and numeric profiles",
+      "scope": "Separate experimental consumer profiles",
+      "evidence": "`make gate-portable`, `make gate-decision`, [portable pure](PORTABLE-PURE-V1.md), [portable decisions](PORTABLE-DECISION-V2.md), [numeric](PORTABLE-NUMERIC-V1.md)",
+      "limit": "Consumers remain responsible for trust and mutations",
+      "status": "IMPLEMENTED",
+      "references": [
+        "docs/PORTABLE-PURE-V1.md",
+        "docs/PORTABLE-DECISION-V2.md",
+        "docs/PORTABLE-NUMERIC-V1.md"
+      ]
+    },
+    {
+      "id": "ASSURANCE-C07",
+      "claim": "Boot-rooted trust, universal mutation mediation, native target qualification, confidential receipts, independent relying-party validation",
+      "scope": "Not approved by L1; no claim of deployment readiness",
+      "evidence": "[ADR](ADR-AXIAL-0001.md), [release criteria](RELEASE-GATE.md)",
+      "limit": "Explicitly out of scope until separately accepted",
+      "status": "NOT_APPROVED",
+      "references": [
+        "docs/ADR-AXIAL-0001.md",
+        "docs/RELEASE-GATE.md"
+      ]
+    }
+  ]
+}

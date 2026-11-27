@@ -31,26 +31,36 @@
       "id": "W01",
       "title": "Campaign baseline and acceptance ledger",
       "acceptance": "Pin the reviewed baseline, scope, workflow results and 40 ordered acceptance criteria.",
-      "state": "IMPLEMENTED",
+      "state": "VERIFIED",
       "evidence": [
         "docs/assurance40/PLAN.md",
         "docs/assurance40/STATUS.json",
-        "baseline workflow runs"
+        "baseline workflow runs",
+        "Reviewed 40 ordered IDs and matching baseline successful workflow IDs via GitHub API, 2026-11-27; documentation acceptance only."
       ]
     },
     {
       "id": "W02",
       "title": "Scope documentation reconciliation",
       "acceptance": "Cross-reference the normative ADR, beta boundary and campaign evidence; preserve L1 and distinguish experimental profiles.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/SCOPE.md",
+        "docs/CLAIMS.md",
+        "docs/BETA-LANGUAGE.md",
+        "docs/ADR-AXIAL-0001.md",
+        "Static reconciliation of source scope; no runtime qualification."
+      ]
     },
     {
       "id": "W03",
       "title": "Structured claim index",
       "acceptance": "Create a versioned machine-readable claim inventory using stable existing claim IDs where applicable; check references and status vocabulary.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/CLAIMS.json",
+        "Seven source table rows parsed, references checked against pinned tree and statuses checked against vocabulary in connector session."
+      ]
     },
     {
       "id": "W04",

@@ -34,3 +34,7 @@ documentation points to this index. It does not prove the truth of prose.
 Audit80 is retained history: its head `26eec8630e8cf1dc3a1808f1580cc12d36410a8e`
 is an ancestor of the inspected main. Its reported historical results must not
 be treated as a new run. Existing campaign claim IDs remain unchanged.
+
+For campaign navigation, see [scope reconciliation](assurance40/SCOPE.md) and the
+[structured claim index](assurance40/CLAIMS.json). These are evidence metadata,
+not a release or authority grant.
