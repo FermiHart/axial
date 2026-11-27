@@ -25,7 +25,9 @@
     "BLOCKED"
   ],
   "report_every": 10,
-  "reported_checkpoints": [],
+  "reported_checkpoints": [
+    "W10"
+  ],
   "waves": [
     {
       "id": "W01",
@@ -66,11 +68,12 @@
       "id": "W04",
       "title": "Scope gate regression coverage",
       "acceptance": "Test the documentation/header guard with isolated ordinary fixtures and check its failure reporting.",
-      "state": "IMPLEMENTED",
+      "state": "VERIFIED",
       "evidence": [
         "tests/assurance40/scope_guard.py",
         ".github/workflows/scope.yml",
-        "Four isolated cases; hosted execution pending."
+        "Four isolated cases; hosted execution pending.",
+        "https://github.com/FermiHart/axial/actions/runs/46001741430 job 140514839158: isolated scope_guard step success."
       ]
     },
     {
@@ -107,103 +110,139 @@
       "id": "W08",
       "title": "Standard signature conformance",
       "acceptance": "Use published standard positive known-answer vectors on local test fixtures; record results and exact scope.",
-      "state": "IMPLEMENTED",
+      "state": "VERIFIED",
       "evidence": [
         "tests/assurance40/public_vectors.c",
         ".github/workflows/assurance-vectors.yml",
-        "RFC 8032 §7.1 public vectors 1–3; CI execution pending."
+        "RFC 8032 §7.1 public vectors 1–3; CI execution pending.",
+        "https://github.com/FermiHart/axial/actions/runs/46001741391 four compiler/dispatch jobs completed with positive vector step success."
       ]
     },
     {
       "id": "W09",
       "title": "Hash conformance",
       "acceptance": "Validate standard SHA-256 and SHA-512 known-answer vectors in supported implementation profiles.",
-      "state": "IMPLEMENTED",
+      "state": "VERIFIED",
       "evidence": [
         "tests/assurance40/public_vectors.c",
         ".github/workflows/assurance-vectors.yml",
-        "Three SHA-256 and three SHA-512 positive examples; CI execution pending."
+        "Three SHA-256 and three SHA-512 positive examples; CI execution pending.",
+        "https://github.com/FermiHart/axial/actions/runs/46001741391 four compiler/dispatch jobs completed with positive vector step success; actual hardware dispatch not confirmed from job status alone."
       ]
     },
     {
       "id": "W10",
       "title": "Crypto review checkpoint",
       "acceptance": "Record conformance evidence and unresolved independent review requirements; do not certify security or alter cryptographic algorithms automatically.",
-      "state": "IMPLEMENTED",
+      "state": "VERIFIED",
       "evidence": [
         "docs/assurance40/W10-CHECKPOINT.md",
-        "Preliminary checkpoint; collect real runs before verification."
+        "Preliminary checkpoint; collect real runs before verification.",
+        "docs/assurance40/W10-CHECKPOINT.md",
+        "Reviewed hosted job/step outcomes; W07 and independent crypto review remain outstanding."
       ]
     },
     {
       "id": "W11",
       "title": "Compiler portability matrix",
       "acceptance": "Qualify ordinary builds on available supported GCC and Clang versions with pinned inputs.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "docs/assurance40/COMPILER-ABI.md",
+        ".github/workflows/assurance-compiler.yml",
+        "Existing hosted ordinary gates succeeded; expanded GCC/Clang O1/O2 and version evidence pending."
+      ]
     },
     {
       "id": "W12",
       "title": "Warning baseline",
       "acceptance": "Measure and document additional compiler warning classes; make narrowly scoped nonsemantic fixes when supported.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "IMPLEMENTED",
+      "evidence": [
+        ".github/workflows/assurance-compiler.yml",
+        "Two informational warning-count jobs implemented; no measurements claimed until logs/results obtained."
+      ]
     },
     {
       "id": "W13",
       "title": "Memory accounting",
       "acceptance": "Qualify leak detection for supported ordinary workloads and separate process-tracing limitations.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/COMPILER-ABI.md",
+        "https://github.com/FermiHart/axial/actions/runs/46001741433 job 140514957090 leak-fast step passed; https://github.com/FermiHart/axial/actions/runs/46001741509 job 140514839338 numeric sanitizer step passed. Limited workloads only."
+      ]
     },
     {
       "id": "W14",
       "title": "Optimized build parity",
       "acceptance": "Compare ordinary golden behavior across supported optimization profiles.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/COMPILER-ABI.md",
+        "https://github.com/FermiHart/axial/actions/runs/46001741433 normal/release gate jobs passed the same checked-in goldens at O1/O2; optimized UBSan fast gate also succeeded. Expanded matrix pending."
+      ]
     },
     {
       "id": "W15",
       "title": "Portable architecture evidence",
       "acceptance": "Record available native CI architecture results, distinguish portable consumer evidence from full C ABI qualification.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/COMPILER-ABI.md",
+        "https://github.com/FermiHart/axial/actions/runs/46001741509 five native compiler fixture and adapter jobs passed, including Ubuntu ARM/macOS. No full C ABI claim."
+      ]
     },
     {
       "id": "W16",
       "title": "Public ABI evidence",
       "acceptance": "Verify exact frozen header and existing layout/symbol contract without expanding the ABI.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "docs/assurance40/COMPILER-ABI.md",
+        ".github/workflows/assurance-compiler.yml",
+        "Frozen header and existing layout gate passed; explicit object prefix symbol comparison pending."
+      ]
     },
     {
       "id": "W17",
       "title": "Contract inventory",
       "acceptance": "Index documented contract interfaces and their existing test entry points.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/CONTRACTS.md",
+        "Source contract and test pointers reconciled with tracked tree; documentation acceptance."
+      ]
     },
     {
       "id": "W18",
       "title": "Decision semantic parity",
       "acceptance": "Run existing approved local policy conformance fixtures across supported reference and portable implementations.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/CONTRACTS.md",
+        "https://github.com/FermiHart/axial/actions/runs/46001741560 job 140514840514 both existing portable/reference and typed-decision steps passed; no new adversarial runs."
+      ]
     },
     {
       "id": "W19",
       "title": "Admission contract review",
       "acceptance": "Document expected decision semantics and existing regression coverage; flag gaps for separate maintainer review.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "VERIFIED",
+      "evidence": [
+        "docs/assurance40/CONTRACTS.md",
+        "Admission documentation and existing fixture coverage reconciled; gaps reserved for maintainer."
+      ]
     },
     {
       "id": "W20",
       "title": "Contract checkpoint",
       "acceptance": "Reconcile source, documented boundaries and verified tests; no promotion of experimental authority.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "docs/assurance40/W20-CHECKPOINT.md",
+        "Checkpoint assembled; expanded compiler evidence pending."
+      ]
     },
     {
       "id": "W21",

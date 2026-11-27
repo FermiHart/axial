@@ -1,0 +1,82 @@
+name: Axial assurance compiler matrix
+on:
+  push:
+    branches: ['audit/axial-assurance-20261127']
+  pull_request:
+permissions:
+  contents: read
+concurrency:
+  group: axial-assurance-compiler-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  ordinary:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+        opt: ['-O1', '-O2']
+    env:
+      COMPILER: ${{ matrix.cc }}
+      OPT: ${{ matrix.opt }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Record source and toolchain
+        run: |
+          git rev-parse HEAD
+          uname -sm
+          "$COMPILER" --version
+          "$COMPILER" -dumpmachine
+      - name: Ordinary golden fixtures and frozen ABI layout
+        run: |
+          set -eu
+          flags="-std=c99 -Wall -Wextra -Werror $OPT -D_POSIX_C_SOURCE=200809L -D_DARWIN_C_SOURCE"
+          printf '%s\n' "$flags"
+          make -j2 BUILD=build-assurance HOSTCC="$COMPILER" CFLAGS="$flags" gate-fast build-assurance/audit40/abi
+          build-assurance/audit40/abi
+          python3 tools/check-release-scope.py
+      - name: Public embed implementation symbol inventory
+        run: |
+          set -eu
+          awk -F '\t' '$1 == "symbol" {print $2}' abi/axi_embed_v1-amd64-sysv-lp64.tsv | LC_ALL=C sort > "$RUNNER_TEMP/expected-symbols"
+          nm -g --defined-only build-assurance/src/axi_embed_v1.o > "$RUNNER_TEMP/embed-symbols"
+          awk '$NF ~ /^axi_embed_v1_/ {print $NF}' "$RUNNER_TEMP/embed-symbols" | LC_ALL=C sort > "$RUNNER_TEMP/actual-symbols"
+          diff -u "$RUNNER_TEMP/expected-symbols" "$RUNNER_TEMP/actual-symbols"
+  warnings:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    strategy:
+      fail-fast: false
+      matrix:
+        cc: [gcc, clang]
+    env:
+      COMPILER: ${{ matrix.cc }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Measure additional warning classes (informational)
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD
+          "$COMPILER" --version
+          flags='-std=c99 -Wall -Wextra -Werror -O1 -D_POSIX_C_SOURCE=200809L -D_DARWIN_C_SOURCE -Wformat=2 -Wshadow -Wstrict-prototypes -Wno-error=format -Wno-error=format-nonliteral -Wno-error=format-security -Wno-error=shadow -Wno-error=strict-prototypes'
+          printf '%s\n' "$flags"
+          make -j2 BUILD=build-warning HOSTCC="$COMPILER" CFLAGS="$flags" dev 2>&1 | tee "$RUNNER_TEMP/axial-warnings.log"
+          python3 - "$RUNNER_TEMP/axial-warnings.log" <<'PY'
+          import collections, pathlib, re, sys
+          lines = pathlib.Path(sys.argv[1]).read_text(errors="replace").splitlines()
+          counts = collections.Counter()
+          for line in lines:
+              if "warning:" in line:
+                  match = re.search(r"\[(-W[^\]]+)\]\s*$", line)
+                  counts[match.group(1) if match else "unclassified"] += 1
+          print("warning diagnostic counts (not unique source locations):")
+          for category, count in sorted(counts.items()):
+              print(f"{category}: {count}")
+          print(f"total: {sum(counts.values())}")
+          PY
