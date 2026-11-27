@@ -1,0 +1,315 @@
+{
+  "campaign": "AXIAL-SOVEREIGN-ASSURANCE-W01-W40-20261127",
+  "branch": "audit/axial-assurance-20261127",
+  "pr": 3,
+  "baseline": {
+    "commit": "d2ed63af63624fbdab51bcf2fb60465ed29b6b84",
+    "tree": "bf35ad414ff25c9f70ed5eb8a6315c9ba542990d",
+    "main": "0e53839844362d736680b0ac54973b6c1c30d3e9",
+    "workflow_runs": [
+      46000508778,
+      46000508749,
+      46000508658,
+      46000508741,
+      46000482116,
+      46000482205,
+      46000481987
+    ],
+    "conclusion": "success",
+    "scope": "PR/non-main subset; not full trusted-main authority qualification"
+  },
+  "states": [
+    "PLANNED",
+    "IMPLEMENTED",
+    "VERIFIED",
+    "BLOCKED"
+  ],
+  "report_every": 10,
+  "reported_checkpoints": [],
+  "waves": [
+    {
+      "id": "W01",
+      "title": "Campaign baseline and acceptance ledger",
+      "acceptance": "Pin the reviewed baseline, scope, workflow results and 40 ordered acceptance criteria.",
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "docs/assurance40/PLAN.md",
+        "docs/assurance40/STATUS.json",
+        "baseline workflow runs"
+      ]
+    },
+    {
+      "id": "W02",
+      "title": "Scope documentation reconciliation",
+      "acceptance": "Cross-reference the normative ADR, beta boundary and campaign evidence; preserve L1 and distinguish experimental profiles.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W03",
+      "title": "Structured claim index",
+      "acceptance": "Create a versioned machine-readable claim inventory using stable existing claim IDs where applicable; check references and status vocabulary.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W04",
+      "title": "Scope gate regression coverage",
+      "acceptance": "Test the documentation/header guard with isolated ordinary fixtures and check its failure reporting.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W05",
+      "title": "Governance checkpoint",
+      "acceptance": "Record release administration requirements, maintainer ownership and review dependencies without asserting unavailable owner controls.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W06",
+      "title": "Crypto source attribution inventory",
+      "acceptance": "Record exact vendor files, digests and source notices, and identify provenance items still needing independent review.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W07",
+      "title": "Upstream provenance review",
+      "acceptance": "Compare documented origins against available authoritative upstream records; preserve license notices and report uncertainty.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W08",
+      "title": "Standard signature conformance",
+      "acceptance": "Use published standard positive known-answer vectors on local test fixtures; record results and exact scope.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W09",
+      "title": "Hash conformance",
+      "acceptance": "Validate standard SHA-256 and SHA-512 known-answer vectors in supported implementation profiles.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W10",
+      "title": "Crypto review checkpoint",
+      "acceptance": "Record conformance evidence and unresolved independent review requirements; do not certify security or alter cryptographic algorithms automatically.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W11",
+      "title": "Compiler portability matrix",
+      "acceptance": "Qualify ordinary builds on available supported GCC and Clang versions with pinned inputs.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W12",
+      "title": "Warning baseline",
+      "acceptance": "Measure and document additional compiler warning classes; make narrowly scoped nonsemantic fixes when supported.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W13",
+      "title": "Memory accounting",
+      "acceptance": "Qualify leak detection for supported ordinary workloads and separate process-tracing limitations.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W14",
+      "title": "Optimized build parity",
+      "acceptance": "Compare ordinary golden behavior across supported optimization profiles.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W15",
+      "title": "Portable architecture evidence",
+      "acceptance": "Record available native CI architecture results, distinguish portable consumer evidence from full C ABI qualification.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W16",
+      "title": "Public ABI evidence",
+      "acceptance": "Verify exact frozen header and existing layout/symbol contract without expanding the ABI.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W17",
+      "title": "Contract inventory",
+      "acceptance": "Index documented contract interfaces and their existing test entry points.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W18",
+      "title": "Decision semantic parity",
+      "acceptance": "Run existing approved local policy conformance fixtures across supported reference and portable implementations.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W19",
+      "title": "Admission contract review",
+      "acceptance": "Document expected decision semantics and existing regression coverage; flag gaps for separate maintainer review.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W20",
+      "title": "Contract checkpoint",
+      "acceptance": "Reconcile source, documented boundaries and verified tests; no promotion of experimental authority.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W21",
+      "title": "Identity roles",
+      "acceptance": "Document producer, checker, recorder, operator and host responsibilities and existing fixture boundaries.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W22",
+      "title": "Test credential handling",
+      "acceptance": "Review test-only identity documentation and safe fixture storage; avoid production credentials or signing keys.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W23",
+      "title": "Trust lifecycle requirements",
+      "acceptance": "Specify reviewable rotation, expiration and revocation requirements without modifying live trust policy.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W24",
+      "title": "Consumer responsibility profiles",
+      "acceptance": "Record the actual Jash, Beyond and RustRoots integration scope without writing to consumer repositories.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W25",
+      "title": "Trust governance checkpoint",
+      "acceptance": "Collect decisions and remaining owner-side dependencies; no external trust-anchor promotion.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W26",
+      "title": "Build metadata capture",
+      "acceptance": "Capture revision, compiler, target and flags as deterministic metadata.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W27",
+      "title": "Build reproducibility",
+      "acceptance": "Compare independent ordinary local or hosted builds with fixed source and toolchain inputs; preserve differences.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W28",
+      "title": "Component inventory",
+      "acceptance": "Produce source-derived dependency and license inventory suitable for an SBOM.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W29",
+      "title": "Artifact manifest",
+      "acceptance": "Generate deterministic digests for explicitly selected nonsecret build outputs.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W30",
+      "title": "Distribution evidence checkpoint",
+      "acceptance": "Document verification procedure and owner-controlled signing requirements; do not sign or publish releases.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W31",
+      "title": "Evidence capsule schema",
+      "acceptance": "Define a versioned manifest for revision, profile, test results and evidence digests.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W32",
+      "title": "Evidence capsule producer",
+      "acceptance": "Implement deterministic local metadata packaging with no secret or production input.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W33",
+      "title": "Evidence capsule reader",
+      "acceptance": "Validate schema and reference integrity in local ordinary fixtures; do not treat unsigned metadata as authorization.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W34",
+      "title": "Evidence capsule CI integration",
+      "acceptance": "Produce nonsecret evidence artifacts in read-only CI with bounded retention.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W35",
+      "title": "Evidence capsule documentation",
+      "acceptance": "Provide example and limits; distinguish integrity, provenance and independent trust.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W36",
+      "title": "Integrated gate inventory",
+      "acceptance": "Reconcile current required checks and their exact names and host constraints.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W37",
+      "title": "Qualification run",
+      "acceptance": "Observe actual available CI results for the candidate; record skipped, unavailable and failing checks explicitly.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W38",
+      "title": "Migration review",
+      "acceptance": "Check documentation for ABI, checker identity, and compatibility implications of the candidate.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W39",
+      "title": "Release readiness review",
+      "acceptance": "Compile remaining owner-side signing, review, branch protection and distribution actions without changing them.",
+      "state": "PLANNED",
+      "evidence": []
+    },
+    {
+      "id": "W40",
+      "title": "Final campaign acceptance",
+      "acceptance": "Produce the exact commit, gate evidence, outcomes and unresolved blockers; retain PR draft for maintainer acceptance.",
+      "state": "PLANNED",
+      "evidence": []
+    }
+  ]
+}
