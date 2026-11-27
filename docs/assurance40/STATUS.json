@@ -107,22 +107,33 @@
       "id": "W08",
       "title": "Standard signature conformance",
       "acceptance": "Use published standard positive known-answer vectors on local test fixtures; record results and exact scope.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "tests/assurance40/public_vectors.c",
+        ".github/workflows/assurance-vectors.yml",
+        "RFC 8032 §7.1 public vectors 1–3; CI execution pending."
+      ]
     },
     {
       "id": "W09",
       "title": "Hash conformance",
       "acceptance": "Validate standard SHA-256 and SHA-512 known-answer vectors in supported implementation profiles.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "tests/assurance40/public_vectors.c",
+        ".github/workflows/assurance-vectors.yml",
+        "Three SHA-256 and three SHA-512 positive examples; CI execution pending."
+      ]
     },
     {
       "id": "W10",
       "title": "Crypto review checkpoint",
       "acceptance": "Record conformance evidence and unresolved independent review requirements; do not certify security or alter cryptographic algorithms automatically.",
-      "state": "PLANNED",
-      "evidence": []
+      "state": "IMPLEMENTED",
+      "evidence": [
+        "docs/assurance40/W10-CHECKPOINT.md",
+        "Preliminary checkpoint; collect real runs before verification."
+      ]
     },
     {
       "id": "W11",
