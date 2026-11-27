@@ -1,0 +1,55 @@
+name: Axial assurance build evidence
+on:
+  push:
+    branches: ['audit/axial-assurance-20261127']
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  ordinary-build-evidence:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Build twice and record selected output digests
+        shell: bash
+        run: |
+          set -euo pipefail
+          export LC_ALL=C TZ=UTC
+          export SOURCE_DATE_EPOCH="$(git show -s --format=%ct HEAD)"
+          flags='-std=c99 -Wall -Wextra -Werror -O1 -D_POSIX_C_SOURCE=200809L -D_DARWIN_C_SOURCE'
+          a="$(mktemp -d "$RUNNER_TEMP/axial-a.XXXXXX")"
+          b="$(mktemp -d "$RUNNER_TEMP/axial-b.XXXXXX")"
+          make -j2 BUILD="$a" HOSTCC=gcc CPPFLAGS='' CFLAGS="$flags" LDFLAGS='' LDLIBS='-lm' dev
+          make -j2 BUILD="$b" HOSTCC=gcc CPPFLAGS='' CFLAGS="$flags" LDFLAGS='' LDLIBS='-lm' dev
+          python3 - "$a" "$b" "$flags" <<'PY'
+          import hashlib, json, os, pathlib, subprocess, sys
+          a, b, flags = sys.argv[1:]
+          def cmd(*args):
+              return subprocess.check_output(args, text=True).strip()
+          def digest(path):
+              return hashlib.sha256(pathlib.Path(path).read_bytes()).hexdigest()
+          left, right = digest(pathlib.Path(a) / "axi"), digest(pathlib.Path(b) / "axi")
+          manifest = {
+              "schema_version": 1,
+              "scope": "two fresh ordinary C99 build directories on one hosted runner",
+              "source_commit": cmd("git", "rev-parse", "HEAD"),
+              "source_tree": cmd("git", "rev-parse", "HEAD^{tree}"),
+              "compiler": cmd("gcc", "--version"),
+              "target": cmd("gcc", "-dumpmachine"),
+              "linker": cmd("ld", "--version"),
+              "host_arch": cmd("uname", "-m"),
+              "source_date_epoch": os.environ["SOURCE_DATE_EPOCH"],
+              "flags": {"CPPFLAGS": "", "CFLAGS": flags, "LDFLAGS": "", "LDLIBS": "-lm"},
+              "artifact": {"path": "axi", "build_a_sha256": left, "build_b_sha256": right, "equal": left == right},
+              "source_sha256": {p: digest(p) for p in ["LICENSE", "vendor/ed25519.c", "vendor/ed25519.h", "vendor/sha256_ni.h"]},
+          }
+          report = json.dumps(manifest, sort_keys=True, indent=2)
+          print(report)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a", encoding="utf-8") as out:
+              out.write("## Ordinary build evidence (unsigned)\n\n```json\n" + report + "\n```\n")
+          if left != right:
+              raise SystemExit("two-build digest mismatch; both hashes retained above")
+          PY
