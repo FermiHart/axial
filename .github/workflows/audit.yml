@@ -20,30 +20,70 @@ jobs:
       fail-fast: false
       matrix:
         profile: [normal, release, sanitizers]
+    env:
+      FULL_AUTHORITY: ${{ github.event_name == 'push' && github.ref == 'refs/heads/main' }}
     steps:
       - name: Check out the tested revision
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
-      - name: Normal C99 gate
-        if: matrix.profile == 'normal'
-        run: make -j2 BUILD=build-normal AUTHORITY_RUNNER=sudo gate
-      - name: Optimized C99 gate
-        if: matrix.profile == 'release'
-        run: >-
-          make -j2 BUILD=build-release AUTHORITY_RUNNER=sudo
-          CFLAGS='-std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L'
-          gate
-      - name: Address and undefined-behavior gate
-        if: matrix.profile == 'sanitizers'
+      - name: Scope and frozen ABI commitment
+        run: python3 tools/check-release-scope.py
+      - name: Audit profile (full authority only on trusted main push)
         env:
+          PROFILE: ${{ matrix.profile }}
           ASAN_OPTIONS: detect_leaks=0:abort_on_error=1
           UBSAN_OPTIONS: halt_on_error=1
+        run: |
+          set -eu
+          if [ "$FULL_AUTHORITY" = true ]; then
+            runner=sudo
+            set -- gate
+            echo "Full trusted-main authority gate"
+          else
+            runner=direct
+            set -- gate-identity gate-fast gate-cli gate-audit gate-frontend gate-numeric gate-security gate-authority-build gate-workers gate-compiler gate-runtime
+            echo "Unprivileged audit subset; authority compile-only, not qualification"
+          fi
+          case "$PROFILE" in
+            normal)
+              make -j2 BUILD=build-normal AUTHORITY_RUNNER="$runner" "$@" ;;
+            release)
+              make -j2 BUILD=build-release AUTHORITY_RUNNER="$runner" CFLAGS='-std=c99 -Wall -Wextra -Werror -O2 -D_POSIX_C_SOURCE=200809L' "$@" ;;
+            sanitizers)
+              make -j2 BUILD=build-sanitize AUTHORITY_RUNNER="$runner" CFLAGS='-std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie' LDFLAGS='-fsanitize=address,undefined -fno-sanitize-recover=all -no-pie' "$@" ;;
+            *) exit 2 ;;
+          esac
+  focused:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        profile: [clang, optimized-ubsan, leak-fast]
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - name: Clang fast gate
+        if: matrix.profile == 'clang'
+        run: make -j2 BUILD=build-clang HOSTCC=clang gate-fast
+      - name: Optimized undefined-behavior fast gate
+        if: matrix.profile == 'optimized-ubsan'
+        env:
+          UBSAN_OPTIONS: halt_on_error=1
         run: >-
-          make -j2 BUILD=build-sanitize AUTHORITY_RUNNER=sudo
-          CFLAGS='-std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address,undefined -fno-omit-frame-pointer -fno-sanitize-recover=all -fno-pie -no-pie'
-          LDFLAGS='-fsanitize=address,undefined -fno-sanitize-recover=all -no-pie'
-          gate
+          make -j2 BUILD=build-ubsan-o2
+          CFLAGS='-std=c99 -Wall -Wextra -Werror -O2 -g -D_POSIX_C_SOURCE=200809L -fsanitize=undefined -fno-sanitize-recover=all'
+          LDFLAGS='-fsanitize=undefined -fno-sanitize-recover=all' gate-fast
+      - name: Address and leak fast gate (no authority fixture)
+        if: matrix.profile == 'leak-fast'
+        env:
+          ASAN_OPTIONS: detect_leaks=1:abort_on_error=1
+        run: >-
+          make -j2 BUILD=build-leak
+          CFLAGS='-std=c99 -Wall -Wextra -Werror -O1 -g -D_POSIX_C_SOURCE=200809L -fsanitize=address -fno-omit-frame-pointer -fno-pie'
+          LDFLAGS='-fsanitize=address -no-pie' gate-fast
   threads:
     runs-on: ubuntu-24.04
     timeout-minutes: 20

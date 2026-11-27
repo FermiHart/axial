@@ -16,7 +16,8 @@ concurrency:
 
 jobs:
   deploy:
-    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
     timeout-minutes: 10
     permissions:
       contents: read
@@ -32,21 +33,12 @@ jobs:
           persist-credentials: false
       - name: Check static resources and source-bound art
         run: |
+          python3 tools/check-release-scope.py
+          python3 tools/check-site-resources.py
           python3 - <<'PY'
-          from html.parser import HTMLParser
           from pathlib import Path
           import runpy
           site = Path('website').resolve()
-          class Resources(HTMLParser):
-              def handle_starttag(self, tag, attributes):
-                  for key, value in attributes:
-                      if key not in ('src', 'srcset', 'href') or not value:
-                          continue
-                      if value.startswith(('https:', 'mailto:', 'data:', '#')):
-                          continue
-                      path = (site / value.split('#')[0]).resolve()
-                      assert path.is_relative_to(site) and path.is_file(), value
-          Resources().feed((site / 'index.html').read_text())
           identity = runpy.run_path(str(Path('tools/presentation.py').resolve()))['fingerprint']()
           for name in ('hero-cell.svg', 'hero-cell-mobile.svg'):
               assert 'source-id:' + identity in (site / 'assets' / name).read_text(), name

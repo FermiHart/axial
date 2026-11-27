@@ -2,17 +2,22 @@ name: Games adapters
 on:
   push:
   pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: axial-games-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   node:
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
         include:
-          - {node: 20, os: ubuntu-latest}
-          - {node: 22, os: ubuntu-latest}
-          - {node: 24, os: ubuntu-latest}
+          - {node: 20, os: ubuntu-24.04}
+          - {node: 22, os: ubuntu-24.04}
+          - {node: 24, os: ubuntu-24.04}
           - {node: 24, os: ubuntu-24.04-arm}
           - {node: 24, os: macos-15}
     runs-on: ${{ matrix.os }}
@@ -33,12 +38,25 @@ jobs:
         run: python3 tests/games-trust-canon.py
       - name: Seeded hostile input corpus
         run: node tools/games-fuzz.cjs
-      - name: Informational local microbenchmark
-        run: node tools/games-benchmark.cjs
-      - name: Informational bounded actor queue workload
-        run: node tools/games-budget-bench.cjs
       - name: Native numeric address/undefined/leak sanitizer corpus
-        if: matrix.os == 'ubuntu-latest' && matrix.node == 24
+        if: matrix.os == 'ubuntu-24.04' && matrix.node == 24
         env:
           AXIAL_NUMERIC_SANITIZERS: '1'
         run: node --test tests/portable-numeric-seeded.test.cjs
+  benchmark:
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
+        with:
+          node-version: '24'
+      - name: Informational local microbenchmarks
+        run: |
+          node tools/portable-decision-build.cjs
+          node tools/portable-numeric-build.cjs
+          node tools/games-benchmark.cjs
+          node tools/games-budget-bench.cjs

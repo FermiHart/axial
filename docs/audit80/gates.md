@@ -15,6 +15,15 @@ The new targets do not impose timing thresholds or run performance benchmarks.
 | `gate-runtime` | W69–W76 workload/lifecycle/memory/stack/concurrency/I/O-fault/process-recovery fixtures. |
 | `gate-tsan` | Separate ThreadSanitizer run of cached, uncached and forced-software concurrency lanes. |
 
+## Current hosted CI qualification boundary
+
+The hosted audit workflow separates the unprivileged PR/non-main subset from
+full authority qualification on trusted main pushes. The subset builds the
+three authority fixtures without running them, and runs the other full-gate
+targets. It is not evidence of authority execution. A separate focused matrix
+runs Clang, optimized UBSan and leak detection on `gate-fast` only.
+The commands and measurements below describe the historical W77/W80 setup.
+
 ## Compiler flags and build separation
 
 All gate runners inherit `HOSTCC`, `CPPFLAGS`, `CFLAGS` and `LDFLAGS`.

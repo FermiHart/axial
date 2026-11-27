@@ -7,3 +7,16 @@ build-*/
 *.axr
 .DS_Store
 __pycache__/
+
+# Private local credentials and generated demo identities (public trust keys
+# may be deliberately tracked after review; do not globally ignore *.pk).
+*.seed
+*.key
+*.pem
+*.p12
+*.pfx
+.env
+.env.*
+!.env.example
+test.pk
+recorder.pk
